@@ -1,0 +1,32 @@
+{
+    "compilerOptions": {
+        "target": "es2015",
+        "lib": ["dom", "dom.iterable", "esnext"],
+        "allowJs": true,
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "strict": true,
+        "forceConsistentCasingInFileNames": true,
+        "noFallthroughCasesInSwitch": true,
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "ignoreDeprecations": "5.0",
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "noEmit": true,
+        "jsx": "react-jsx",
+        "incremental": true,
+        "paths": {
+            "@styles/*": ["./src/styles/*"],
+            "@components/*": ["./src/components/*"],
+            "@public/*": ["./public/*"],
+            "@interfaces/*": ["./src/interfaces/*"],
+            "@fonts/*": ["./public/fonts/*"],
+            "@lib/*": ["./src/lib/*"],
+            "@/*": ["./src/*"]
+        }
+    },
+    "include": ["src", "next.config.js"],
+    "exclude": ["node_modules"]
+}

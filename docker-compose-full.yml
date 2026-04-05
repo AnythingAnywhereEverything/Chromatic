@@ -1,0 +1,57 @@
+services:
+  # Use for development only ---- 
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis:/data      
+    ports:
+      - '6379:6379'
+
+  postgres:
+    image: postgres:17-alpine
+    restart: always
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    env_file:
+      - .env_docker
+    ports:
+      - "5432:5432"
+  # ----------------------------
+
+
+  rust:
+    build: ./backend/rust-service
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env_docker
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./media:/app/media
+
+  nextjs:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.nextjs
+      args:
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+    ports:
+      - "5175:5175"
+
+  nginx:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - nextjs
+      - rust
+    volumes:
+      - ./media:/etc/nginx/media
+
+volumes:
+  redis:
+  postgres:

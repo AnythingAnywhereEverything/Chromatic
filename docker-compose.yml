@@ -1,0 +1,37 @@
+services:
+  # Use this file only if you have Redis and Postgres(internal/external)
+
+  rust:
+    build: ./backend/rust-service
+    env_file:
+      - .env_docker
+    ports:
+      - "3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./media:/app/media
+
+  nextjs:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.nextjs
+      args:
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+        DOCKER: "true"
+    ports:
+      - "5175:5175"
+
+  nginx:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.nginx
+    ports:
+      - "80:80"
+      # - "443:443" -- enable if have SSL
+    depends_on:
+      - nextjs
+      - rust
+    volumes:
+      - ./media:/etc/nginx/media
+      # - ./.certificates:/etc/nginx/ssl

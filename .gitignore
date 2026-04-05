@@ -1,0 +1,14 @@
+/backend/rust-service-example
+
+# docker
+.env*
+!.env_docker*_example
+!.env.example
+
+# media files
+media/*
+!media/.gitkeep
+.vscode/
+.next/
+
+.certificates/

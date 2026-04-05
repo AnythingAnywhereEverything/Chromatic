@@ -1,0 +1,30 @@
+$primary-color: #282c34;
+$secondary-color: #61dafb;
+
+.homeContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: 'Arial', sans-serif;
+
+  header {
+    background-color: $primary-color;
+    color: white;
+    padding: 2rem;
+    text-align: center;
+
+    h1 {
+      color: $secondary-color;
+    }
+  }
+
+  main {
+    margin: 2rem;
+  }
+
+  footer {
+    margin-top: auto;
+    padding: 1rem;
+    color: gray;
+  }
+}
