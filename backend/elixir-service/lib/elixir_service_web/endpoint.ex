@@ -1,12 +1,19 @@
-# lib/elixir_service_web/endpoint.ex
 defmodule ElixirServiceWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :elixir_service
 
-  # The socket is defined here
-  socket("/socket", ElixirServiceWeb.UserSocket,
+  socket "/socket", ElixirServiceWeb.UserSocket,
     websocket: true,
     longpoll: false
-  )
 
-  plug(ElixirServiceWeb.Router)
+  plug Plug.RequestId
+  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+
+  plug Plug.Parsers,
+    parsers: [:urlencoded, :multipart, :json],
+    pass: ["*/*"],
+    json_decoder: Phoenix.json_library()
+
+  plug Plug.MethodOverride
+  plug Plug.Head
+  plug ElixirServiceWeb.Router
 end

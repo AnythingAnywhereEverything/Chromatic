@@ -17,15 +17,15 @@ defmodule ElixirServiceWeb do
   those modules here.
   """
 
-  # lib/elixir_service_web.ex (Modified)
+  def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
 
   def router do
     quote do
-      # Phoenix.Router is correctly used here.
-      use Phoenix.Router, namespace: ElixirServiceWeb
+      use Phoenix.Router, helpers: false
 
-      # You can safely remove import Plug.Conn if you are not using HTTP routing,
-      # but keeping it is fine as it's defined inside the quote block.
+      # Import common connection and controller functions to use in pipelines
+      import Plug.Conn
+      import Phoenix.Controller
     end
   end
 
@@ -38,8 +38,6 @@ defmodule ElixirServiceWeb do
   def controller do
     quote do
       use Phoenix.Controller, formats: [:html, :json]
-
-      use Gettext, backend: ElixirServiceWeb.Gettext
 
       import Plug.Conn
 
