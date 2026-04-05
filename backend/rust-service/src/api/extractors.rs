@@ -67,8 +67,7 @@ where
 
                 SessionService::validate_session(
                     &shared_state,
-                    parsed.user_id,
-                    parsed.timestamp,
+                    &parsed,
                     60 * 60,
                     60 * 60,
                 )

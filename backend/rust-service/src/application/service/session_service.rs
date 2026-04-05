@@ -50,7 +50,11 @@ impl SessionService {
         tx.commit().await?;
 
         let mut conn = state.redis.get().await?;
-        let key = format!("session_active:{}:{}", user_id, token.timestamp);
+
+        // * create sha256 hash of the token and save to redis with expiration
+        let token_hash = sha256::digest(&token.full_token);
+
+        let key = format!("session_active:{}:{}:{}", user_id, token.timestamp, token_hash);
 
         let _: () = conn.set_ex(key, "1", expiration).await?;
         Ok(token)
@@ -67,7 +71,7 @@ impl SessionService {
         tx.commit().await?;
 
         let mut conn = state.redis.get().await?;
-        let pattern = format!("session_active:{}:*", user_id);
+        let pattern = format!("session_active:{}:*:*", user_id);
         let mut cursor: u64 = 0;
 
         loop {
@@ -103,8 +107,8 @@ impl SessionService {
 
         let mut conn = state.redis.get().await?;
         let key = format!(
-            "session_active:{}:{}",
-            session_token.user_id, session_token.timestamp
+            "session_active:{}:{}:{}",
+            session_token.user_id, session_token.timestamp, sha256::digest(&session_token.full_token)
         );
         let _: usize = conn.del(key).await?;
 
@@ -113,14 +117,14 @@ impl SessionService {
 
     pub async fn validate_session(
         state: &AppState,
-        user_id: i64,
-        created_time: i64,
+        token: &SessionToken,
         expiration: i64,
         expiration_extend: i64,
     ) -> Result<(), SessionServiceError> {
         let mut tx = state.db_pool.begin().await?;
         let mut conn = state.redis.get().await?;
-        let key = format!("session_active:{}:{}", user_id, created_time);
+
+        let key = format!("session_active:{}:{}:{}", token.user_id, token.timestamp, sha256::digest(&token.full_token));
 
         // * if key exist make cache longer as user stays
         if conn.exists(&key).await? {
@@ -128,11 +132,11 @@ impl SessionService {
             return Ok(())
         }
 
-        let date_time = Utc.timestamp_millis_opt(created_time).unwrap().naive_utc();
+        let date_time = Utc.timestamp_millis_opt(token.timestamp).unwrap().naive_utc();
 
         let is_exist = session_repo::is_session_exists(
             &mut tx, 
-            user_id, 
+            token.user_id, 
             date_time)
         .await?;
 
@@ -140,7 +144,7 @@ impl SessionService {
             return Err(SessionServiceError::MissingCredential)
         }
 
-        let key = format!("session_active:{}:{}", user_id, created_time);
+        let key = format!("session_active:{}:{}:{}", token.user_id, token.timestamp, sha256::digest(&token.full_token));
         let _ : () = conn.set_ex(key, "1", expiration as u64).await?;
 
         Ok(())
@@ -163,7 +167,7 @@ impl SessionService {
         .timestamp_millis();
     
         let key = format!(
-            "session_active:{}:{}",
+            "session_active:{}:{}:*",
             user_id, created_ts
         );
         let _: usize = conn.del(key).await?;
