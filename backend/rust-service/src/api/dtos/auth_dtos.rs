@@ -25,3 +25,15 @@ pub struct RegisterResponse {
     pub token: String,
     pub user_id: String,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct OauthRequest {
+    pub provider: String,
+    pub access_token: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct OauthResponse {
+    pub token: String,
+    pub user_id: String,
+}

@@ -11,11 +11,12 @@ use crate::{
 pub struct AuthService;
 
 impl AuthService {
-    pub async fn login_oauth(
+    pub async fn oauth(
         state: &AppState,
         provider: &str,
         provider_user_id: &str,
         email: &str,
+        
     ) -> Result<i64, AuthServiceError> {
         let mut tx = state.db_pool.begin().await?;
 
@@ -85,6 +86,9 @@ impl AuthService {
             .await?;
 
         tx.commit().await?;
+
+        // * create session for the user
+        
 
         Ok(user_id)
     }

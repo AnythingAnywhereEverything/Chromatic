@@ -6,14 +6,64 @@ use axum::{
 use crate::{
     api::{
         APIError, RequestAuth,
-        dtos::auth_dtos::{LoginRequest, LoginResponse, RegisterRequest, RegisterResponse},
+        dtos::auth_dtos::{LoginRequest, LoginResponse, OauthRequest, OauthResponse, RegisterRequest, RegisterResponse},
         version,
     },
     application::{
-        service::{auth::service::AuthService, errors::AuthServiceError},
+        service::{auth::{self, provider::errors::ProviderError, service::AuthService}, errors::AuthServiceError, session_service::SessionService},
         state::SharedState,
     },
 };
+
+pub async fn oauth_handler(
+    State(state): State<SharedState>,
+    Path(version): Path<String>,
+    req_header: RequestAuth,
+    Json(payload): Json<OauthRequest>,
+) -> Result<Json<OauthResponse>, APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+    tracing::trace!("oauth request: {:#?}", payload);
+    tracing::trace!("request header: {:#?}", req_header);
+
+    match payload.provider.as_str() {
+        "google" => {
+            let google_userinfo =
+                auth::provider::google::fetch_google_userinfo(&payload.access_token)
+                    .await
+                    .map_err(|e| {
+                        tracing::error!("Failed to fetch Google user info: {}", e);
+                        AuthServiceError::ProviderError(ProviderError::FetchUserInfoFailed)
+                    })?;
+
+            tracing::trace!("Google user info: {:#?}", google_userinfo);
+
+            let res_userid = AuthService::oauth(
+                &state,
+                "google",
+                &google_userinfo.sub,
+                &google_userinfo.email,
+            )
+            .await?;
+
+            // create session for the user
+            let session_token = SessionService::create_session(
+                &state,
+                res_userid,
+                &req_header.user_agent,
+                &req_header.ip_address,
+                60 * 60,
+            )
+            .await?;
+
+            Ok(Json(OauthResponse {
+                token: session_token.full_token,
+                user_id: res_userid.to_string(),
+            }))
+        }
+        _ => return Err(AuthServiceError::UnsupportedProvider.into()),
+    }
+}
 
 pub async fn login_handler(
     State(state): State<SharedState>,

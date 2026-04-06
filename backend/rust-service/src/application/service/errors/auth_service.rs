@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 use crate::{
-    application::service::errors::{SessionServiceError, SnowflakeServiceError},
+    application::service::{auth::provider::errors::ProviderError, errors::{SessionServiceError, SnowflakeServiceError}},
     domain::{session::errors::SessionError, user::{EmailError, errors::{DisplayNameError, UsernameError}}},
 };
 
@@ -40,6 +40,9 @@ pub enum AuthServiceError {
     #[error("User not found.")]
     UserNotFound,
 
+    #[error("Unsupported OAuth provider.")]
+    UnsupportedProvider,
+
     #[error(transparent)]
     UserValidation(#[from] UsernameError),
 
@@ -48,6 +51,9 @@ pub enum AuthServiceError {
 
     #[error(transparent)]
     DisplayNameValidation(#[from] DisplayNameError),
+
+    #[error(transparent)]
+    ProviderError(#[from] ProviderError),
 }
 
 impl From<sqlx::Error> for AuthServiceError {
