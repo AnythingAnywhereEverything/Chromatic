@@ -1,0 +1,149 @@
+@import "@fontsource/geist-sans/200.css";
+@import "@fontsource/geist-sans/300.css";
+@import "@fontsource/geist-sans/400.css";
+@import "@fontsource/geist-sans/500.css";
+@import "@fontsource/geist-sans/600.css";
+@import "@fontsource/geist-sans/700.css";
+@import "@fontsource/geist-sans/800.css";
+
+:root {
+    // Base values
+    --background: #fafafa;
+    --foreground: #0a0a0a;
+    --spacing: 0.25rem;
+    --container-md: 28rem;
+    
+    --navbar-height: calc(var(--spacing) * 18);
+
+    // Base colors
+    // TODO: Update the color palette
+    // --primary: #2e49ab;
+    // --primary-foreground: #ffffff;
+    // --secondary: #ffffff;
+    // --secondary-foreground: #1c1c1c;
+    // --tertiary: #f5a018;
+    // --tertiary-foreground: #ffffff;
+    // --muted: #e3e3e3;
+    // --muted-foreground: #505050;
+    
+    --card: #171717;
+    --card-foreground: #fafafa;
+    
+    --accent: #f5f5f5;
+    --accent-foreground: #171717;
+    --accent-star: #f5a018;
+    --accent-link: #3c56ff;
+    --accent-link-hover: #162fcf;
+    --accent-sale: #d75555;
+    
+    --icon-blue: #2b93cf;
+    
+    --popover: #fff;
+    --popover-foreground: #000000;
+    
+    --border: #b0b0b0;
+    --input: #e5e5e5;
+    --destructive: #ff6466;
+    --destructive-foreground: #e32324;
+    --success: #83ff64;
+    --success-foreground: #5de323;
+    --warning: #ffaa64;
+    --warning-foreground: #e38323;
+    
+    --stock-in: #16a34a;
+    --stock-low: #ea580c;
+    --stock-out: #dc2626;
+
+    --product-add-bg: #ff7b7b;
+    --product-add-foreground: #911a1a;
+    --product-buy-bg: #ffbb55;
+    --product-buy-foreground: #733f17;
+    
+    --text-neutral: #0a0a0a;
+    --text-link: #3a5ba3;
+    
+    // Fonts
+    --text-base: 1rem;
+    --text-base--line-height: calc(1.5 / 1);
+    --text-extra-small: calc(var(--text-base) * 0.75);
+    --text-xs--line-height: calc(1 / .75);
+    --text-small: calc(var(--text-base) * 0.875);
+    --text-sm--line-height: calc(1.25 / .875);
+    --text-large: calc(var(--text-base) * 1.125);
+    --text-lg--line-height: calc(1.75 / 1.125);
+    
+    // Border
+    --radius: .625rem;
+    --radius-extra-small: .25rem;
+    --radius-small: calc(var(--radius) - 4px);
+    --radius-medium: calc(var(--radius) - 2px);
+    --radius-large: var(--radius);
+    
+    // blur
+    --blur-extra-small: 4px;
+    --blur-small: 8px;
+
+    //sidebar
+    --sidebar-width: 16rem;
+
+    // ring
+    --ring: #5f5f5f;
+    --ring-primary: 0 0 0 2px rgba(56, 128, 210, 0.4);;
+}
+
+[data-theme=dark] {
+    --background: #17171a;
+    --foreground: #fafafa;
+    --primary: #3d5ac3;
+    --primary-foreground: #ffffff;
+    --text-neutral: #dedede;
+    --secondary: #ffffff;
+    --secondary-foreground: #000000;
+    --muted: #323232;
+    --muted-foreground: #a2a2a2;
+    --text-link: #8aadf7;
+    --ring: #989898;
+
+    --popover: #1e2023;
+    --popover-foreground: #fafafa;
+    --border: lab(100% 0 0 / .1);
+    --input: lab(100% 0 0 / .15);
+
+    --accent: #535353;
+    --accent-foreground: #f5f5f5;
+
+    --product-add-bg: #ff7272;
+    --product-add-foreground: #f99191;
+
+    --product-buy-bg: #ff904f;
+    --product-buy-foreground: #ffbc89;
+}
+
+[data-theme=midnight] {
+    color-scheme: dark;
+    --background: #000000;
+    --foreground: #fafafa;
+    --primary: #3d5ac3;
+    --primary-foreground: #ffffff;
+    --text-neutral: #dedede;
+    --secondary: #1c1c1c;
+    --secondary-foreground: #ffffff;
+    --muted: #323232;
+    --muted-foreground: #a2a2a2;
+    --text-link: #8aadf7;
+    --ring: #989898;
+
+    --popover: #13151b;
+    --popover-foreground: #fafafa;
+    --border: lab(100% 0 0 / .1);
+    --input: lab(100% 0 0 / .15);
+
+    --accent: #535353;
+    --accent-foreground: #f5f5f5;
+
+    --product-add-bg: #ff7272;
+    --product-add-foreground: #f99191;
+
+    --product-buy-bg: #ff904f;
+    --product-buy-foreground: #ffbc89;
+}
