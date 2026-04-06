@@ -4,7 +4,8 @@ services:
   rust:
     build: ./backend/rust-service
     env_file:
-      - .env_docker
+      - .env_docker_global
+      - .env_docker_rust
     ports:
       - "3000:3000"
     extra_hosts:
