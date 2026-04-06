@@ -14,33 +14,26 @@ defmodule ElixirServiceWeb.CounterChannel do
 
   @impl true
   def handle_info(:after_join, socket) do
-    count =
-      case :persistent_term.get(:current_count, nil) do
-        nil ->
-          :persistent_term.put(:current_count, 0)
-          0
-
-        value ->
-          value
-      end
-
+    count = ElixirService.CounterServer.get_count()
     push(socket, "count_update", %{count: count})
     {:noreply, socket}
   end
 
   @impl true
   def handle_in("increment", _payload, socket) do
-    current = :persistent_term.get(:current_count, 0)
-    new = current + 1
-
-    :persistent_term.put(:current_count, new)
+    new_count = ElixirService.CounterServer.increment()
 
     ElixirServiceWeb.Endpoint.broadcast!(
       "counter:lobby",
       "count_update",
-      %{count: new}
+      %{count: new_count}
     )
 
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_in(_event, _payload, socket) do
     {:noreply, socket}
   end
 end
