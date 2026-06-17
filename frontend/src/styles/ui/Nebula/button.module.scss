@@ -1,0 +1,231 @@
+@use "sass:color";
+
+.baseButton {
+    flex-shrink: 0;
+    border-radius: var(--radius-medium);
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    pointer-events: all;
+    cursor: pointer;
+    transition: all 0.25s;
+    border: none;
+    box-sizing: border-box;
+    text-decoration: none;
+
+    &:has(>[data-component="icon"]) {
+        gap: calc(var(--spacing) * 2);
+    }
+
+    &:disabled {
+        pointer-events: none;
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
+    &:focus-visible {
+        border-color: var(--ring);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 50%, transparent);
+    }
+    
+    &[aria-invalid="true"] {
+        border-color: var(--destructive);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--destructive) 20%, transparent);
+    }
+
+    [data-theme=dark] &[aria-invalid="true"] {
+        border-color: color-mix(in srgb, var(--destructive) 50%, transparent);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--destructive) 40%, transparent);
+    }
+}
+
+//position
+
+.start {
+    justify-content: start;
+}
+
+.center {
+    justify-content: center;
+}
+
+.end {
+    justify-content: end;
+}
+
+// Variants
+
+.defaultVariant {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+
+    &:hover {
+        background-color: color-mix(
+        in oklab,
+        var(--primary) 90%,
+        white
+        );
+    }
+}
+
+.opposeVariant {
+    background-color: var(--tertiary);
+    color: var(--tertiary-foreground);
+
+    &:hover {
+        background-color: color-mix(
+        in oklab,
+            var(--tertiary) 90%,
+            white
+        );
+    }
+}
+
+.outlineVariant {
+    background-color: var(--background);;
+    color: var(--text-neutral);
+    border: solid 1px var(--border);
+
+    [data-theme="dark"] & {
+        background: color-mix(in oklab,
+            var(--input) 30%,
+            transparent
+        );
+        border-color: var(--input);
+        &:hover {
+            background: var(--muted);
+        }
+    }
+
+    [data-theme="midnight"] & {
+        background: color-mix(in oklab,
+            var(--input) 10%,
+            transparent
+        );
+        border-color: var(--input);
+        &:hover {
+            background: var(--muted);
+        }
+    }
+
+    &:hover {
+        background: var(--muted);
+        color: var(--foreground);
+    }
+}
+
+.secondaryVariant {
+    background-color: var(--secondary);
+    color: var(--secondary-foreground);
+
+    &:hover {
+        background-color: color-mix(
+        in oklab,
+        var(--secondary) 90%,
+        black
+        );
+    }
+}
+
+.destructiveVariant {
+    color: var(--destructive);
+    background-color: color-mix(in oklab, var(--destructive) 10%, transparent);
+
+    &:hover {
+        background-color: color-mix(in oklab, var(--destructive) 20%, transparent);
+    }
+
+    &:focus-visible {
+        border: 1px solid color-mix(in oklab, var(--destructive) 40%, transparent);
+        box-shadow: 0 0 0 4px 
+            color-mix(in oklab, var(--destructive) 20%, transparent);
+    }
+
+    [data-theme=dark] &, [data-theme=midnight] & {
+        background-color: color-mix(in oklab, var(--destructive) 20%, transparent);
+        &:hover {
+            background-color: color-mix(in oklab, var(--destructive) 30%, transparent);
+        }
+        &:focus-visible {
+            box-shadow: 0 0 0 4px 
+                color-mix(in oklab, var(--destructive) 20%, transparent);
+        }
+    }
+}
+
+.ghostVariant {
+    background-color: transparent;
+    color: var(--text-neutral);
+
+    &:hover {
+        background-color: color-mix(in oklab,
+        var(--foreground) 10%, transparent);
+    }
+}
+
+.linkVariant {
+    background: transparent;
+    color: var(--text-neutral);
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+.notification {
+    position: relative;
+}
+
+// Sizes
+
+.defaultSize {
+    // padding: 0.5rem 0.825rem;
+    padding-block: calc(var(--spacing) * 1.5);
+    padding-inline: calc(var(--spacing) * 3);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+}
+
+.extraSmallSize {
+    padding-block: calc(var(--spacing) * 0.5);
+    padding-inline: calc(var(--spacing) * 2);
+    font-size: var(--text-extra-small);
+    line-height: var(--text-xs--line-height);
+}
+
+.smallSize {
+    border-radius: var(--radius-small);
+    padding-block: calc(var(--spacing) * 1.25);
+    padding-inline: calc(var(--spacing) * 2.5);
+    font-size: var(--text-small);
+    line-height: var(--text-sm--line-height);
+}
+
+.largeSize {
+    padding: 0.6rem 1rem;
+    font-size: var(--text-large);
+    line-height: var(--text-lg--line-height);
+}
+
+.defaultIcon {
+    width: calc(var(--spacing) * 8);
+    height: calc(var(--spacing) * 8)
+}
+
+.extraSmallIcon {
+    width: calc(var(--spacing) * 5);
+    height: calc(var(--spacing) * 5);
+    font-size: 0.5rem;
+}
+
+.smallIcon {
+    width: calc(var(--spacing) * 7);
+    height: calc(var(--spacing) * 7);
+    font-size: 0.825rem;
+}
+
+.largeIcon {
+    width: calc(var(--spacing) * 9);
+    height: calc(var(--spacing) * 9);
+    font-size: 1.125rem;
+}

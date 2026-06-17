@@ -1,0 +1,45 @@
+.productField {
+    list-style: none;
+    margin: 0;
+    padding: calc(var(--spacing) * 1);
+    display: grid;
+    width: 100%;
+    gap: calc(var(--spacing) * 2);
+    grid-template-rows: 1fr;
+    grid-template-columns: repeat(
+        auto-fill,
+        minmax(clamp(150px, 22vw, 200px), 1fr));
+    box-sizing: border-box;
+}
+
+.productContainer {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing) * 2);
+    width: 100%;
+    padding: calc(var(--spacing) * 2);
+    box-sizing: border-box;
+}
+
+.containerHeader {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+}
+
+.containerHeaderGroup {
+    display: flex;
+    flex-direction: column;
+}
+
+.containerTitle {
+    font-weight: 600;
+    font-size: 1.75rem;
+    color: var(--text-neutral);
+    white-space: nowrap;
+}
+
+.containerDescription {
+    color: var(--muted-foreground);
+}

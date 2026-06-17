@@ -1,0 +1,132 @@
+.overlay {
+    position: fixed;
+    z-index: 99;
+    isolation: isolate;
+    backdrop-filter: blur(4px);
+    inset: calc(var(--spacing) * 0);
+    background-color: color-mix(in oklab, black 10%, transparent);
+
+    &[data-state="open"] {
+        animation: fadein 0.1s 0s 1 normal none;
+    }
+
+    &[data-state="closed"] {
+        animation: fadeout 0.1s 0s 1 normal none;
+    }
+}
+
+@keyframes fadein {
+    0% {
+        opacity: 0;
+    }
+}
+
+@keyframes fadeout {
+    100% {
+        opacity: 0;
+    }
+}
+
+
+
+.dialogContent{
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--background);
+    max-width: calc(100% - 2rem);
+    padding: calc(var(--spacing) * 4);
+    display: grid;
+    gap: calc(var(--spacing) * 4);
+
+
+    border-radius: 1rem;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--ring) 50%, transparent);
+
+    z-index: 99;
+
+    @media (min-width: 40rem) {
+        max-width: var(--container-md);
+    }
+
+    &[data-state="open"] {
+        animation: enter 0.1s 0s 1 normal none;
+    }
+
+    &[data-state="closed"] {
+        animation: out 0.1s 0s 1 normal none;
+    }
+}
+
+.dialogTitle {
+    font-size: var(--text-base);
+    font-weight: 500;
+    line-height: 1;
+}
+
+.dialogFooter {
+    display: flex;
+    gap: 2;
+    flex-direction: column-reverse;
+    background-color: color-mix(in oklab, var(--muted) 50%, transparent);
+    padding: calc(var(--spacing) * 4);
+    margin-inline: calc(var(--spacing) * -4);
+    margin-bottom: calc(var(--spacing) * -4);
+
+    border-top: 1px var(--border) solid;
+
+    @media (min-width: 40rem) {
+        flex-direction: row;
+        justify-content: flex-start;
+    }
+}
+
+.dialogDescription {
+    color: var(--muted-foreground);
+    font-size: small;
+}
+
+.dialogHeader {
+    gap: calc(var(--spacing) * 2);
+    display: flex;
+    flex-direction: column;
+}
+
+.srOnly {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+
+.closeBtn {
+    position: absolute;
+    top: calc(var(--spacing) * 2);
+    right: calc(var(--spacing) * 2);
+}
+
+@keyframes enter {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale3d(.95, .95, .95);
+        filter: blur(0);
+    }
+}
+
+@keyframes out {
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale3d(.95, .95, .95);
+        filter: blur(0);
+    }
+}

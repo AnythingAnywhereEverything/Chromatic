@@ -1,0 +1,25 @@
+.removeButton {
+    position: absolute;
+    top: 4;
+    right: 4;
+    background-color: color-mix(in oklab, var(--muted) 50%, transparent) !important;
+    &:hover{
+        background-color: var(--muted) !important;
+    }
+}
+
+.imageWrapper {
+    border-radius: var(--radius-medium);
+    cursor: grab;
+    overflow: hidden;
+    width: calc(var(--spacing) * 28) !important;
+    height: calc(var(--spacing) * 28) !important;
+    position: relative;
+    border: var(--border) solid 1px;
+}
+
+.addButton {
+    width: calc(var(--spacing) * 28) !important;
+    height: calc(var(--spacing) * 28) !important;
+    border-style: dashed;
+}

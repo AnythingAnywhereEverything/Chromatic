@@ -1,0 +1,42 @@
+.baseBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding-inline: var(--spacing);
+    border: 1px solid color-mix(
+        in oklab, var(--border) 20%, transparent);
+    box-sizing: border-box;
+
+    white-space: nowrap;
+    vertical-align: middle;
+
+    margin-right: var(--spacing);
+
+    border-radius: var(--radius-small);
+}
+
+.defaultSize {
+    font-size: var(--text-base);
+    line-height: calc(var(--spacing) * 4.5);
+    font-weight: 400;
+}
+
+.extraSmallSize {
+    font-size: var(--text-extra-small);
+    line-height: calc(var(--spacing) * 3.5);
+    border-radius: var(--radius-extra-small);
+    font-weight: 400;
+}
+
+.smallSize {
+    font-size: var(--text-small);
+    line-height: calc(var(--spacing) * 4);
+    font-weight: 400;
+}
+
+.largeSize {
+    font-size: var(--text-large);
+    line-height: calc(var(--spacing) * 5);
+    font-weight: 400;
+}

@@ -1,0 +1,24 @@
+.content {
+    border-radius: var(--radius-medium);
+    padding-inline: calc(var(--spacing) * 3);
+    padding-block: calc(var(--spacing) * 1.5);
+    font-size: var(--text-extra-small);
+    line-height: var(--text-xs--line-height);
+    background-color: var(--foreground);
+    color: var(--background);
+    z-index: 50;
+    width: fit-content;
+    max-width: calc(var(--spacing) * 20);
+    transform-origin: var(--radix-tooltip-content-transform-origin);
+}
+
+.arrow {
+    width: calc(var(--spacing) * 2.5);
+    height: calc(var(--spacing) * 2.5);
+    transform: translateY(calc(-50% - 2px));
+    rotate: 45deg;
+    fill: var(--foreground);
+    background-color: var(--foreground);
+    z-index: 50;
+
+}

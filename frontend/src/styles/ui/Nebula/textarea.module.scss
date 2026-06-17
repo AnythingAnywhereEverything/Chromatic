@@ -1,0 +1,65 @@
+.inputField {
+    border: 1px solid var(--border);
+    background-color: var(--input);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.625rem;
+    font-size: 1rem;
+    min-height: 4rem;
+    width: 100%;
+    display: flex;
+    transition: color 0.2s, background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    box-sizing: border-box;
+    background: transparent;
+    resize: vertical;
+    
+    
+    &::placeholder {
+        color: var(--muted-foreground);
+    }
+    
+    [data-theme=dark] & {
+        background: color-mix(in srgb, var(--input) 30%, transparent);;
+    }
+    [data-theme=midnight] & {
+        background: color-mix(in srgb, var(--input) 10%, transparent);;
+    }
+
+    &:focus-visible {
+        border-color: var(--ring);
+        box-shadow: 0 0 0 3px color-mix(
+            in oklab, var(--ring) 50%, transparent);
+    }
+
+    &[aria-invalid="true"] {
+        border-color: var(--destructive);
+        box-shadow: 0 0 0 3px color-mix(in srgb, 
+            var(--destructive) 20%, transparent);
+
+        [data-theme=dark] &, [data-theme=midnight] & {
+            border-color: 1px solid color-mix(in srgb, 
+                var(--destructive) 50%, transparent);
+            box-shadow: 0 0 0 3px color-mix(in srgb, 
+                var(--destructive) 40%, transparent);
+        }
+    }
+
+    &:disabled {
+        background-color: var(--input);
+        opacity: 0.5;
+        cursor: not-allowed;
+
+        [data-theme=dark] & {
+            background-color: color-mix(in srgb, 
+                var(--input) 80%, transparent);
+        }
+        [data-theme=midnight] & {
+            background-color: color-mix(in srgb, 
+                var(--input) 60%, transparent);
+        }
+    }
+
+    @media (min-width: 768px) {
+        font-size: 0.875rem;
+    }
+}

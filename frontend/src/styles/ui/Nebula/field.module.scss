@@ -1,0 +1,242 @@
+.fieldSet {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: calc(var(--spacing) * 4);
+    &:has(>[data-component="checkbox-group"]),
+    &:has(>[data-component="radio-group"]){
+        gap: calc(var(--spacing) * 3);
+    }
+}
+
+.fieldLegend {
+    margin-bottom: calc(var(--spacing) * 1.5);
+    font-weight: 500;
+    &[data-variant=label] {
+        font-size: var(--text-small);
+    }
+    &[data-variant=legend] {
+        font-size: var(--text-base);
+    }
+}
+
+.fieldTitle {
+    display: flex;
+    width: 100%;
+    line-height: 1.375;
+    align-items: center;
+    gap: calc(var(--spacing) * 2);
+    font-size: var(--text-small);
+    .fieldBase[data-disabled=true] & {
+        opacity: 0.5;
+    }
+}
+
+.fieldSeparatorContainer {
+    margin-block: calc(var(--spacing) * -2);
+    height: calc(var(--spacing) * 5);
+    position: relative;
+
+    .fieldGroup[variant="outline"] {
+        margin-bottom: calc(var(--spacing) * -2);
+    }
+
+    .separator {
+        position: absolute;
+        inset: 0;
+        top: 50%;
+
+    }
+    .content {
+        color: var(--muted-foreground);
+        padding-inline: calc(var(--spacing) * 2);
+        position: relative;
+        margin-inline: auto;
+        display: block;
+        width: fit-content;
+    }
+}
+
+.fieldDescription {
+    color: var(--muted-foreground);
+    text-align: left;
+    font-size: var(--text-small);
+    [data-variant='legend'] + & {
+        margin-top: calc(var(--spacing) * 1.5);
+    }
+
+    .fieldBase:has([data-orientation='horizontal']) & {
+        text-wrap: balance;
+    }
+
+    .fieldBase[data-disabled=true] & {
+        opacity: 0.5;
+    }
+
+    &:last-child {
+        margin-top: 0;
+    }
+
+    &:nth-last-child(2) {
+        margin-top: calc(var(--spacing) * -1);
+    }
+
+    > a {
+        text-decoration-line: underline;
+        text-underline-offset: 4px;
+        color: inherit;
+
+        &:hover {
+        color: var(--primary);
+        }
+    }
+
+}
+
+.fieldLabel {
+    display: flex;
+    width: fit-content;
+    line-height: 1.375;
+    gap: calc(var(--spacing) * 2);
+    
+    &:has(>[data-component=field]){
+        border-radius: var(--radius-large);
+        border: 1px solid var(--border);
+        width: 100%;
+        flex-direction: column;
+    }
+
+    &:has([data-state="checked"]) {
+        background-color: color-mix(in oklab, var(--primary) 5%, transparent);
+        border: 1px solid var(--primary);
+    }
+
+    .fieldSet:disabled & {
+        opacity: .5;
+    }
+
+    * {
+        &[data-component="field"] {
+            padding: calc(var(--spacing) * 2.5);
+        }
+    }
+}
+
+.fieldGroup {
+    display: flex;
+    flex-direction: column;
+    flex-direction: column;
+    gap: calc(var(--spacing) * 5);
+    container: field-group / inline-size;
+    width: 100%;
+    &:has(>[data-component="checkbox-group"]){
+        gap: calc(var(--spacing) * 3);
+    }
+    &:has(>[data-component="field-group"]){
+        gap: calc(var(--spacing) * 4);
+    }
+}
+
+.fieldContent {
+    gap: calc(var(--spacing) * .5);
+    display: flex;
+    line-height: 1.375;
+    flex-direction: column;
+}
+
+.fieldError {
+    color: var(--destructive);
+    font-size: var(--text-small);
+    font-weight: 400;
+    .fieldErrorList {
+        margin-left: calc(var(--spacing) * 4);
+        display: flex;
+        list-style: disc;
+        flex-direction: column;
+        gap: var(--spacing);
+    }
+}
+
+.fieldBase {
+    display: flex;
+    width: 100%;
+    gap: calc(var(--spacing) * 2);
+
+    &[data-invalid="true"] {
+        color: var(--destructive);
+    }
+
+    &.spacebetween {
+        justify-content: space-between;
+    }
+
+    &.center {
+        justify-content: center;
+    }
+
+    &.spacearound {
+        justify-content: space-around;
+    }
+    
+    &.vertical {
+        flex-direction: column;
+        > * {
+            width: 100%;
+        }
+        .srOnly {
+            width: auto;
+        }
+    }
+
+    &.horizontal {
+        flex-direction: row;
+        align-items: center;
+
+        >[data-component="field-label"] {
+            flex: auto;
+        }
+        
+        &:has(>[data-component="field-content"]){
+            align-items: start;
+            &>[role=checkbox], &>[role=radio] {
+                margin-top: 1px;
+            }
+        }
+    }
+
+    &.responsive {
+        flex-direction: column;
+        * {
+            width: 100%;
+        }
+        .srOnly {
+            width: auto;
+        }
+        @container field-group (min-width: 48rem) {
+            flex-direction: row;
+            align-items: center;
+
+            > * {
+                width: auto;
+            }
+
+            > [data-component='field-label'] {
+                flex: 1 1 auto;
+            }
+
+            &:has(> [data-component='field-content']) {
+                align-items: flex-start;
+
+                > [role='checkbox'],
+                > [role='radio'] {
+                    margin-top: 1px;
+                }
+            }
+        }
+    }
+
+    &[data-stretch="true"] {
+        flex: 1;
+        align-items: stretch;
+    }
+}
