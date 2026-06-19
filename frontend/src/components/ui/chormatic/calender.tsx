@@ -8,7 +8,7 @@ import {
   type Locale,
 } from "react-day-picker"
 import { Icon } from "./icon"
-import s from "@styles/ui/Nebula/calender.module.scss"
+import s from "@styles/ui/Chormatic/calender.module.scss"
 
 function Calendar({
   className,

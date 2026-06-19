@@ -1,9 +1,9 @@
 
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
-import { Icon } from "../webappUI"
+import { Icon } from "../chormaticUI"
 
-import s from "@styles/ui/Nebula/dropdownmenu.module.scss"
+import s from "@styles/ui/Chormatic/dropdownmenu.module.scss"
 
 function DropdownMenu({
     ...props

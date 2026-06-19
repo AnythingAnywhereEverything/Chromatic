@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 import { Label } from "./label"
 import { Separator } from "./separator"
 
-import s from "@styles/ui/Nebula/field.module.scss"
+import s from "@styles/ui/Chormatic/field.module.scss"
 
 function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
     return (

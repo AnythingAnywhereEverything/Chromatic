@@ -1,8 +1,8 @@
 import { Dialog as DialogPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
-import { Button, Icon } from "@components/ui/webappUI"
+import { Button, Icon } from "@components/ui/chormaticUI"
 
-import s from "@styles/ui/Nebula/dialogue.module.scss"
+import s from "@styles/ui/Chormatic/dialogue.module.scss"
 
 function Dialog({
   ...props

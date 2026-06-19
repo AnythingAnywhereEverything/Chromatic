@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "./button";
-import s from "@styles/ui/Nebula/imageuploader.module.scss";
-import { FieldError, Icon } from "../webappUI";
+import s from "@styles/ui/Chormatic/imageuploader.module.scss";
+import { FieldError, Icon } from "../chormaticUI";
 
 import {
     DndContext,

@@ -2,7 +2,7 @@ import { Tooltip as TooltipPrimitive } from "radix-ui"
 
 import { cn } from "@lib/utils"
 
-import s from "@styles/ui/Nebula/tooltip.module.scss"
+import s from "@styles/ui/Chormatic/tooltip.module.scss"
 
 function TooltipProvider({
   delayDuration = 0,

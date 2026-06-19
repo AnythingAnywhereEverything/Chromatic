@@ -17,7 +17,7 @@ import {
     Icon,
     FieldError,
     FieldSeparator,
-} from "@components/ui/webappUI";
+} from "@components/ui/chormaticUI";
 import Link from "next/link";
 import Form from "next/form";
 import { useRouter } from "next/router";

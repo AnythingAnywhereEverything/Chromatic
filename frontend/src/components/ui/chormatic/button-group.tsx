@@ -4,7 +4,7 @@ import { Slot } from "radix-ui"
 import { cn } from "@/lib/utils"
 import { Separator } from "./separator"
 
-import s from "@styles/ui/Nebula/buttongroup.module.scss"
+import s from "@styles/ui/Chormatic/buttongroup.module.scss"
 
 const buttonGroupVariants = cva(
   s.buttonGroupBase,

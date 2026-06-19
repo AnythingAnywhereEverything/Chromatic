@@ -1,6 +1,6 @@
-import s from "@styles/ui/Nebula/inputgroup.module.scss"
+import s from "@styles/ui/Chormatic/inputgroup.module.scss"
 import { cva, type VariantProps } from "class-variance-authority"
-import { Button, Input, Textarea } from "../webappUI"
+import { Button, Input, Textarea } from "../chormaticUI"
 import { cn } from "@/lib/utils"
 
 function InputGroup({ className, ...props }: React.ComponentProps<"div">) {

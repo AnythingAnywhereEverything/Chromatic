@@ -1,7 +1,7 @@
 import { Switch as SwitchPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
 
-import s from "@styles/ui/Nebula/switch.module.scss"
+import s from "@styles/ui/Chormatic/switch.module.scss"
 
 function Switch({
   className,

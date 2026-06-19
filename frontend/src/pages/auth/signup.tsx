@@ -6,7 +6,7 @@ import style from "@styles/layouts/authlayout.module.scss";
 import { useRouter } from "next/router";
 import React, { useEffect, useState } from "react";
 import { cn } from "@lib/utils";
-import { Button, Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldSeparator, FieldSet, Icon, Input, InputGroup, InputGroupAddon, InputGroupInput } from "@components/ui/webappUI";
+import { Button, Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldSeparator, FieldSet, Icon, Input, InputGroup, InputGroupAddon, InputGroupInput } from "@components/ui/chormaticUI";
 import { Form } from "@base-ui/react";
 import Link from "next/link";
 import GoogleAuthButton from "@components/ui/GoogleLoginBtn";

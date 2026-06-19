@@ -1,4 +1,4 @@
-import style from "@styles/ui/Nebula/badge.module.scss"
+import style from "@styles/ui/Chormatic/badge.module.scss"
 import { cva, type VariantProps } from "class-variance-authority"
 import { getWCAGColor } from "@/lib/getWCAGcolor";
 import { cn } from "@/lib/utils";
