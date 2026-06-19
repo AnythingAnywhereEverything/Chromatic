@@ -1,0 +1,17 @@
+.authContainer{
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    padding: 2rem;
+    box-sizing: border-box;
+}
+
+.form {
+    width: 400px;
+    border: 1px var(--border) solid;
+    background-color: color-mix(in oklab, var(--muted) 20%, transparent);
+    padding: calc(var(--spacing) * 6);
+    border-radius: var(--radius-medium);
+}

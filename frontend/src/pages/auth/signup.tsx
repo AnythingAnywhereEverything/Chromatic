@@ -2,7 +2,7 @@ import { register } from "@/api/auth";
 import { useUser } from "@/hooks/useUser";
 import { NextPageWithLayout } from "@/types/global";
 import Head from "next/head";
-import style from "@styles/layouts/authlayout.module.scss";
+import style from "@styles/layouts/authLayout.module.scss";
 import { useRouter } from "next/router";
 import React, { useEffect, useState } from "react";
 import { cn } from "@lib/utils";
