@@ -7,12 +7,17 @@ on:
         branches: [main, master]
 
 jobs:
-    test:
-        name: Run Rest API Tests
+    api-integration-tests:
+        name: "Test Suite: ${{ matrix.test-module }}"
         runs-on: ubuntu-latest
 
+        strategy:
+            fail-fast: false
+            matrix:
+                test-module: [health, auth]
+
         services:
-            postgres:
+            postgres: &postgres_service
                 image: postgres:15
                 env:
                     POSTGRES_DB: postgres
@@ -26,7 +31,7 @@ jobs:
                     --health-timeout 5s
                     --health-retries 5
 
-            redis:
+            redis: &redis_service
                 image: redis:7-alpine
                 ports:
                     - 6379:6379
@@ -35,7 +40,6 @@ jobs:
                     --health-interval 10s
                     --health-timeout 5s
                     --health-retries 5
-
         steps:
             - name: Checkout Code
               uses: actions/checkout@v4
@@ -70,4 +74,4 @@ jobs:
 
             - name: Run Test Suite
               working-directory: backend/rust-service
-              run: cargo test
+              run: cargo test ${{ matrix.test-module }}
