@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use crate::{
     application::service::{auth::provider::errors::ProviderError, errors::{SessionServiceError, SnowflakeServiceError}},
-    domain::{session::errors::SessionError, user::{EmailError, errors::{DisplayNameError, UsernameError}}},
+    domain::{session::errors::SessionError, user::{EmailError, errors::{DisplayNameError, PasswordError, UsernameError}}},
 };
 
 #[derive(Debug, Error)]
@@ -15,6 +15,9 @@ pub enum AuthServiceError {
 
     #[error("Database error.")]
     Database,
+
+    #[error("Delete account failed.")]
+    DeleteAccountFailed,
 
     #[error("Invalid credentials.")]
     InvalidCredentials,
@@ -51,6 +54,9 @@ pub enum AuthServiceError {
 
     #[error(transparent)]
     DisplayNameValidation(#[from] DisplayNameError),
+
+    #[error(transparent)]
+    PasswordValidation(#[from] PasswordError),
 
     #[error(transparent)]
     ProviderError(#[from] ProviderError),

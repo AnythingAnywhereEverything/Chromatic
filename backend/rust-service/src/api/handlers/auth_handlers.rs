@@ -141,3 +141,21 @@ pub async fn logout_handler(
 
     Ok(())
 }
+
+pub async fn delete_handler(
+    State(state): State<SharedState>,
+    Path(version): Path<String>,
+    req_header: RequestAuth,
+) -> Result<(), APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+    tracing::trace!("delete account request header: {:#?}", req_header);
+
+    let user_id = match req_header.user {
+        Some(user) => user.user_id,
+        None => return Err(AuthServiceError::DeleteAccountFailed.into()),
+    };
+
+    AuthService::delete_account(&state, user_id).await?;
+    Ok(())
+}

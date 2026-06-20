@@ -6,6 +6,7 @@ pub async fn username_taken(tx: &mut Transaction<'_, sqlx::Postgres>, username: 
     let count: (i64,) = sqlx::query_as(
         r#"
         SELECT COUNT(*) FROM users WHERE username = $1
+        AND deleted_at IS NULL
         "#
     )
     .bind(username)
