@@ -58,15 +58,15 @@ jobs:
                   cd backend/rust-service
                   cp .env.example .env
 
-                  # Replace file keys with the active CI credentials safely using sed
-                  sed -i 's/^POSTGRES_USER=.*/POSTGRES_USER=postgres/' .env
-                  sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=password/' .env
-                  sed -i 's/^POSTGRES_HOST=.*/POSTGRES_HOST=localhost/' .env
-                  sed -i 's/^POSTGRES_PORT=.*/POSTGRES_PORT=5432/' .env
-                  sed -i 's/^POSTGRES_DB=.*/POSTGRES_DB=postgres/' .env
-                  sed -i 's/^REDIS_HOST=.*/REDIS_HOST=localhost/' .env
-                  sed -i 's/^REDIS_PORT=.*/REDIS_PORT=6379/' .env
-                  sed -i 's/^SERVICE_PORT=.*/SERVICE_PORT=0/' .env
+                  # The [[:space:]]* handles spaces around the '=' sign automatically
+                  sed -i 's/^POSTGRES_USER[[:space:]]*=[[:space:]]*.*/POSTGRES_USER=postgres/' .env
+                  sed -i 's/^POSTGRES_PASSWORD[[:space:]]*=[[:space:]]*.*/POSTGRES_PASSWORD=password/' .env
+                  sed -i 's/^POSTGRES_HOST[[:space:]]*=[[:space:]]*.*/POSTGRES_HOST=localhost/' .env
+                  sed -i 's/^POSTGRES_PORT[[:space:]]*=[[:space:]]*.*/POSTGRES_PORT=5432/' .env
+                  sed -i 's/^POSTGRES_DB[[:space:]]*=[[:space:]]*.*/POSTGRES_DB=postgres/' .env
+                  sed -i 's/^REDIS_HOST[[:space:]]*=[[:space:]]*.*/REDIS_HOST=localhost/' .env
+                  sed -i 's/^REDIS_PORT[[:space:]]*=[[:space:]]*.*/REDIS_PORT=6379/' .env
+                  sed -i 's/^SERVICE_PORT[[:space:]]*=[[:space:]]*.*/SERVICE_PORT=0/' .env
 
             - name: Run Test Suite
               working-directory: backend/rust-service
