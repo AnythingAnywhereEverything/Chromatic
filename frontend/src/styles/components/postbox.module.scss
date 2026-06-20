@@ -1,0 +1,10 @@
+.createPostContainer{
+    max-width:600px;
+    .text{
+        padding-bottom: calc(var(--spacing) * 2);
+        border-bottom: 1px solid var(--foreground);
+    }
+}
+.postContainer{
+    
+}
