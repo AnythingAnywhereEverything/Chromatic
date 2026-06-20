@@ -28,23 +28,11 @@ use crate::{
     application::{state::SharedState},
 };
 
-pub async fn start(state: SharedState) {
+pub async fn create_router(state: SharedState) -> Router {
     // Build a CORS layer.
     // see https://docs.rs/tower-http/latest/tower_http/cors/index.html
     // for more details
     let cors_layer = CorsLayer::new().allow_origin(Any);
-    // let cors_header_value = config.service_http_addr().parse::<HeaderValue>().unwrap();
-    // let cors_layer = CorsLayer::new()
-    //      .allow_origin(cors_header_value)
-    //      .allow_methods([
-    //          Method::HEAD,
-    //          Method::GET,
-    //          Method::POST,
-    //          Method::PATCH,
-    //          Method::DELETE,
-    //      ])
-    //      .allow_credentials(true)
-    //      .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
 
     // Build the router.
     let router = Router::new()
@@ -62,6 +50,25 @@ pub async fn start(state: SharedState) {
         .layer(cors_layer)
         .layer(middleware::from_fn(logging_middleware))
         .layer(ClientIpSource::XRealIp.into_extension());
+
+    router
+}
+
+pub async fn start(state: SharedState) {
+    // let cors_layer = CorsLayer::new()
+    //      .allow_origin(cors_header_value)
+    //      .allow_methods([
+    //          Method::HEAD,
+    //          Method::GET,
+    //          Method::POST,
+    //          Method::PATCH,
+    //          Method::DELETE,
+    //      ])
+    //      .allow_credentials(true)
+    //      .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
+
+    // Build the router.
+    let router = create_router(state.clone()).await;
 
     // Build the listener.
     let addr = state.config.service_socket_addr();

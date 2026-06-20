@@ -55,11 +55,10 @@ impl Config {
     }
 }
 
-pub fn load() -> Config {
-    let env_file = if env_get_or("ENV_TEST", "0") == "1" {
-        ".env_test"
-    } else {
-        ".env"
+pub fn load(env_file_override: Option<&str>) -> Config {
+    let env_file = match env_file_override {
+        Some(file) => file,
+        None => if env_get_or("ENV_TEST", "0") == "1" { ".env.test" } else { ".env" }
     };
 
     // Try to load environment variables from file.

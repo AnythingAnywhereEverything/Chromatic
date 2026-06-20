@@ -6,9 +6,8 @@ use crate::{
     infrastructure::{database::Database, redis},
 };
 
-pub async fn run() {
+pub async fn build_state(config: config::Config) -> Arc<AppState> {
     // Load configuration.
-    let config = config::load();
 
     // Connect to Redis.
     let redis = redis::open(&config).await;
@@ -36,13 +35,19 @@ pub async fn run() {
     );
 
     // Build the application state.
-    let shared_state = Arc::new(AppState {
+    Arc::new(AppState {
         config,
         db_pool,
         redis,
         snowflake_generator,
         media_service
-    });
+    })
+}
+
+pub async fn run() {
+
+    let config = config::load(None);
+    let shared_state = build_state(config).await;
 
     server::start(shared_state).await;
 }
