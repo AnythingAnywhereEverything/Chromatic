@@ -49,7 +49,7 @@ pub async fn build_state(config: config::Config, db_pool: Option<sqlx::PgPool>) 
 
 pub async fn run() {
 
-    let config = config::load(None);
+    let config = config::load();
     let shared_state = build_state(config, None).await;
 
     server::start(shared_state).await;

@@ -14,7 +14,7 @@ pub struct TestContext {
 impl TestContext {
     pub async fn new(pool: Option<PgPool>) -> Self {
 
-        let test_config = config::load(Some(".env.test"));
+        let test_config = config::load();
         let state = build_state(test_config, pool).await;
 
         let router = create_router(state.clone()).await;
