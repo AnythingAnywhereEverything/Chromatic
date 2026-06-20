@@ -1,10 +1,10 @@
 [package]
-name = "exppt"
+name = "chromatic"
 version = "0.0.1"
 license = "MIT"
 edition = "2024"
 rust-version = "1.90"
-repository = "https://github.com/catalize/catalize"
+repository = "https://github.com/AnythingAnywhereEverything/Chromatic"
 
 [dependencies]
 dotenvy = "0.15"
@@ -55,4 +55,5 @@ reqwest = "0.12"
 
 [dev-dependencies]
 serial_test = "3.2"
+axum-test = "20.1.0"
 reqwest = { version = "0.12", features = ["json"] }

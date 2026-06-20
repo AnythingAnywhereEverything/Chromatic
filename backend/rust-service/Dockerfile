@@ -22,4 +22,4 @@ RUN apt-get update && apt-get install -y \
 COPY --from=builder /opt/target/release/exppt .
 
 EXPOSE 3000
-CMD ["./exppt"]
+CMD ["./chromatic"]

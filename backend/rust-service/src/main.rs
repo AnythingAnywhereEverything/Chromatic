@@ -1,6 +1,6 @@
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use exppt::application::app;
+use chromatic::application::app;
 
 #[tokio::main]
 async fn main() {
