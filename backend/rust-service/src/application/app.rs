@@ -6,16 +6,19 @@ use crate::{
     infrastructure::{database::Database, redis},
 };
 
-pub async fn build_state(config: config::Config) -> Arc<AppState> {
+pub async fn build_state(config: config::Config, db_pool: Option<sqlx::PgPool>) -> Arc<AppState> {
     // Load configuration.
 
     // Connect to Redis.
     let redis = redis::open(&config).await;
 
     // Connect to PostgreSQL.
-    let db_pool = Database::connect(config.clone().into())
-        .await
-        .expect("Failed to connect to the database.");
+    let db_pool = match db_pool {
+        Some(pool) => pool,
+        None => Database::connect(config.clone().into())
+            .await
+            .expect("Failed to connect to the database."),
+    };
 
     // Run migrations.
     Database::migrate(&db_pool)
@@ -47,7 +50,7 @@ pub async fn build_state(config: config::Config) -> Arc<AppState> {
 pub async fn run() {
 
     let config = config::load(None);
-    let shared_state = build_state(config).await;
+    let shared_state = build_state(config, None).await;
 
     server::start(shared_state).await;
 }

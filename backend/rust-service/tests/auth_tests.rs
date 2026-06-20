@@ -1,27 +1,32 @@
 mod common;
 
 use serde_json::json;
+use sqlx::PgPool;
+
+use crate::common::TestContext;
 
 /// test user registration with invalid data
-#[tokio::test]
-async fn test_user_registration_with_invalid_data() {
-    let ctx = common::get_test_context().await;
-    ctx.clear().await;
+#[sqlx::test]
+async fn test_user_registration_with_invalid_data(pool: PgPool) {
+    let ctx = TestContext::new(Some(pool)).await;
 
     let invalid_payload = json!({
         "username": "",
         "email": "invalidemail",
         "password": ""
     });
-    let response = ctx.server.post("/v1/auth/register").json(&invalid_payload).await;
+    let response = ctx
+        .server
+        .post("/v1/auth/register")
+        .json(&invalid_payload)
+        .await;
     response.assert_status_bad_request();
 }
 
 /// Test duplicate user registration with the same username or email.
-#[tokio::test]
-async fn test_user_duplicate_registration() {
-    let ctx: common::TestContext = common::get_test_context().await;
-    ctx.clear().await;
+#[sqlx::test]
+async fn test_user_duplicate_registration(pool: PgPool) {
+    let ctx = TestContext::new(Some(pool)).await;
 
     let payload = json!({
         "username": "testuser1",
@@ -37,10 +42,9 @@ async fn test_user_duplicate_registration() {
 }
 
 /// Test user login with invalid credentials.
-#[tokio::test]
-async fn test_user_login_with_invalid_credentials() {
-    let ctx = common::get_test_context().await;
-    ctx.clear().await;
+#[sqlx::test]
+async fn test_user_login_with_invalid_credentials(pool: PgPool) {
+    let ctx = TestContext::new(Some(pool)).await;
 
     let login_payload = json!({
         "username_or_email": "nonexistentuser",
@@ -51,38 +55,44 @@ async fn test_user_login_with_invalid_credentials() {
 }
 
 /// Test user registration endpoints.
-#[tokio::test]
-async fn test_user_registration() {
-    let ctx = common::get_test_context().await;
-    ctx.clear().await;
-    
+#[sqlx::test]
+async fn test_user_registration(pool: PgPool) {
+    let ctx = TestContext::new(Some(pool)).await;
+
     let registeration_payload = json!({
-        "username": "testuser1",
-        "email": "testuser@example.com",
+        "username": "testuser2",
+        "email": "testuser2@example.com",
         "password": "VeryStrongPassword123!"
     });
-    let registration_response = ctx.server.post("/v1/auth/register").json(&registeration_payload).await;
+    let registration_response = ctx
+        .server
+        .post("/v1/auth/register")
+        .json(&registeration_payload)
+        .await;
     registration_response.assert_status_ok();
 }
 
 /// Test user login via email and username.
-#[tokio::test]
-async fn test_user_login_via_email_and_username() {
-    let ctx = common::get_test_context().await;
-    ctx.clear().await;
+#[sqlx::test]
+async fn test_user_login_via_email_and_username(pool: PgPool) {
+    let ctx = TestContext::new(Some(pool)).await;
 
     let registeration_payload = json!({
-        "username": "testuser1",
-        "email": "testuser@example.com",
+        "username": "testuser3",
+        "email": "testuser3@example.com",
         "password": "VeryStrongPassword123!"
     });
-    let registration_response = ctx.server.post("/v1/auth/register").json(&registeration_payload).await;
+    let registration_response = ctx
+        .server
+        .post("/v1/auth/register")
+        .json(&registeration_payload)
+        .await;
     registration_response.assert_status_ok();
 
     // Test login via email
 
     let login_payload = json!({
-        "username_or_email": "testuser@example.com",
+        "username_or_email": "testuser3@example.com",
         "password": "VeryStrongPassword123!"
     });
 
@@ -91,7 +101,7 @@ async fn test_user_login_via_email_and_username() {
 
     // Test login via username
     let login_payload = json!({
-        "username_or_email": "testuser1",
+        "username_or_email": "testuser3",
         "password": "VeryStrongPassword123!"
     });
     let login_response = ctx.server.post("/v1/auth/login").json(&login_payload).await;
@@ -99,10 +109,9 @@ async fn test_user_login_via_email_and_username() {
 }
 
 // Test insert various invalid registration payloads and assert that they are rejected with appropriate error messages.
-#[tokio::test]
-async fn test_user_registration_with_various_invalid_payloads() {
-    let ctx = common::get_test_context().await;
-    ctx.clear().await;
+#[sqlx::test]
+async fn test_user_registration_with_various_invalid_payloads(pool: PgPool) {
+    let ctx = TestContext::new(Some(pool)).await;
 
     let invalid_payloads = vec![
         json!({
@@ -139,10 +148,9 @@ async fn test_user_registration_with_various_invalid_payloads() {
 }
 
 /// Test username with special characters and assert that it is rejected.
-#[tokio::test]
-async fn test_user_registration_with_special_characters_in_username() {
-    let ctx = common::get_test_context().await;
-    ctx.clear().await;
+#[sqlx::test]
+async fn test_user_registration_with_special_characters_in_username(pool: PgPool) {
+    let ctx = TestContext::new(Some(pool)).await;
 
     let payload = json!({
         "username": "invalid$username",
@@ -154,14 +162,13 @@ async fn test_user_registration_with_special_characters_in_username() {
 }
 
 /// Test weak password and assert that it is rejected.
-#[tokio::test]
-async fn test_user_registration_with_weak_password() {
-    let ctx = common::get_test_context().await;
-    ctx.clear().await;
+#[sqlx::test]
+async fn test_user_registration_with_weak_password(pool: PgPool) {
+    let ctx = TestContext::new(Some(pool)).await;
 
     let payload = json!({
-        "username": "testuser1",
-        "email": "testuser@example.com",
+        "username": "testuser4",
+        "email": "testuser4@example.com",
         "password": "weakpassword"
     });
     let response = ctx.server.post("/v1/auth/register").json(&payload).await;
@@ -169,14 +176,13 @@ async fn test_user_registration_with_weak_password() {
 }
 
 // Test short password and assert that it is rejected.
-#[tokio::test]
-async fn test_user_registration_with_short_password() {
-    let ctx = common::get_test_context().await;
-    ctx.clear().await;
+#[sqlx::test]
+async fn test_user_registration_with_short_password(pool: PgPool) {
+    let ctx = TestContext::new(Some(pool)).await;
 
     let payload = json!({
-        "username": "testuser1",
-        "email": "testuser@example.com",
+        "username": "testuser5",
+        "email": "testuser5@example.com",
         "password": "short"
     });
     let response = ctx.server.post("/v1/auth/register").json(&payload).await;
@@ -184,14 +190,13 @@ async fn test_user_registration_with_short_password() {
 }
 
 /// Test long but invalid password and assert that it is rejected.
-#[tokio::test]
-async fn test_user_registration_with_long_but_invalid_password() {
-    let ctx = common::get_test_context().await;
-    ctx.clear().await;
+#[sqlx::test]
+async fn test_user_registration_with_long_but_invalid_password(pool: PgPool) {
+    let ctx = TestContext::new(Some(pool)).await;
 
     let payload = json!({
-        "username": "testuser1",
-        "email": "testuser@example.com",
+        "username": "testuser6",
+        "email": "testuser6@example.com",
         "password": "ThisIsAVeryLongPasswordThatExceedsTheMaximumLengthAllowed"
     });
     let response = ctx.server.post("/v1/auth/register").json(&payload).await;
