@@ -5,7 +5,7 @@ use crate::{
         security::argon,
         service::{auth::types::AuthResponse, errors::AuthServiceError, session_service::SessionService},
         state::AppState,
-    }, domain::user::{User, types::{DisplayName, Email, Username}}
+    }, domain::user::{User, types::{DisplayName, Email, Password, Username}}
 };
 
 pub struct AuthService;
@@ -87,9 +87,6 @@ impl AuthService {
 
         tx.commit().await?;
 
-        // * create session for the user
-        
-
         Ok(user_id)
     }
 
@@ -120,6 +117,8 @@ impl AuthService {
             return Err(AuthServiceError::EmailAlreadyRegistered);
         }
 
+        let password= Password::new(&password)?;
+
         let user = User {
             id: user_id,
             email,
@@ -130,7 +129,7 @@ impl AuthService {
         
         // * Prepare credential
         let password_hash =
-            argon::hash(password.as_bytes()).map_err(|_| AuthServiceError::UnableToHashSession)?;
+            argon::hash(password.as_str().as_bytes()).map_err(|_| AuthServiceError::UnableToHashSession)?;
 
         auth::credential::create_credential(&mut tx, user_id, &password_hash).await?;
 
@@ -193,5 +192,20 @@ impl AuthService {
         Err(AuthServiceError::InvalidCredentials)?
     }
 
-    //TODO: implement Email Token
+    pub async fn delete_account(
+        state: &AppState,
+        user_id: i64,
+    ) -> Result<(), AuthServiceError> {
+        let mut tx = state.db_pool.begin().await?;
+
+        user::delete::soft_delete_user(&mut tx, user_id).await?;
+
+        SessionService::delete_all_sessions(state, user_id)
+            .await
+            .map_err(|_| AuthServiceError::DeleteAccountFailed)?;
+
+        tx.commit().await?;
+
+        Ok(())
+    }
 }
