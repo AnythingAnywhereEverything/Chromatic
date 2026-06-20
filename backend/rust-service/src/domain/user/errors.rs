@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use crate::domain::session::errors::TokenError;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum UsernameError {
     #[error("Username contains invalid characters.")]
     InvalidCharacters,
@@ -14,7 +14,19 @@ pub enum UsernameError {
     InvalidFormat,
 }
 
-#[derive(Debug, Error)]
+
+
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum PasswordError {
+    #[error("Password is too short.")]
+    TooShort,
+    #[error("Password is too long.")]
+    TooLong,
+    #[error("Password has invalid format.")]
+    InvalidFormat
+}
+
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum DisplayNameError {
     #[error("Display name cannot be empty.")]
     Empty,
@@ -24,7 +36,7 @@ pub enum DisplayNameError {
     Blank
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum EmailError {
     #[error("Invalid email format.")]
     InvalidEmailFormat,
@@ -32,7 +44,7 @@ pub enum EmailError {
     InvalidToken
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum PhoneNumberError {
     #[error("Invalid phone structure")]
     InvalidStructure,

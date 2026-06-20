@@ -39,7 +39,18 @@ impl From<AuthServiceError> for APIError {
                     .code(APIErrorCode::AuthenticationInvalidEmail)
                     .kind(APIErrorKind::AuthenticationError),
             ),
-
+            AuthServiceError::DisplayNameValidation(e) => (
+                StatusCode::BAD_REQUEST,
+                APIErrorEntry::new(&e.to_string())
+                    .code(APIErrorCode::AuthenticationInvalidDisplayName)
+                    .kind(APIErrorKind::AuthenticationError),
+            ),
+            AuthServiceError::PasswordValidation(e) => (
+                StatusCode::BAD_REQUEST,
+                APIErrorEntry::new(&e.to_string())
+                    .code(APIErrorCode::AuthenticationInvalidPassword)
+                    .kind(APIErrorKind::AuthenticationError),
+            ),
             e => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 APIErrorEntry::new(&e.to_string())

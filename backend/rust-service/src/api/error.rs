@@ -33,9 +33,11 @@ pub enum APIErrorCode {
     
     AuthenticationEmailAlreadyRegistered,
     AuthenticationUsernameAlreadyRegistered,
-
+    
+    AuthenticationInvalidDisplayName,
     AuthenticationInvalidUsername,
     AuthenticationInvalidEmail,
+    AuthenticationInvalidPassword,
 
     // Session
     SessionError,
