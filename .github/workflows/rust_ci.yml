@@ -14,10 +14,10 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                test-module: [health, auth]
+                test-module: [health, auth, doc]
 
         services:
-            postgres: &postgres_service
+            postgres:
                 image: postgres:15
                 env:
                     POSTGRES_DB: postgres
@@ -31,7 +31,7 @@ jobs:
                     --health-timeout 5s
                     --health-retries 5
 
-            redis: &redis_service
+            redis:
                 image: redis:7-alpine
                 ports:
                     - 6379:6379
@@ -74,4 +74,8 @@ jobs:
 
             - name: Run Test Suite
               working-directory: backend/rust-service
-              run: cargo test ${{ matrix.test-module }}
+              run: if [ "${{ matrix.test-module }}" = "doc" ]; then
+                      cargo test --doc
+                  else
+                    cargo test ${{ matrix.test-module }}
+                  fi
