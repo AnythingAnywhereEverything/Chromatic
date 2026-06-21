@@ -5,12 +5,12 @@ use axum::{
 
 use crate::{
     api::handlers::user_handlers::{
-        get_user_handler,
+        get_current_user_handler,
     },
     application::state::SharedState,
 };
 
 pub fn routes() -> Router<SharedState> {
     Router::new()
-        .route("/me", get(get_user_handler))
+        .route("/me", get(get_current_user_handler))
 }

@@ -13,7 +13,7 @@ use crate::{
 };
 
 #[axum::debug_handler]
-pub async fn get_user_handler(
+pub async fn get_current_user_handler(
     State(state): State<SharedState>,
     Path(version): Path<String>,
     req_auth: RequestAuth,
