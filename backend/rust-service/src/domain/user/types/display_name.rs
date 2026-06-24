@@ -8,7 +8,6 @@ pub struct DisplayName(String);
 impl DisplayName {
     /// Creates a new `DisplayName` after validating the input string.
     /// Validation rules:
-    /// - Must not be empty or consist solely of whitespace.
     /// - Must not exceed `MAX_DISPLAY_NAME_LENGTH` characters.
     /// Returns a `DisplayNameError` if validation fails.
     /// Example usage:
@@ -16,15 +15,6 @@ impl DisplayName {
     /// # use chromatic::domain::user::types::DisplayName;
     /// let name = DisplayName::new("Alice").unwrap();
     /// assert_eq!(name.as_str(), "Alice");
-    /// ```
-    /// 
-    /// Example of empty display name:
-    /// ```
-    /// # use chromatic::domain::user::types::DisplayName;
-    /// # use chromatic::domain::user::errors::DisplayNameError;
-    /// let name = DisplayName::new("   ");
-    /// assert!(name.is_err());
-    /// assert_eq!(name.err().unwrap(), DisplayNameError::Empty);
     /// ```
     /// 
     /// Example of exceeding maximum length:
@@ -38,10 +28,6 @@ impl DisplayName {
     /// ```
     pub fn new(input: &str) -> Result<Self, DisplayNameError> {
         let trimmed = input.trim();
-
-        if trimmed.is_empty() {
-            return Err(DisplayNameError::Empty);
-        }
 
         if trimmed.len() > MAX_DISPLAY_NAME_LENGTH {
             return Err(DisplayNameError::TooLong);
