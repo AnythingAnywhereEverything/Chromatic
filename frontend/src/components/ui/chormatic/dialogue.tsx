@@ -1,7 +1,7 @@
 import { Dialog as DialogPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
 import { Button, Icon } from "@components/ui/chormaticUI"
-
+import { IoClose } from "react-icons/io5";
 import s from "@styles/ui/Chormatic/dialogue.module.scss"
 
 function Dialog({
@@ -85,7 +85,7 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close data-component="dialog-close" asChild>
             <Button variant="ghost" className={s.closeBtn} size="icon-sm">
-              <Icon value=""/>
+              <IoClose/>
               <span className={s.srOnly}>Close</span>
             </Button>
           </DialogPrimitive.Close>

@@ -20,6 +20,8 @@ import {
 
 import { CSS } from "@dnd-kit/utilities";
 import Image from "next/image";
+import { IoClose } from "react-icons/io5";
+import { HiOutlinePlus } from "react-icons/hi";
 
 type ImageValue = File | string;
 
@@ -90,7 +92,7 @@ const SortableImage = React.memo(({
                 onClick={onRemove}
                 className={s.removeButton}
             >
-                <Icon value="" />
+            <IoClose/>
             </Button>
         </div>
     );
@@ -246,7 +248,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
                                 className={s.addButton}
                                 asChild
                             >
-                                <Icon value=""/>
+                                <HiOutlinePlus/>
                             </Button>
                         )}
                     </div>
