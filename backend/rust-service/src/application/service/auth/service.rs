@@ -11,12 +11,15 @@ use crate::{
 pub struct AuthService;
 
 impl AuthService {
+    /// ! Unsupported for register.
+    /// Support only linking accounts as public users.
+    /// Auto create account is unreliable and can cause security issues, we will not support it for now.
+    /// instead we will require users to explicitly register before linking their oauth accounts.
     pub async fn oauth(
         state: &AppState,
         provider: &str,
         provider_user_id: &str,
         email: &str,
-        
     ) -> Result<i64, AuthServiceError> {
         let mut tx = state.db_pool.begin().await?;
 
