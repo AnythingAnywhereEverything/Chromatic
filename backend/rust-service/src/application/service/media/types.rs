@@ -8,18 +8,37 @@ pub enum MediaProcessingMode {
     Raw,            // keep original
 }
 
+pub enum CropStyle {
+    /// Freeform cropping based on exact width and height dimensions
+    Flexible {
+        cr_width: i32,
+        cr_height: i32,
+    },
+    /// Proportion-locked cropping using a ratio and a defining dimension (e.g., width)
+    Ratio {
+        ratio: (i32, i32),
+        target: TargetRatio,
+    },
+}
+
+pub enum TargetRatio {
+    Height(i32), // * target height, width will be calculated based on the ratio
+    Width(i32),  // * target width, height will be calculated based on the ratio
+}
+
 pub enum ImageTransform {
     Resize {
-        max_width: i32,
-        max_height: i32,
+        rz_width: i32,
+        rz_height: i32,
     },
     Crop {
-        max_width: i32,
-        max_height: i32,
-        ratio: Option<(i32, i32)>,
+        style: CropStyle,
+        /// The anchor point (x, y). None defaults to center cropping.
+        position: Option<(i32, i32)>, 
     },
     None,
 }
+
 
 pub enum AllowedMediaType {
     Jpeg,

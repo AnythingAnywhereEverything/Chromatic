@@ -8,16 +8,12 @@ use tokio::{process::Command};
 use std::fmt::Debug;
 
 use crate::application::{
-    config::Config,
-    service::{
-        errors::MediaServiceError,
-        media::{
-            processor::video::process_video_hls,
-            types::{
-                AllowedMediaType, ExtractedPayload, ImageTransform, MediaCategory, MediaMeta, MediaOptions, MediaProcessingMode, SavedMedia, TempUpload
+    config::Config, service::{
+        errors::MediaServiceError, media::{
+            processor::video::process_video_hls, types::{
+                AllowedMediaType, CropStyle, ExtractedPayload, ImageTransform, MediaCategory, MediaMeta, MediaOptions, MediaProcessingMode, SavedMedia, TargetRatio, TempUpload
             },
-        },
-        snowflake_service::SnowflakeGenerator,
+        }, snowflake_service::SnowflakeGenerator,
     },
 };
 
@@ -44,7 +40,10 @@ fn categorize(mime: &str) -> MediaCategory {
         | "application/json"
         | "application/javascript"
         | "text/x-rust"
-        | "text/x-python" => MediaCategory::Code,
+        | "text/x-python"
+        | "text/x-java"
+        | "text/x-c++" 
+        | "text/x-c" => MediaCategory::Code,
 
         _ => MediaCategory::Unknown,
     }
@@ -167,6 +166,17 @@ impl MediaService {
     }
 
 
+    /// Saves the uploaded media file to the storage and returns the saved media information.
+    ///
+    /// # Arguments
+    ///
+    /// * `temp_uploaded` - The temporary uploaded media file.
+    /// * `options` - The media options for processing and saving the media.
+    /// * `old_relative_path` - An optional old relative path to delete after saving the new media.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the saved media information or a `MediaServiceError` if an error occurs during the process.
     pub async fn save_media(
         &self,
         temp_uploaded: TempUpload,
@@ -204,6 +214,8 @@ impl MediaService {
         match category {
             MediaCategory::Image => {
                 let (processed_bytes, final_ext) = match options.mode {
+                    // Use only for image that was uploaded to public
+                    // do not use this in direct message upload, because it will strip metadata which may be expected to be preserved (e.g. animated webp)
                     MediaProcessingMode::Sanitize => {
                         let mut image = VipsImage::new_from_buffer(&raw, "")?;
 
@@ -217,47 +229,97 @@ impl MediaService {
 
                         if let Some(transform) = options.image_transform {
                             match transform {
-                                ImageTransform::Resize { max_width, max_height } => {
-                                    if width > max_width || height > max_height {
-                                        let scale = (max_width as f64 / width as f64)
-                                            .min(max_height as f64 / height as f64);
+                                ImageTransform::Resize { rz_width, rz_height } => {
+                                    if width > rz_width || height > rz_height {
+                                        let scale = (rz_width as f64 / width as f64)
+                                            .min(rz_height as f64 / height as f64);
 
                                         image = ops::resize(&image, scale)?;
                                     }
                                 }
 
-                                ImageTransform::Crop { max_width, max_height, ratio } => {
-                                    if let Some((rw, rh)) = ratio {
-                                        let target_ratio = rw as f64 / rh as f64;
-                                        let current_ratio = width as f64 / height as f64;
+                                ImageTransform::Crop {
+                                    style,
+                                    position,
+                                 } => {
 
-                                        let (crop_width, crop_height) =
-                                            if current_ratio > target_ratio {
-                                                ((height as f64 * target_ratio) as i32, height)
-                                            } else {
-                                                (width, (width as f64 / target_ratio) as i32)
+                                    match style {
+                                        CropStyle::Flexible { cr_width, cr_height } => {
+                                            // * if position is provided, crop the image to the specified position first
+                                            if let Some((cw, ch)) = position {
+                                                let left = cw.clamp(0, width - cr_width);
+                                                let top = ch.clamp(0, height - cr_height);
+
+                                                // * extract_area will automatically adjust the crop area if it exceeds the image bounds, so we don't need to do additional checks here
+                                                image = ops::extract_area(
+                                                    &image,
+                                                    left,
+                                                    top,
+                                                    cr_width,
+                                                    cr_height,
+                                                )?;
+
+                                                width = image.get_width();
+                                                height = image.get_height();
+                                            }
+
+                                            // * if position is not provided, default to center crop
+                                            if position.is_none() {
+                                                let left = (width - cr_width) / 2;
+                                                let top = (height - cr_height) / 2;
+
+                                                image = ops::extract_area(
+                                                    &image,
+                                                    left,
+                                                    top,
+                                                    cr_width,
+                                                    cr_height,
+                                                )?;
+                                            }
+                                        }
+
+                                        CropStyle::Ratio { ratio: (rw, rh), target } => {
+                                            let target_ratio = rw as f64 / rh as f64;
+                                            let current_ratio = width as f64 / height as f64;
+
+                                            let (crop_width, crop_height) = 
+                                                if current_ratio > target_ratio {
+                                                    ((height as f64 * target_ratio) as i32, height)
+                                                } else {
+                                                    (width, (width as f64 / target_ratio) as i32)
+                                                };
+
+                                            // apply position and target dimension, otherwise default to center [ Experimental ]
+                                            let (left, top) = match position {
+                                                Some((px, py)) => {
+                                                    let left = match target {
+                                                        TargetRatio::Width(_) => px.clamp(0, width - crop_width),
+                                                        TargetRatio::Height(_) => (width - crop_width) / 2,
+                                                    };
+
+                                                    let top = match target {
+                                                        TargetRatio::Width(_) => (height - crop_height) / 2,
+                                                        TargetRatio::Height(_) => py.clamp(0, height - crop_height),
+                                                    };
+
+                                                    (left, top)
+                                                }
+
+                                                None => (
+                                                    (width - crop_width) / 2,
+                                                    (height - crop_height) / 2,
+                                                )
                                             };
 
-                                        let left = (width - crop_width) / 2;
-                                        let top = (height - crop_height) / 2;
 
-                                        image = ops::extract_area(
-                                            &image,
-                                            left,
-                                            top,
-                                            crop_width,
-                                            crop_height,
-                                        )?;
-
-                                        width = image.get_width();
-                                        height = image.get_height();
-                                    }
-
-                                    if width > max_width || height > max_height {
-                                        let scale = (max_width as f64 / width as f64)
-                                            .min(max_height as f64 / height as f64);
-
-                                        image = ops::resize(&image, scale)?;
+                                            image = ops::extract_area(
+                                                &image,
+                                                left,
+                                                top,
+                                                crop_width,
+                                                crop_height,
+                                            )?;
+                                        }
                                     }
                                 }
 
@@ -325,7 +387,9 @@ impl MediaService {
                             // ! fire and forget, manifest is not available immediately
                             let _ = process_video_hls(input_path, hls_output_path, storage).await;
 
-                            // TODO: Add DB update here
+                            // TODO: Add DB update here [doing]
+
+                            
                         });
 
                         (
