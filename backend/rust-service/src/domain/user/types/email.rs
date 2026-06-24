@@ -26,6 +26,24 @@ pub struct EmailToken {
 }
 
 impl Email {
+    /// Creates a new `Email` after validating the input string.
+    /// Validation rules:
+    /// - Must match a valid email format (e.g., example@domain.com)
+    /// Returns an `EmailError` if validation fails.
+    /// 
+    /// Example usage:
+    /// ```
+    /// # use chromatic::domain::user::types::Email;
+    /// let email = Email::new("example@domain.com").unwrap();
+    /// ```
+    /// Example of invalid email:
+    /// ```
+    /// # use chromatic::domain::user::types::Email;
+    /// # use chromatic::domain::user::errors::EmailError;
+    /// let email = Email::new("invalid-email");
+    /// assert!(email.is_err());
+    /// assert_eq!(email.err().unwrap(), EmailError::InvalidEmailFormat);
+    /// ```
     pub fn new(input: &str) -> Result<Self, EmailError> {
         let email = input.to_lowercase();
 
