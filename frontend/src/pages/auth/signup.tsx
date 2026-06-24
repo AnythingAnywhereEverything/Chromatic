@@ -10,6 +10,7 @@ import { Button, Field, FieldDescription, FieldError, FieldGroup, FieldLabel, Fi
 import { Form } from "@base-ui/react";
 import Link from "next/link";
 import GoogleAuthButton from "@components/ui/GoogleLoginBtn";
+import AuthLayout from "@components/layouts/main-layouts/authLayout";
 
 const SignUp: NextPageWithLayout = () => {
     const [revealPassword, setRevealPassword] = useState(false);
@@ -84,9 +85,10 @@ const SignUp: NextPageWithLayout = () => {
         e.preventDefault();
 
         if (!validate()) return;
-
+        console.log(values)
         register(values)
             .then((response) => {
+                console.log(response)
                 router.push("/auth/signin");
             })
             .catch((error) => {
@@ -257,5 +259,7 @@ const SignUp: NextPageWithLayout = () => {
         </>
     )
 }
+
+SignUp.getLayout = (page) => <AuthLayout>{page}</AuthLayout>;
 
 export default SignUp;
