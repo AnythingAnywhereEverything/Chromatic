@@ -74,8 +74,9 @@ jobs:
 
             - name: Run Test Suite
               working-directory: backend/rust-service
-              run: if [ "${{ matrix.test-module }}" = "doc" ]; then
-                      cargo test --doc
-                  else
+              run: |
+                if [ "${{ matrix.test-module }}" = "doc" ]; then
+                    cargo test --doc
+                else
                     cargo test ${{ matrix.test-module }}
-                  fi
+                fi
