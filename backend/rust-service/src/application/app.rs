@@ -34,7 +34,8 @@ pub async fn build_state(config: config::Config, db_pool: Option<sqlx::PgPool>) 
 
     let media_service = MediaService::new(
         SnowflakeGenerator::new(config.server_worker_id, SnowflakeKind::Image).expect("Failed to create snowflake generator for media"),
-        config.clone(), 
+        config.clone(),
+        db_pool.clone()
     );
 
     // Build the application state.
