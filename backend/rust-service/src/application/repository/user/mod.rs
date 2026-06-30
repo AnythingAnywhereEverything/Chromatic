@@ -4,3 +4,4 @@ pub mod create;
 pub mod check;
 pub mod find;
 pub mod delete;
+pub mod update;

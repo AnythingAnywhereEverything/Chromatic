@@ -12,7 +12,7 @@ pub async fn profile_full_by_id(
     let row = sqlx::query_as::<_, UserProfileFullRow>(
         r#"
         SELECT 
-            u.id, u.email, u.username, up.display_name, up.bio, up.avatar_url
+            u.id, u.email, u.username, up.display_name, up.bio, up.avatar_media_id, up.banner_media_id, u.created_at
         FROM users u
         LEFT JOIN user_profiles up ON u.id = up.user_id
         WHERE u.id = $1
