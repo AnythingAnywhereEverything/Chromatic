@@ -2,3 +2,6 @@
 /.sqlx
 
 .env.local
+
+/tests/media/*
+/tests/temp/*
