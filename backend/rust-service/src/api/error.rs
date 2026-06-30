@@ -39,6 +39,16 @@ pub enum APIErrorCode {
     AuthenticationInvalidEmail,
     AuthenticationInvalidPassword,
 
+    // Media
+    MediaFileTooLarge,
+    MediaInvalidFileType,
+    MediaMissingFile,
+    MediaUnableToExtract,
+    MediaMultipartError,
+    MediaSnowflakeError,
+    MediaLibvipsError,
+    MediaInvalidScale,
+
     // Session
     SessionError,
 
@@ -92,6 +102,8 @@ pub enum APIErrorKind {
     SnowflakeError,
     
     SessionError,
+
+    MediaError,
 
     SystemError, // Fallback for uncategorized errors
 }
