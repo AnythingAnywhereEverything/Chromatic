@@ -30,6 +30,10 @@ impl MediaStorage for R2Storage {
         todo!()
     }
 
+    async fn exists(&self, _path: &str) -> Result<bool, MediaServiceError> {
+        todo!()
+    }
+
     async fn save_temp_stream(
         &self,
         _field: &mut Field<'_>,

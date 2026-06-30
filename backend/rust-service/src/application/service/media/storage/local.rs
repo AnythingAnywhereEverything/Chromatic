@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use axum::extract::multipart::Field;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
+use tokio::time::Instant;
 use uuid::Uuid;
 
 use crate::application::service::errors::MediaServiceError;
@@ -62,6 +63,11 @@ impl MediaStorage for LocalStorage {
         Ok(data)
     }
 
+    async fn exists(&self, path: &str) -> Result<bool, MediaServiceError> {
+        let full = self.build_full_path(path);
+        Ok(full.exists())
+    }
+
     async fn save_temp_stream(
         &self,
         field: &mut Field<'_>,
@@ -78,12 +84,29 @@ impl MediaStorage for LocalStorage {
         let mut written = 0usize;
 
         let write_result = async {
+            // * throughput monitoring variables
+            let start_time = Instant::now();
+            let min_bytes_per_second = 512;
+
             // * cancel/disconnect is detected here when the multipart stream read fails
-            while let Some(chunk) = field.chunk().await? {
+            while let Some(chunk) = tokio::time::timeout(std::time::Duration::from_secs(10), field.chunk())
+                .await
+                .map_err(|_| MediaServiceError::Timeout)?
+                .map_err(|e| MediaServiceError::MultipartError(e))?
+            {
                 written += chunk.len();
 
                 if written > max_size {
-                    return Err(MediaServiceError::SizeTooLarge);
+                    return Err(MediaServiceError::FileTooLarge);
+                }
+
+                let elapsed = start_time.elapsed().as_secs();
+                if elapsed > 5 { // Give the connection a 5-second grace period to spin up
+                    let throughput = written / (elapsed as usize);
+                    if throughput < min_bytes_per_second {
+                        tracing::warn!("Dropped connection due to low throughput rate.");
+                        return Err(MediaServiceError::TransmissionTooSlow);
+                    }
                 }
 
                 file.write_all(&chunk).await?;

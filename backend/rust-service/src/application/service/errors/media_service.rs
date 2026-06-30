@@ -12,7 +12,7 @@ pub enum MediaServiceError {
     MediaMissing,
 
     #[error("File too large.")]
-    SizeTooLarge,
+    FileTooLarge,
 
     #[error("Unable to extract payload.")]
     UnableToExtract,
@@ -24,29 +24,29 @@ pub enum MediaServiceError {
     StorageUnavailable,
 
     #[error("Failed to process the video")]
-    ProcessingFailed
-}
+    ProcessingFailed,
 
-impl From<MultipartError> for MediaServiceError {
-    fn from(_: MultipartError) -> Self {
-        MediaServiceError::InternalServer
-    }
-}
+    #[error("Operation timed out.")]
+    Timeout,
 
-impl From<libvips::error::Error> for MediaServiceError {
-    fn from(_: libvips::error::Error) -> Self {
-        MediaServiceError::InternalServer
-    }
-}
+    #[error("Invalid scale value.")]
+    InvalidScale,
 
-impl From<std::io::Error> for MediaServiceError {
-    fn from(_: std::io::Error) -> Self {
-        MediaServiceError::InternalServer
-    }
-}
+    #[error("Transmission too slow.")]
+    TransmissionTooSlow,
 
-impl From<SnowflakeServiceError> for MediaServiceError {
-    fn from(_: SnowflakeServiceError) -> Self {
-        MediaServiceError::InternalServer
-    }
+    #[error(transparent)]
+    MultipartError(#[from] MultipartError),
+
+    #[error(transparent)]
+    SnowflakeError(#[from] SnowflakeServiceError),
+
+    #[error(transparent)]
+    LibvipsError(#[from] libvips::error::Error),
+
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
+
+    #[error(transparent)]
+    SqlxError(#[from] sqlx::Error),
 }

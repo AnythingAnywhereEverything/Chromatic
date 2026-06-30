@@ -13,6 +13,7 @@ use crate::application::service::media::types::TempUpload;
 pub trait MediaStorage: Send + Sync {
     async fn save(&self, path: &str, data: &[u8]) -> Result<(), MediaServiceError>;
     async fn delete(&self, path: &str);
+    async fn exists(&self, path: &str) -> Result<bool, MediaServiceError>;
 
     async fn read(&self, path: &str) -> Result<Vec<u8>, MediaServiceError>;
 

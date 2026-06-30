@@ -2,39 +2,45 @@ use std::sync::Arc;
 
 use axum::extract::Multipart;
 use infer::{self};
-use libvips::{ops, VipsImage};
+use libvips::{VipsImage, ops};
 use serde::de::DeserializeOwned;
-use tokio::{process::Command};
 use std::fmt::Debug;
+use tokio::process::Command;
 
 use crate::application::{
-    config::Config, service::{
-        errors::MediaServiceError, media::{
-            processor::video::process_video_hls, types::{
-                AllowedMediaType, CropStyle, ExtractedPayload, ImageTransform, MediaCategory, MediaMeta, MediaOptions, MediaProcessingMode, SavedMedia, TargetRatio, TempUpload
+    config::Config, repository::media::{self, row::{MediaDataRow, MediaStatus}}, service::{
+        errors::MediaServiceError,
+        media::{
+            processor::{image, video::process_video_hls},
+            types::{
+                AllowedMediaType, CropStyle, ExtractedPayload, ImageTransform, MediaCategory,
+                MediaOptions, MediaProcessingMode, TempUpload,
             },
-        }, snowflake_service::SnowflakeGenerator,
+        },
+        snowflake_service::SnowflakeGenerator,
     },
 };
 
-use super::storage::{local::LocalStorage, r2::R2Storage, MediaStorage};
+use super::storage::{MediaStorage, local::LocalStorage, r2::R2Storage};
 
 pub struct MediaService {
     storage: Arc<dyn MediaStorage>,
     snowflake: SnowflakeGenerator,
+    connection: sqlx::PgPool,
 }
 
 fn categorize(mime: &str) -> MediaCategory {
     match mime {
+        // categorize based on mime type
         m if m.starts_with("image/") => MediaCategory::Image,
         m if m.starts_with("video/") => MediaCategory::Video,
         m if m.starts_with("audio/") => MediaCategory::Audio,
 
         "application/pdf" => MediaCategory::Document,
 
-        "application/zip"
-        | "application/x-tar"
-        | "application/x-rar-compressed" => MediaCategory::Archive,
+        "application/zip" | "application/x-tar" | "application/x-rar-compressed" => {
+            MediaCategory::Archive
+        }
 
         "text/plain"
         | "application/json"
@@ -42,7 +48,7 @@ fn categorize(mime: &str) -> MediaCategory {
         | "text/x-rust"
         | "text/x-python"
         | "text/x-java"
-        | "text/x-c++" 
+        | "text/x-c++"
         | "text/x-c" => MediaCategory::Code,
 
         _ => MediaCategory::Unknown,
@@ -77,7 +83,7 @@ async fn get_video_duration(path: &str) -> Result<f32, MediaServiceError> {
 }
 
 impl MediaService {
-    pub fn new(snowflake: SnowflakeGenerator, config: Config) -> Self {
+    pub fn new(snowflake: SnowflakeGenerator, config: Config, connection: sqlx::PgPool) -> Self {
         let driver = config.media_driver;
 
         let storage: Arc<dyn MediaStorage> = match driver.as_str() {
@@ -92,7 +98,7 @@ impl MediaService {
             }
         };
 
-        Self { storage, snowflake }
+        Self { storage, snowflake, connection }
     }
 
     pub async fn extract_payload_with_type<T: DeserializeOwned + Debug>(
@@ -113,12 +119,10 @@ impl MediaService {
                         .await
                         .map_err(|_| MediaServiceError::UnableToExtract)?;
 
-                    payload = Some(
-                        serde_json::from_str(&raw).map_err(|e| {
-                            tracing::error!("Payload deserialize error: {}", e);
-                            MediaServiceError::UnableToExtract
-                        })?,
-                    );
+                    payload = Some(serde_json::from_str(&raw).map_err(|e| {
+                        tracing::error!("Payload deserialize error: {}", e);
+                        MediaServiceError::UnableToExtract
+                    })?);
                 }
 
                 _ => {
@@ -154,17 +158,13 @@ impl MediaService {
                 }
             }
 
-            let uploaded = self
-                .storage
-                .save_temp_stream(&mut field, max_size)
-                .await?;
+            let uploaded = self.storage.save_temp_stream(&mut field, max_size).await?;
 
             files.push(uploaded);
         }
 
         Ok(files)
     }
-
 
     /// Saves the uploaded media file to the storage and returns the saved media information.
     ///
@@ -179,16 +179,17 @@ impl MediaService {
     /// A `Result` containing the saved media information or a `MediaServiceError` if an error occurs during the process.
     pub async fn save_media(
         &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        uploader_id: i64,
         temp_uploaded: TempUpload,
         options: MediaOptions,
         old_relative_path: Option<String>,
-    ) -> Result<SavedMedia, MediaServiceError> {
-
+    ) -> Result<i64, MediaServiceError> {
         // * read uploaded temporary file
         let raw = self.storage.read_temp(&temp_uploaded.path).await?;
 
         if raw.len() > options.max_size {
-            return Err(MediaServiceError::SizeTooLarge);
+            return Err(MediaServiceError::FileTooLarge);
         }
 
         let detected = infer::get(&raw).ok_or(MediaServiceError::InvalidMediaType)?;
@@ -213,127 +214,195 @@ impl MediaService {
 
         match category {
             MediaCategory::Image => {
-                let (processed_bytes, final_ext) = match options.mode {
+                let (processed_bytes, preview, final_ext) = match options.mode {
                     // Use only for image that was uploaded to public
-                    // do not use this in direct message upload, because it will strip metadata which may be expected to be preserved (e.g. animated webp)
                     MediaProcessingMode::Sanitize => {
-                        let mut image = VipsImage::new_from_buffer(&raw, "")?;
+                        let mut image = if mime == "image/gif" {
+                            VipsImage::new_from_buffer(&raw, "[n=-1]")?
+                        } else {
+                            VipsImage::new_from_buffer(&raw, "")?
+                        };
 
-                        let mut width = image.get_width();
-                        let mut height = image.get_height();
+                        if image.get_n_pages() <= 1 {
+                            let width = image.get_width();
+                            let height = image.get_height();
 
-                        let pixels = width as i64 * height as i64;
-                        if pixels > 25_000_000 {
-                            return Err(MediaServiceError::InvalidMediaType);
-                        }
+                            let pixels = width as i64 * height as i64;
+                            if pixels > 25_000_000 {
+                                return Err(MediaServiceError::InvalidMediaType);
+                            }
 
-                        if let Some(transform) = options.image_transform {
-                            match transform {
-                                ImageTransform::Resize { rz_width, rz_height } => {
-                                    if width > rz_width || height > rz_height {
-                                        let scale = (rz_width as f64 / width as f64)
-                                            .min(rz_height as f64 / height as f64);
-
-                                        image = ops::resize(&image, scale)?;
+                            if let Some(transform) = options.image_transform {
+                                match transform {
+                                    ImageTransform::Resize {
+                                        rz_width,
+                                        rz_height,
+                                    } => {
+                                        image = image::resize_image(
+                                            image,
+                                            width as u32,
+                                            height as u32,
+                                            rz_width,
+                                            rz_height,
+                                        )?;
                                     }
-                                }
 
-                                ImageTransform::Crop {
-                                    style,
-                                    position,
-                                 } => {
-
-                                    match style {
-                                        CropStyle::Flexible { cr_width, cr_height } => {
-                                            // * if position is provided, crop the image to the specified position first
-                                            if let Some((cw, ch)) = position {
-                                                let left = cw.clamp(0, width - cr_width);
-                                                let top = ch.clamp(0, height - cr_height);
-
-                                                // * extract_area will automatically adjust the crop area if it exceeds the image bounds, so we don't need to do additional checks here
-                                                image = ops::extract_area(
-                                                    &image,
-                                                    left,
-                                                    top,
-                                                    cr_width,
-                                                    cr_height,
-                                                )?;
-
-                                                width = image.get_width();
-                                                height = image.get_height();
-                                            }
-
-                                            // * if position is not provided, default to center crop
-                                            if position.is_none() {
-                                                let left = (width - cr_width) / 2;
-                                                let top = (height - cr_height) / 2;
-
-                                                image = ops::extract_area(
-                                                    &image,
-                                                    left,
-                                                    top,
-                                                    cr_width,
-                                                    cr_height,
-                                                )?;
-                                            }
-                                        }
-
-                                        CropStyle::Ratio { ratio: (rw, rh), target } => {
-                                            let target_ratio = rw as f64 / rh as f64;
-                                            let current_ratio = width as f64 / height as f64;
-
-                                            let (crop_width, crop_height) = 
-                                                if current_ratio > target_ratio {
-                                                    ((height as f64 * target_ratio) as i32, height)
-                                                } else {
-                                                    (width, (width as f64 / target_ratio) as i32)
-                                                };
-
-                                            // apply position and target dimension, otherwise default to center [ Experimental ]
-                                            let (left, top) = match position {
-                                                Some((px, py)) => {
-                                                    let left = match target {
-                                                        TargetRatio::Width(_) => px.clamp(0, width - crop_width),
-                                                        TargetRatio::Height(_) => (width - crop_width) / 2,
-                                                    };
-
-                                                    let top = match target {
-                                                        TargetRatio::Width(_) => (height - crop_height) / 2,
-                                                        TargetRatio::Height(_) => py.clamp(0, height - crop_height),
-                                                    };
-
-                                                    (left, top)
-                                                }
-
-                                                None => (
-                                                    (width - crop_width) / 2,
-                                                    (height - crop_height) / 2,
-                                                )
-                                            };
-
-
-                                            image = ops::extract_area(
-                                                &image,
-                                                left,
-                                                top,
-                                                crop_width,
-                                                crop_height,
+                                    ImageTransform::Crop { style, position } => match style {
+                                        CropStyle::Absolute { width, height } => {
+                                            image = image::crop_image_absolute(
+                                                image,
+                                                width as u32,
+                                                height as u32,
+                                                width,
+                                                height,
+                                                position,
                                             )?;
                                         }
-                                    }
+
+                                        CropStyle::Normalized { width, height } => {
+                                            image = image::crop_image_normalized(
+                                                image,
+                                                width as u32,
+                                                height as u32,
+                                                width,
+                                                height,
+                                                position,
+                                            )?;
+                                        }
+
+                                        CropStyle::Ratio {
+                                            ratio: (rw, rh),
+                                            scale,
+                                        } => {
+                                            image = image::crop_image_ratio(
+                                                image,
+                                                width as u32,
+                                                height as u32,
+                                                (rw, rh),
+                                                scale,
+                                                position,
+                                            )?;
+                                        }
+                                    },
+
+                                    ImageTransform::None => {}
+                                }
+                            }
+
+                            let webp = image.image_write_to_buffer(".webp[strip]")?;
+                            (webp, None, "webp")
+                        } else {
+                            let page_height = image.get_page_height();
+                            let n_pages = image.get_n_pages();
+
+                            let mut frames = Vec::with_capacity(n_pages as usize);
+
+                            for page in 0..n_pages {
+                                let frame = ops::extract_area(
+                                    &image,
+                                    0,
+                                    page * page_height,
+                                    image.get_width(),
+                                    page_height,
+                                )?;
+
+                                let width = frame.get_width();
+                                let height = frame.get_height();
+                                let pixels = width as i64 * height as i64;
+                                if pixels > 25_000_000 {
+                                    return Err(MediaServiceError::InvalidMediaType);
                                 }
 
-                                ImageTransform::None => {}
-                            }
-                        }
+                                let frame = match options.image_transform {
+                                    Some(ImageTransform::Resize {
+                                        rz_width,
+                                        rz_height,
+                                    }) => image::resize_image(
+                                        frame,
+                                        width as u32,
+                                        height as u32,
+                                        rz_width,
+                                        rz_height,
+                                    )?,
 
-                        let webp = image.image_write_to_buffer(".webp[strip]")?;
-                        (webp, "webp")
+                                    Some(ImageTransform::Crop { style, position }) => match style {
+                                        CropStyle::Absolute {
+                                            width: cr_width,
+                                            height: cr_height,
+                                        } => image::crop_image_absolute(
+                                            frame,
+                                            width as u32,
+                                            height as u32,
+                                            cr_width,
+                                            cr_height,
+                                            position,
+                                        )?,
+
+                                        CropStyle::Normalized {
+                                            width: norm_width,
+                                            height: norm_height,
+                                        } => image::crop_image_normalized(
+                                            frame,
+                                            width as u32,
+                                            height as u32,
+                                            norm_width,
+                                            norm_height,
+                                            position,
+                                        )?,
+
+                                        CropStyle::Ratio {
+                                            ratio: (rw, rh),
+                                            scale,
+                                        } => image::crop_image_ratio(
+                                            frame,
+                                            width as u32,
+                                            height as u32,
+                                            (rw, rh),
+                                            scale,
+                                            position,
+                                        )?,
+                                    },
+
+                                    _ => frame,
+                                };
+
+                                frames.push(frame);
+                            }
+
+                            let first_frame = &frames[0].clone();
+                            let frame_height = first_frame.get_height();
+                            let frame_width = first_frame.get_width();
+
+                            let joined = ops::arrayjoin_with_opts(
+                                &mut frames,
+                                &ops::ArrayjoinOptions {
+                                    across: 1,
+                                    shim: 0,
+                                    background: vec![0.0],
+                                    halign: ops::Align::Low,
+                                    valign: ops::Align::Low,
+                                    hspacing: frame_width,
+                                    vspacing: frame_height,
+                                    // hspacing and vspacing is the length of the image, the naming of the document is confusing, but it is the distance between the images, so we set it to the width and height of the image to avoid overlap
+                                    // shim is the gap between the images, so we set it to 0
+                                },
+                            )?;
+                            
+                            let webp = joined.image_write_to_buffer(&format!(
+                                ".webp[page-height={}]",
+                                frame_height
+                            ))?;
+
+                            let preview_image =
+                                first_frame.image_write_to_buffer(".webp[strip]")?;
+
+                            (webp, Some(preview_image), "webp")
+                        }
                     }
 
                     _ => {
                         // * fallback to raw automatically
-                        (raw.to_vec(), extension)
+                        (raw.to_vec(), None, extension)
                     }
                 };
 
@@ -347,30 +416,55 @@ impl MediaService {
                     self.storage.delete(&old).await;
                 }
 
-                let (width, height) =
-                    extract_image_meta(&processed_bytes).unwrap_or((0, 0));
+                let preview_path = if let Some(preview_image) = preview {
+                    let preview_filename = format!("{}_preview.{}", id, final_ext);
+                    let preview_relative_path = format!("{}/{}", options.folder, preview_filename);
 
-                let meta = MediaMeta {
-                    size: processed_bytes.len(),
-                    mime: mime.to_string(),
+                    self.storage
+                        .save(&preview_relative_path, &preview_image)
+                        .await?;
+
+                    Some(preview_relative_path)
+                } else {
+                    None
+                };
+
+                // * Saved all media to storage successfully
+                // * saved data to db
+
+                let (width, height) = extract_image_meta(&processed_bytes).unwrap_or((0, 0));
+
+                let media_data = MediaDataRow {
+                    id,
+                    user_id: uploader_id,
+                    media_url: relative_path.clone(),
+                    media_preview_url: preview_path.clone(),
+                    media_category: category,
+                    media_status: MediaStatus::Processing,
+                    created_at: chrono::Utc::now().naive_utc(),
+                };
+
+                let media_metadata = media::row::MediaMetadataRow {
+                    media_id: id,
+                    file_size: processed_bytes.len() as i64,
+                    mime_type: mime.to_string(),
                     width: Some(width),
                     height: Some(height),
                     duration: None,
                 };
 
-                return Ok(SavedMedia {
-                    path: relative_path,
-                    category,
-                    meta,
-                    video_manifest: None,
-                })
+                media::create::media_data(tx, &media_data).await?;
+
+                media::create::media_metadata(tx, &media_metadata).await?;
+
+                return Ok(id);
             }
 
             MediaCategory::Video => {
                 let video_id = self.snowflake.generate_id()?;
                 let output_folder = format!("{}/{}", options.folder, video_id);
 
-                let (output_path, video_manifest) = match options.mode {
+                let (output_path, preview_path ) = match options.mode {
                     MediaProcessingMode::Hls => {
                         let storage = self.storage.clone();
                         let input_path = temp_uploaded.path.clone();
@@ -383,19 +477,68 @@ impl MediaService {
                             self.storage.save(&raw_output_path, &raw).await?;
                         }
 
-                        tokio::spawn(async move {
-                            // ! fire and forget, manifest is not available immediately
-                            let _ = process_video_hls(input_path, hls_output_path, storage).await;
+                        // preview image for video is optional, if manual_preview is set, use that instead of generating one
+                        let has_manual_preview = options.manual_preview.is_some();
+                        if let Some(manual_preview) = options.manual_preview {
+                            let preview_filename = format!("preview.{}", extension);
+                            let preview_output_path = format!("{}/{}", output_folder, preview_filename);
 
-                            // TODO: Add DB update here [doing]
-
+                            self.storage
+                                .save(&preview_output_path, &self.storage.read_temp(&manual_preview.path).await?)
+                                .await?;
+                        } else {
+                            // generate preview image for video
+                            let preview_filename = format!("preview.jpg");
+                            let preview_output_path = format!("{}/{}", output_folder, preview_filename);
                             
+                            let mut cmd = Command::new("ffmpeg");
+                            cmd.arg("-i")
+                                .arg(&temp_uploaded.path)
+                                .arg("-ss")
+                                .arg("00:00:00.500")
+                                .arg("-vframes")
+                                .arg("1")
+                                .arg(&preview_output_path)
+                                .stdout(std::process::Stdio::null())
+                                .stderr(std::process::Stdio::null());
+
+                            let status = cmd.spawn()?.wait().await?;
+
+                            if !status.success() {
+                                let _ = tokio::fs::remove_dir_all(&temp_uploaded.path).await;
+                                return Err(MediaServiceError::ProcessingFailed);
+                            }
+                        }
+
+                        let output_folder_clone = output_folder.clone();
+                        let storage_clone = storage.clone();
+                        let video_id_clone = video_id.clone();
+                        let connection_pool = self.connection.clone();
+                        // if the pool reaches the max connections, this will wait until a connection is available, so it should be fine to spawn a new task here
+                        // as an example, if the pool has 5 connections and 5 videos are being processed at the same time, the 6th video will wait until one of the previous videos is done processing and releases the connection back to the pool
+                        tokio::spawn(async move {
+                            let _manifists = process_video_hls(input_path, hls_output_path, storage).await?;
+
+                            // check if the master.m3u8 exists, if not, delete the output folder and return error
+                            let master_path = format!("{}/master.m3u8", output_folder_clone);
+                            if !storage_clone.exists(&master_path).await? {
+                                let _ = storage_clone.delete(&output_folder_clone).await;
+                                return Err(MediaServiceError::ProcessingFailed);
+                            }
+
+                            // Update media status to Completed after video processing completes
+                            let mut tx = connection_pool.begin().await?;
+                            media::update::media_status(&mut tx, &video_id_clone, &MediaStatus::Completed).await?;
+                            tx.commit().await?;
+
+                            Ok::<(), MediaServiceError>(())
                         });
 
-                        (
-                            format!("{}/master.m3u8", output_folder),
-                            None,
-                        )
+                        (format!("{}/master.m3u8", output_folder), if has_manual_preview {
+                            Some(format!("{}/preview.{}", output_folder, extension))
+                        } else {
+                            Some(format!("{}/preview.jpg", output_folder))
+                        })
                     }
 
                     _ => {
@@ -415,20 +558,29 @@ impl MediaService {
 
                 let duration = get_video_duration(&temp_uploaded.path).await.ok();
 
-                let meta = MediaMeta {
-                    size: raw.len(),
-                    mime: mime.to_string(),
+                let media_data = MediaDataRow {
+                    id: video_id,
+                    user_id: uploader_id,
+                    media_url: output_path.clone(),
+                    media_preview_url: preview_path.clone(),
+                    media_category: category,
+                    media_status: MediaStatus::Processing,
+                    created_at: chrono::Utc::now().naive_utc(),
+                };
+
+                let media_metadata = media::row::MediaMetadataRow {
+                    media_id: video_id,
+                    file_size: raw.len() as i64,
+                    mime_type: mime.to_string(),
                     width: None,
                     height: None,
                     duration,
                 };
 
-                return Ok(SavedMedia {
-                    path: output_path,
-                    category,
-                    meta,
-                    video_manifest,
-                });
+                media::create::media_data(tx, &media_data).await?;
+                media::create::media_metadata(tx, &media_metadata).await?;
+
+                return Ok(video_id);
             }
 
             _ => {
@@ -443,20 +595,7 @@ impl MediaService {
                     self.storage.delete(&old).await;
                 }
 
-                let meta = MediaMeta {
-                    size: raw.len(),
-                    mime: mime.to_string(),
-                    width: None,
-                    height: None,
-                    duration: None,
-                };
-
-                return Ok(SavedMedia {
-                    path: relative_path,
-                    category,
-                    meta,
-                    video_manifest: None,
-                })
+                return Ok(id);
             }
         }
     }
