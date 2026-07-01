@@ -8,7 +8,12 @@ use std::fmt::Debug;
 use tokio::process::Command;
 
 use crate::application::{
-    config::Config, repository::media::{self, row::{MediaDataRow, MediaStatus}}, service::{
+    config::Config,
+    repository::media::{
+        self,
+        row::{MediaDataRow, MediaStatus},
+    },
+    service::{
         errors::MediaServiceError,
         media::{
             processor::{image, video::process_video_hls},
@@ -82,6 +87,63 @@ async fn get_video_duration(path: &str) -> Result<f32, MediaServiceError> {
     Ok(duration)
 }
 
+/// Transforms the given image according to the specified `ImageTransform`.
+/// # Arguments
+/// * `image` - The input image to be transformed.
+/// * `transform` - The transformation to be applied to the image.
+/// # Returns
+/// A `Result` containing the transformed image or a `MediaServiceError` if an error occurs during the transformation process.
+fn transform_image(
+    image: VipsImage,
+    transform: ImageTransform,
+) -> Result<VipsImage, MediaServiceError> {
+    let width = image.get_width();
+    let height = image.get_height();
+
+    match transform {
+        ImageTransform::Resize {
+            rz_width,
+            rz_height,
+        } => Ok(image::resize_image(
+            image,
+            width as u32,
+            height as u32,
+            rz_width,
+            rz_height,
+        )?),
+        ImageTransform::Crop { style, position } => match style {
+            CropStyle::Absolute { width, height } => Ok(image::crop_image_absolute(
+                image,
+                width as u32,
+                height as u32,
+                width,
+                height,
+                position,
+            )?),
+            CropStyle::Normalized { width, height } => Ok(image::crop_image_normalized(
+                image,
+                width as u32,
+                height as u32,
+                width,
+                height,
+                position,
+            )?),
+            CropStyle::Ratio {
+                ratio: (rw, rh),
+                scale,
+            } => Ok(image::crop_image_ratio(
+                image,
+                width as u32,
+                height as u32,
+                (rw, rh),
+                scale,
+                position,
+            )?),
+        },
+        ImageTransform::None => Ok(image),
+    }
+}
+
 impl MediaService {
     pub fn new(snowflake: SnowflakeGenerator, config: Config, connection: sqlx::PgPool) -> Self {
         let driver = config.media_driver;
@@ -98,7 +160,11 @@ impl MediaService {
             }
         };
 
-        Self { storage, snowflake, connection }
+        Self {
+            storage,
+            snowflake,
+            connection,
+        }
     }
 
     pub async fn extract_payload_with_type<T: DeserializeOwned + Debug>(
@@ -233,60 +299,7 @@ impl MediaService {
                             }
 
                             if let Some(transform) = options.image_transform {
-                                match transform {
-                                    ImageTransform::Resize {
-                                        rz_width,
-                                        rz_height,
-                                    } => {
-                                        image = image::resize_image(
-                                            image,
-                                            width as u32,
-                                            height as u32,
-                                            rz_width,
-                                            rz_height,
-                                        )?;
-                                    }
-
-                                    ImageTransform::Crop { style, position } => match style {
-                                        CropStyle::Absolute { width, height } => {
-                                            image = image::crop_image_absolute(
-                                                image,
-                                                width as u32,
-                                                height as u32,
-                                                width,
-                                                height,
-                                                position,
-                                            )?;
-                                        }
-
-                                        CropStyle::Normalized { width, height } => {
-                                            image = image::crop_image_normalized(
-                                                image,
-                                                width as u32,
-                                                height as u32,
-                                                width,
-                                                height,
-                                                position,
-                                            )?;
-                                        }
-
-                                        CropStyle::Ratio {
-                                            ratio: (rw, rh),
-                                            scale,
-                                        } => {
-                                            image = image::crop_image_ratio(
-                                                image,
-                                                width as u32,
-                                                height as u32,
-                                                (rw, rh),
-                                                scale,
-                                                position,
-                                            )?;
-                                        }
-                                    },
-
-                                    ImageTransform::None => {}
-                                }
+                                image = transform_image(image, transform)?;
                             }
 
                             let webp = image.image_write_to_buffer(".webp[strip]")?;
@@ -298,7 +311,7 @@ impl MediaService {
                             let mut frames = Vec::with_capacity(n_pages as usize);
 
                             for page in 0..n_pages {
-                                let frame = ops::extract_area(
+                                let mut frame = ops::extract_area(
                                     &image,
                                     0,
                                     page * page_height,
@@ -313,58 +326,9 @@ impl MediaService {
                                     return Err(MediaServiceError::InvalidMediaType);
                                 }
 
-                                let frame = match options.image_transform {
-                                    Some(ImageTransform::Resize {
-                                        rz_width,
-                                        rz_height,
-                                    }) => image::resize_image(
-                                        frame,
-                                        width as u32,
-                                        height as u32,
-                                        rz_width,
-                                        rz_height,
-                                    )?,
-
-                                    Some(ImageTransform::Crop { style, position }) => match style {
-                                        CropStyle::Absolute {
-                                            width: cr_width,
-                                            height: cr_height,
-                                        } => image::crop_image_absolute(
-                                            frame,
-                                            width as u32,
-                                            height as u32,
-                                            cr_width,
-                                            cr_height,
-                                            position,
-                                        )?,
-
-                                        CropStyle::Normalized {
-                                            width: norm_width,
-                                            height: norm_height,
-                                        } => image::crop_image_normalized(
-                                            frame,
-                                            width as u32,
-                                            height as u32,
-                                            norm_width,
-                                            norm_height,
-                                            position,
-                                        )?,
-
-                                        CropStyle::Ratio {
-                                            ratio: (rw, rh),
-                                            scale,
-                                        } => image::crop_image_ratio(
-                                            frame,
-                                            width as u32,
-                                            height as u32,
-                                            (rw, rh),
-                                            scale,
-                                            position,
-                                        )?,
-                                    },
-
-                                    _ => frame,
-                                };
+                                if let Some(transform) = options.image_transform {
+                                    frame = transform_image(frame, transform)?;
+                                }
 
                                 frames.push(frame);
                             }
@@ -373,21 +337,20 @@ impl MediaService {
                             let frame_height = first_frame.get_height();
                             let frame_width = first_frame.get_width();
 
-                            let joined = ops::arrayjoin_with_opts(
-                                &mut frames,
-                                &ops::ArrayjoinOptions {
-                                    across: 1,
-                                    shim: 0,
-                                    background: vec![0.0],
-                                    halign: ops::Align::Low,
-                                    valign: ops::Align::Low,
-                                    hspacing: frame_width,
-                                    vspacing: frame_height,
-                                    // hspacing and vspacing is the length of the image, the naming of the document is confusing, but it is the distance between the images, so we set it to the width and height of the image to avoid overlap
-                                    // shim is the gap between the images, so we set it to 0
-                                },
-                            )?;
-                            
+                            // * Join frames into a single image with the same height as the first frame
+
+                            let options = ops::ArrayjoinOptions {
+                                across: 1,
+                                shim: 0,
+                                background: vec![0.0],
+                                halign: ops::Align::Low,
+                                valign: ops::Align::Low,
+                                hspacing: frame_width,
+                                vspacing: frame_height,
+                            };
+
+                            let joined = ops::arrayjoin_with_opts(&mut frames, &options)?;
+
                             let webp = joined.image_write_to_buffer(&format!(
                                 ".webp[page-height={}]",
                                 frame_height
@@ -464,7 +427,7 @@ impl MediaService {
                 let video_id = self.snowflake.generate_id()?;
                 let output_folder = format!("{}/{}", options.folder, video_id);
 
-                let (output_path, preview_path ) = match options.mode {
+                let (output_path, preview_path) = match options.mode {
                     MediaProcessingMode::Hls => {
                         let storage = self.storage.clone();
                         let input_path = temp_uploaded.path.clone();
@@ -481,16 +444,21 @@ impl MediaService {
                         let has_manual_preview = options.manual_preview.is_some();
                         if let Some(manual_preview) = options.manual_preview {
                             let preview_filename = format!("preview.{}", extension);
-                            let preview_output_path = format!("{}/{}", output_folder, preview_filename);
+                            let preview_output_path =
+                                format!("{}/{}", output_folder, preview_filename);
 
                             self.storage
-                                .save(&preview_output_path, &self.storage.read_temp(&manual_preview.path).await?)
+                                .save(
+                                    &preview_output_path,
+                                    &self.storage.read_temp(&manual_preview.path).await?,
+                                )
                                 .await?;
                         } else {
                             // generate preview image for video
                             let preview_filename = format!("preview.jpg");
-                            let preview_output_path = format!("{}/{}", output_folder, preview_filename);
-                            
+                            let preview_output_path =
+                                format!("{}/{}", output_folder, preview_filename);
+
                             let mut cmd = Command::new("ffmpeg");
                             cmd.arg("-i")
                                 .arg(&temp_uploaded.path)
@@ -514,10 +482,9 @@ impl MediaService {
                         let storage_clone = storage.clone();
                         let video_id_clone = video_id.clone();
                         let connection_pool = self.connection.clone();
-                        // if the pool reaches the max connections, this will wait until a connection is available, so it should be fine to spawn a new task here
-                        // as an example, if the pool has 5 connections and 5 videos are being processed at the same time, the 6th video will wait until one of the previous videos is done processing and releases the connection back to the pool
                         tokio::spawn(async move {
-                            let _manifists = process_video_hls(input_path, hls_output_path, storage).await?;
+                            let _manifists =
+                                process_video_hls(input_path, hls_output_path, storage).await?;
 
                             // check if the master.m3u8 exists, if not, delete the output folder and return error
                             let master_path = format!("{}/master.m3u8", output_folder_clone);
@@ -528,17 +495,25 @@ impl MediaService {
 
                             // Update media status to Completed after video processing completes
                             let mut tx = connection_pool.begin().await?;
-                            media::update::media_status(&mut tx, &video_id_clone, &MediaStatus::Completed).await?;
+                            media::update::media_status(
+                                &mut tx,
+                                &video_id_clone,
+                                &MediaStatus::Completed,
+                            )
+                            .await?;
                             tx.commit().await?;
 
                             Ok::<(), MediaServiceError>(())
                         });
 
-                        (format!("{}/master.m3u8", output_folder), if has_manual_preview {
-                            Some(format!("{}/preview.{}", output_folder, extension))
-                        } else {
-                            Some(format!("{}/preview.jpg", output_folder))
-                        })
+                        (
+                            format!("{}/master.m3u8", output_folder),
+                            if has_manual_preview {
+                                Some(format!("{}/preview.{}", output_folder, extension))
+                            } else {
+                                Some(format!("{}/preview.jpg", output_folder))
+                            },
+                        )
                     }
 
                     _ => {
