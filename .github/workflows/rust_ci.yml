@@ -14,7 +14,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                test-module: [health, auth, doc]
+                test-module: [health, auth, doc, user]
 
         services:
             postgres:
