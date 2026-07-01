@@ -84,6 +84,8 @@ pub async fn upload_avatar_handler(
     )
     .await?;
 
+    tracing::debug!("Extracted payload: {:?}", extracted.payload);
+
     let file = extracted.files;
 
     //log the extracted payload for debugging
@@ -135,6 +137,8 @@ pub async fn upload_avatar_handler(
         Some(media_id) => Some(media_repo::get::media_full_data(&mut tx, &media_id).await?),
         None => None,
     };
+
+    tx.commit().await?;
 
     Ok(Json(UserDTO {
         id: updated_user.id.to_string(),
