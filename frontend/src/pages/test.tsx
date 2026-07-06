@@ -1,9 +1,13 @@
 import Post from "@components/post";
 import PostBox from "@components/createPost";
-import React from "react";
+import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import { PostProp } from "@components/post";
 import { BottomPost } from "@components/ui/postComp";
+import ImageUploader from "@components/ui/chormatic/image-uploader";
+import { Field } from "@components/ui/chormaticUI";
+import { ImageValue, useImageUploader } from "@/hooks/useImageUploader";
+import { ContainerPreview, ImageUploader2 } from "@components/ui/chormatic/image-uploader2";
 
 const Posts: PostProp[] = [
     {
@@ -60,6 +64,13 @@ const Posts: PostProp[] = [
 ];
 export default function Test() {
   const { id } = useParams<{ id: string }>();
+  const [value, setValue] = useState<ImageValue[]>([]);
+  
+  const uploader = useImageUploader({
+       value,
+       onChange: setValue,
+       max: 5
+    });
 
   return (
     <div>
@@ -79,6 +90,16 @@ export default function Test() {
               repost={post.repost}
           />
       ))}
+      <Field>
+        <ImageUploader2 uploader={uploader}>
+            <button>Add Image</button>
+        </ImageUploader2>
+
+        <ContainerPreview
+            images={uploader.images}
+            onDelete={uploader.removeImage}
+        />
+      </Field>
     </div>
   );
 }

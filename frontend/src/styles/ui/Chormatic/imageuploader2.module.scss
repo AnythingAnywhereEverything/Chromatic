@@ -1,0 +1,31 @@
+.imageContainer{
+    display: flex;
+    gap: calc(var(--spacing) * 2);
+    width: 100%;
+    height: 240px;
+}
+
+.coverImage{
+    border-radius: var(--radius-medium);
+    overflow: hidden;
+    width: calc(var(--spacing) * 48) !important;
+    height: calc(var(--spacing) * 48) !important;
+    position: relative;
+    border: var(--border) solid 1px;
+    .image{
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        pointer-events: none;
+    }
+}
+
+.removeImage{
+    position: absolute;
+    top: 4;
+    right: 4;
+    background-color: color-mix(in oklab, var(--muted) 50%, transparent) !important;
+    &:hover{
+        background-color: var(--muted) !important;
+    }
+}
