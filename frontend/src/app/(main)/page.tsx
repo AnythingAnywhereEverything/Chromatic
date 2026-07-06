@@ -31,8 +31,6 @@ const Home: React.FC = () => {
     //     );
     // }
 
-    console.log("HOME RENDER");
-
     const layer = useLayer();
 
     React.useEffect(() => {
@@ -46,10 +44,6 @@ const Home: React.FC = () => {
             }
         }
         fetchPing();
-    }, []);
-
-    React.useEffect(() => {
-        console.log("PING MOUNTED");
     }, []);
 
     const exampleOpenLayer = () => {

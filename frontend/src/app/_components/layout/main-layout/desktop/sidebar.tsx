@@ -77,15 +77,14 @@ const SidebarNavigator: React.FC = () => {
                     href="/notifications"
                 />
 
+            </div>
+
+            <div className={style["sidebar-footer"]}>
                 <SidebarProfile
                     username="username"
                     profileImageUrl="https://placehold.co/40"
                     label="Profile"
                 />
-            </div>
-
-            <div className={style["sidebar-footer"]}>
-                <p>&copy; 2024 Absolute Cinema</p>
             </div>
         </nav>
     );

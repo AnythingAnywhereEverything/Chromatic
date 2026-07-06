@@ -11,9 +11,9 @@ export default function MainMobileLayout({
 }) {
     return (
         <div className={style["main-layout"]}>
-            {/* <Topbar /> */}
+            <Topbar />
             <div className={style["main-container"]}>{children}</div>
-            {/* <BottomBar /> */}
+            <BottomBar />
         </div>
     );
 }
