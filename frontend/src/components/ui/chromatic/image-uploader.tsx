@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "./button";
 import s from "@styles/ui/Chormatic/imageuploader.module.scss";
-import { FieldError, Icon } from "../chormaticUI";
+import { FieldError, Icon } from "../chromaticUI";
 
 import {
     DndContext,
