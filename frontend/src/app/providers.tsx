@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { LayerProvider } from "./_components/layer";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
     const [queryClient] = useState(
@@ -21,7 +22,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             <GoogleOAuthProvider
                 clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}
             >
-                {children}
+                <LayerProvider>
+                    {children}
+                </LayerProvider>
             </GoogleOAuthProvider>
         </QueryClientProvider>
     );

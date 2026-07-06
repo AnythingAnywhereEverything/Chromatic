@@ -4,11 +4,11 @@ import Providers from "./providers";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Webapp",
-    description: "Web Application",
+    title: "Chromatic",
+    description: "Chromatic is a social media platform that allows users to share and discover knowledge.",
     openGraph: {
-        title: "Webapp",
-        description: "Web Application",
+        title: "Chromatic",
+        description: "Chromatic is a social media platform that allows users to share and discover knowledge.",
         url: "https://www.chromatic.com",
         siteName: "Chromatic",
         images: [
