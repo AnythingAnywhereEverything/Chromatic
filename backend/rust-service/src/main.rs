@@ -6,7 +6,7 @@ use chromatic::application::app;
 async fn main() {
     // Tracing configuration.
     let filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| "axum_web=trace".into());
+        .unwrap_or_else(|_| "chromatic=trace".into());
     let fmt_layer = tracing_subscriber::fmt::layer()
         .compact()
         .with_target(false)
