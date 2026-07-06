@@ -8,6 +8,7 @@ use tokio::time::Instant;
 use uuid::Uuid;
 
 use crate::application::service::errors::MediaServiceError;
+use crate::application::service::media::storage::StorageResponse;
 use crate::application::service::media::types::TempUpload;
 
 use super::MediaStorage;
@@ -57,10 +58,10 @@ impl MediaStorage for LocalStorage {
         let _ = fs::remove_file(full).await;
     }
 
-    async fn read(&self, path: &str) -> Result<Vec<u8>, MediaServiceError> {
+    async fn read(&self, path: &str, _mime_type: &str) -> Result<StorageResponse, MediaServiceError> {
         let full = self.build_full_path(path);
         let data = fs::read(full).await?;
-        Ok(data)
+        Ok(StorageResponse::Bytes(data))
     }
 
     async fn exists(&self, path: &str) -> Result<bool, MediaServiceError> {
