@@ -3,7 +3,7 @@ import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
 import { Icon } from "../chromaticUI"
 
-import s from "@styles/ui/Chormatic/dropdownmenu.module.scss"
+import s from "@styles/ui/chromatic/dropdownmenu.module.scss"
 
 function DropdownMenu({
     ...props

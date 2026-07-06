@@ -2,7 +2,7 @@ import { Separator as SeparatorPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 
-import s from "@styles/ui/Chormatic/separator.module.scss"
+import s from "@styles/ui/chromatic/separator.module.scss"
 
 function Separator({
     className,

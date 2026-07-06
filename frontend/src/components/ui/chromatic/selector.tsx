@@ -2,7 +2,7 @@ import { Select as SelectPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
 import { Icon } from "./icon"
 
-import s from "@styles/ui/Chormatic/select.module.scss";
+import s from "@styles/ui/chromatic/select.module.scss";
 
 function Select({
   ...props

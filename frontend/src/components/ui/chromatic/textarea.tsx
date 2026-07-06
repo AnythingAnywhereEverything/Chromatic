@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils"
-import s from "@styles/ui/Chormatic/textarea.module.scss"
+import s from "@styles/ui/chromatic/textarea.module.scss"
 
 function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return (

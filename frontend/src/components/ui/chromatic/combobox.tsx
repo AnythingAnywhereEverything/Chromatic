@@ -1,17 +1,17 @@
 import { Combobox as ComboboxPrimitive } from "@base-ui/react"
 
 import { cn } from "@lib/utils"
-import { Button } from "@components/ui/chormatic/button"
+import { Button } from "@components/ui/chromatic/button"
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
-} from "@components/ui/chormatic/input-group"
+} from "@components/ui/chromatic/input-group"
 import React from "react"
 import { Icon } from "./icon"
 
-import s from "@styles/ui/Chormatic/combobox.module.scss"
+import s from "@styles/ui/chromatic/combobox.module.scss"
 
 const Combobox = ComboboxPrimitive.Root
 

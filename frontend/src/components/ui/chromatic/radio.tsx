@@ -3,7 +3,7 @@ import { RadioGroup as RadioGroupPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
 import { Icon } from "./icon"
 
-import s from "@styles/ui/Chormatic/radio.module.scss"
+import s from "@styles/ui/chromatic/radio.module.scss"
 
 function RadioGroup({
   className,

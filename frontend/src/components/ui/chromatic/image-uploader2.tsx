@@ -1,4 +1,4 @@
-import s from "@styles/ui/Chormatic/imageuploader2.module.scss"
+import s from "@styles/ui/chromatic/imageuploader2.module.scss"
 import { useImageUploader } from "@/hooks/useImageUploader";
 import React, { useRef } from "react";
 

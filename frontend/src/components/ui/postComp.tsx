@@ -20,7 +20,7 @@ import { FaRegBookmark } from "react-icons/fa";
 import { PiShareFat } from "react-icons/pi";
 import s from "@styles/components/postbox.module.scss"
 import { useEffect, useState } from "react";
-import dialog from "@styles/ui/Chormatic/dialogue.module.scss"
+import dialog from "@styles/ui/chromatic/dialogue.module.scss"
 import Form from "next/form";
 
 const CustomOverlay = ({ state }: { state: boolean }) => (
