@@ -8,21 +8,14 @@ use std::fmt::Debug;
 use tokio::process::Command;
 
 use crate::application::{
-    config::Config,
-    repository::media::{
-        self,
-        row::{MediaDataRow, MediaStatus},
-    },
-    service::{
-        errors::MediaServiceError,
-        media::{
-            processor::{image, video::process_video_hls},
-            types::{
-                AllowedMediaType, CropStyle, ExtractedPayload, ImageTransform, MediaCategory,
-                MediaOptions, MediaProcessingMode, TempUpload,
+    config::Config, repository::media::{
+        self, row::{MediaDataRow, MediaDataWithMetadataRow, MediaStatus},
+    }, service::{
+        errors::MediaServiceError, media::{
+            processor::{image, video::process_video_hls}, types::{
+                AllowedMediaType, CropStyle, ExtractedPayload, ImageTransform, MediaCategory, MediaOptions, MediaProcessingType, TempUpload,
             },
-        },
-        snowflake_service::SnowflakeGenerator,
+        }, snowflake_service::SnowflakeGenerator,
     },
 };
 
@@ -232,6 +225,34 @@ impl MediaService {
         Ok(files)
     }
 
+    pub async fn serve_media(&self, media_data: MediaDataWithMetadataRow) -> Result<Vec<u8>, MediaServiceError> {
+        let path = media_data.media_url;
+        let _data = self.storage.read(&path, &media_data.mime_type).await?;
+        todo!() // Implement the logic to serve media based on the StorageResponse
+    }
+
+    /// Separate media transformation so we could save it as temprary file.
+    /// Sending the media to storage will be done in save_media function.
+    /// Alternatively save and serve media through temporary file path for client to attach with messages before going through Elixir pipeline.
+    /// # Arguments
+    /// * `temp_uploaded` - The temporary uploaded media file.
+    /// * `options` - The media options for processing and saving the media.
+    /// # Returns
+    /// A `Result` containing the processed media bytes or a `MediaServiceError` if an error occurs during the process.
+    pub async fn process_media() {
+        todo!()
+
+        // Draft:
+        // * read uploaded temporary file
+        // * check file size
+        // * detect mime type and extension
+        // * categorize media type
+
+        // * optional strict filtering
+        // * process media based on category and options
+        // * return processed media bytes and preview if applicable
+    }
+
     /// Saves the uploaded media file to the storage and returns the saved media information.
     ///
     /// # Arguments
@@ -278,11 +299,13 @@ impl MediaService {
             }
         }
 
+        // todo: add data strip on geo, exif, etc. for images and videos
+
         match category {
             MediaCategory::Image => {
                 let (processed_bytes, preview, final_ext) = match options.mode {
                     // Use only for image that was uploaded to public
-                    MediaProcessingMode::Sanitize => {
+                    MediaProcessingType::Transform => {
                         let mut image = if mime == "image/gif" {
                             VipsImage::new_from_buffer(&raw, "[n=-1]")?
                         } else {
@@ -298,8 +321,10 @@ impl MediaService {
                                 return Err(MediaServiceError::InvalidMediaType);
                             }
 
-                            if let Some(transform) = options.image_transform {
-                                image = transform_image(image, transform)?;
+                            if let Some(transform) = options.image_transforms {
+                                for t in transform {
+                                    image = transform_image(image, t)?;
+                                }
                             }
 
                             let webp = image.image_write_to_buffer(".webp[strip]")?;
@@ -326,8 +351,10 @@ impl MediaService {
                                     return Err(MediaServiceError::InvalidMediaType);
                                 }
 
-                                if let Some(transform) = options.image_transform {
-                                    frame = transform_image(frame, transform)?;
+                                if let Some(transform) = options.image_transforms.clone() {
+                                    for t in transform {
+                                        frame = transform_image(frame, t)?;
+                                    }
                                 }
 
                                 frames.push(frame);
@@ -428,7 +455,7 @@ impl MediaService {
                 let output_folder = format!("{}/{}", options.folder, video_id);
 
                 let (output_path, preview_path) = match options.mode {
-                    MediaProcessingMode::Hls => {
+                    MediaProcessingType::Hls => {
                         let storage = self.storage.clone();
                         let input_path = temp_uploaded.path.clone();
                         let hls_output_path = output_folder.clone();

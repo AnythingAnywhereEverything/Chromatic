@@ -3,10 +3,10 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
-pub enum MediaProcessingMode {
-    Sanitize,       // transform (webp, strip metadata)
+pub enum MediaProcessingType {
+    Transform,       // transform
     Hls,
-    Raw,            // keep original
+    Raw,            // keep original but strip some metadata e.g. exif, gps, etc.
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -45,6 +45,11 @@ pub enum ImageTransform {
     None,
 }
 
+pub struct ImagePostProcessingOptions {
+    pub keep_preview: bool,
+    pub ouput_format: Option<String>, 
+}
+
 
 #[derive(Debug, Clone, Copy)]
 pub enum AllowedMediaType {
@@ -66,15 +71,24 @@ pub enum MediaCategory {
     Unknown,
 }
 
+/// Refactor Draft:
+/// Sanitize should be reanemd to "Transform" or "Process" to better reflect its purpose of modifying media files, not just cleaning them.
+/// Transform should have an order of operations, e.g., Sanitize -> Resize -> Crop, to ensure consistent processing.
+/// Transform as Vec<ImageTransform> could allow for multiple transformations in a single operation, providing more flexibility and efficiency in media processing.
+/// 
+/// This allow for modular extnesive design as well as adding more feature to create dynamic media size generator.
+/// 
+
+
 #[derive(Debug, Clone)]
 pub struct MediaOptions {
     pub folder: String,
     pub max_size: usize,
     pub allowed_types: Option<Vec<AllowedMediaType>>,
-    pub image_transform: Option<ImageTransform>,
+    pub image_transforms: Option<Vec<ImageTransform>>,
 
-    pub mode: MediaProcessingMode,
-    pub manual_preview: Option<TempUpload>, // * if set, will use this as the preview instead of generating one
+    pub mode: MediaProcessingType,
+    pub manual_preview: Option<TempUpload>,
 
     // * only for video
     // * if the mode set to raw, these will be ignore unconditionally

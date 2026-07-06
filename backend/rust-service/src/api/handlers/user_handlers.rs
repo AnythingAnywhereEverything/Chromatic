@@ -6,10 +6,8 @@ use axum::{
 use crate::{
     api::{APIError, RequestAuth, dtos::user_dtos::{MediaFullDTO, UserDTO}, version}, application::{
         repository::{media::{self as media_repo, row::MediaStatus}, user::{self as user_repo}}, service::{
-            errors::{AuthServiceError, MediaServiceError},
-            media::{
-                service::MediaService,
-                types::{CropStyle, ImageTransform, MediaOptions, MediaProcessingMode},
+            errors::{AuthServiceError, MediaServiceError}, media::{
+                service::MediaService, types::{CropStyle, ImageTransform, MediaOptions, MediaProcessingType},
             },
         }, state::SharedState,
     },
@@ -77,7 +75,7 @@ pub async fn upload_avatar_handler(
         None => return Err(AuthServiceError::InvalidCredentials.into()),
     };
 
-    let extracted = MediaService::extract_payload_with_type::<UploadAvatarPayload>(
+    let extracted: crate::application::service::media::types::ExtractedPayload<UploadAvatarPayload> = MediaService::extract_payload_with_type::<UploadAvatarPayload>(
         &state.media_service,
         multipart,
         10_000_000,
@@ -95,14 +93,21 @@ pub async fn upload_avatar_handler(
         max_size: 10_000_000, // 10 MB
         allowed_types: None,
         folder: "avatars".to_string(),
-        image_transform: Some(ImageTransform::Crop {
+        // image_transforms: Some(ImageTransform::Crop {
+        //     style: CropStyle::Ratio {
+        //         ratio: (1, 1),
+        //         scale: extracted.payload.scale,
+        //     },
+        //     position: Some((extracted.payload.position_x, extracted.payload.position_y)),
+        // }),
+        image_transforms: Some(vec![ImageTransform::Crop {
             style: CropStyle::Ratio {
                 ratio: (1, 1),
                 scale: extracted.payload.scale,
             },
             position: Some((extracted.payload.position_x, extracted.payload.position_y)),
-        }),
-        mode: MediaProcessingMode::Sanitize,
+        }]),
+        mode: MediaProcessingType::Transform,
         hls_fallback: false,
         manual_preview: None, // no auto preview for profile bozo
     };
