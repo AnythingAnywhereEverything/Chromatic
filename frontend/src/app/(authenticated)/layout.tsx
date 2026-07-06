@@ -13,19 +13,21 @@ export default function AuthenticatedLayout({
     const router = useRouter();
 
     // Kick out unauthenticated users instantly from sub-pages
-    useEffect(() => {
-        if (!isLoading && !user) {
-            router.replace("/");
-        }
-    }, [user, isLoading, router]);
 
-    if (isLoading || !user) {
-        return (
-            <div>
-                <p>Loading application...</p>
-            </div>
-        );
-    }
+    // Commented  for frontend only development purposes, to allow access to authenticated pages without login
+    // useEffect(() => {
+    //     if (!isLoading && !user) {
+    //         router.replace("/");
+    //     }
+    // }, [user, isLoading, router]);
+
+    // if (isLoading || !user) {
+    //     return (
+    //         <div>
+    //             <p>Loading application...</p>
+    //         </div>
+    //     );
+    // }
 
     return (
         <main className="page-body">
