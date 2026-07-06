@@ -1,20 +1,30 @@
 pub mod local;
 pub mod r2;
+pub mod nginx; // nginx storage
 
 use std::path::PathBuf;
 
 use async_trait::async_trait;
-use axum::extract::multipart::Field;
+use axum::{http::HeaderMap, extract::multipart::Field};
 
 use crate::application::service::errors::MediaServiceError;
 use crate::application::service::media::types::TempUpload;
+
+pub enum StorageResponse {
+    /// Used by LocalStorage when Rust must read and stream the file bytes directly.
+    Bytes(Vec<u8>),
+    /// Used by Nginx (X-Accel-Redirect) or Cloud CNDs (302 Redirect URLs).
+    Headers(HeaderMap),
+}
+
 
 #[async_trait]
 pub trait MediaStorage: Send + Sync {
     async fn save(&self, path: &str, data: &[u8]) -> Result<(), MediaServiceError>;
     async fn delete(&self, path: &str);
+    async fn exists(&self, path: &str) -> Result<bool, MediaServiceError>;
 
-    async fn read(&self, path: &str) -> Result<Vec<u8>, MediaServiceError>;
+    async fn read(&self, path: &str, mime_type: &str) -> Result<StorageResponse, MediaServiceError>;
 
     async fn save_temp_stream(
         &self,

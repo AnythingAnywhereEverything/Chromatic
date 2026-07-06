@@ -1,13 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use axum::{
-    Json, Router,
-    body::Body,
-    extract::{Query, Request},
-    http::{HeaderMap, Method, StatusCode},
-    middleware::{self, Next},
-    response::{IntoResponse, Response},
-    routing::{any, get},
+    Json, Router, body::Body, extract::{DefaultBodyLimit, Query, Request}, http::{HeaderMap, Method, StatusCode}, middleware::{self, Next}, response::{IntoResponse, Response}, routing::{any, get},
 };
 use axum_client_ip::ClientIpSource;
 use serde_json::json;
@@ -49,7 +43,8 @@ pub async fn create_router(state: SharedState) -> Router {
         .with_state(Arc::clone(&state))
         .layer(cors_layer)
         .layer(middleware::from_fn(logging_middleware))
-        .layer(ClientIpSource::XRealIp.into_extension());
+        .layer(ClientIpSource::XRealIp.into_extension())
+        .layer(DefaultBodyLimit::disable()); // Let NGINX and route handle the body size limit, as we have a reverse proxy in front of this service.
 
     router
 }

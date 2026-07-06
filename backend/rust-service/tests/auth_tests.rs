@@ -8,7 +8,7 @@ use crate::common::TestContext;
 /// test user registration with invalid data
 #[sqlx::test]
 async fn test_auth_registration_with_invalid_data(pool: PgPool) {
-    let ctx = TestContext::new(Some(pool)).await;
+    let ctx = TestContext::new(Some(pool), None).await;
 
     let invalid_payload = json!({
         "username": "",
@@ -26,7 +26,7 @@ async fn test_auth_registration_with_invalid_data(pool: PgPool) {
 /// Test duplicate user registration with the same username or email.
 #[sqlx::test]
 async fn test_auth_duplicate_registration(pool: PgPool) {
-    let ctx = TestContext::new(Some(pool)).await;
+    let ctx = TestContext::new(Some(pool), None).await;
 
     let payload = json!({
         "username": "testuser1",
@@ -44,7 +44,7 @@ async fn test_auth_duplicate_registration(pool: PgPool) {
 /// Test user login with invalid credentials.
 #[sqlx::test]
 async fn test_auth_login_with_invalid_credentials(pool: PgPool) {
-    let ctx = TestContext::new(Some(pool)).await;
+    let ctx = TestContext::new(Some(pool), None).await;
 
     let login_payload = json!({
         "username_or_email": "nonexistentuser",
@@ -57,7 +57,7 @@ async fn test_auth_login_with_invalid_credentials(pool: PgPool) {
 /// Test user registration endpoints.
 #[sqlx::test]
 async fn test_auth_registration(pool: PgPool) {
-    let ctx = TestContext::new(Some(pool)).await;
+    let ctx = TestContext::new(Some(pool), None).await;
 
     let registeration_payload = json!({
         "username": "testuser2",
@@ -75,7 +75,7 @@ async fn test_auth_registration(pool: PgPool) {
 /// Test user login via email and username.
 #[sqlx::test]
 async fn test_auth_login_via_email_and_username(pool: PgPool) {
-    let ctx = TestContext::new(Some(pool)).await;
+    let ctx = TestContext::new(Some(pool), None).await;
 
     let registeration_payload = json!({
         "username": "testuser3",
@@ -111,7 +111,7 @@ async fn test_auth_login_via_email_and_username(pool: PgPool) {
 // Test insert various invalid registration payloads and assert that they are rejected with appropriate error messages.
 #[sqlx::test]
 async fn test_auth_registration_with_various_invalid_payloads(pool: PgPool) {
-    let ctx = TestContext::new(Some(pool)).await;
+    let ctx = TestContext::new(Some(pool), None).await;
 
     let invalid_payloads = vec![
         json!({
@@ -150,7 +150,7 @@ async fn test_auth_registration_with_various_invalid_payloads(pool: PgPool) {
 /// Test username with special characters and assert that it is rejected.
 #[sqlx::test]
 async fn test_auth_registration_with_special_characters_in_username(pool: PgPool) {
-    let ctx = TestContext::new(Some(pool)).await;
+    let ctx = TestContext::new(Some(pool), None).await;
 
     let payload = json!({
         "username": "invalid$username",
@@ -164,7 +164,7 @@ async fn test_auth_registration_with_special_characters_in_username(pool: PgPool
 /// Test weak password and assert that it is rejected.
 #[sqlx::test]
 async fn test_auth_registration_with_weak_password(pool: PgPool) {
-    let ctx = TestContext::new(Some(pool)).await;
+    let ctx = TestContext::new(Some(pool), None).await;
 
     let payload = json!({
         "username": "testuser4",
@@ -178,7 +178,7 @@ async fn test_auth_registration_with_weak_password(pool: PgPool) {
 // Test short password and assert that it is rejected.
 #[sqlx::test]
 async fn test_auth_registration_with_short_password(pool: PgPool) {
-    let ctx = TestContext::new(Some(pool)).await;
+    let ctx = TestContext::new(Some(pool), None).await;
 
     let payload = json!({
         "username": "testuser5",
@@ -192,7 +192,7 @@ async fn test_auth_registration_with_short_password(pool: PgPool) {
 /// Test long but invalid password and assert that it is rejected.
 #[sqlx::test]
 async fn test_auth_registration_with_long_but_invalid_password(pool: PgPool) {
-    let ctx = TestContext::new(Some(pool)).await;
+    let ctx = TestContext::new(Some(pool), None).await;
 
     let payload = json!({
         "username": "testuser6",

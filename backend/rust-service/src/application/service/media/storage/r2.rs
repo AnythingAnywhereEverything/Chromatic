@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use axum::extract::multipart::Field;
 
 use crate::application::service::errors::MediaServiceError;
+use crate::application::service::media::storage::StorageResponse;
 use crate::application::service::media::types::TempUpload;
 
 use super::MediaStorage;
@@ -26,7 +27,11 @@ impl MediaStorage for R2Storage {
         todo!()
     }
 
-    async fn read(&self, _path: &str) -> Result<Vec<u8>, MediaServiceError> {
+    async fn read(&self, _path: &str, _mime_type: &str) -> Result<StorageResponse, MediaServiceError> {
+        todo!()
+    }
+
+    async fn exists(&self, _path: &str) -> Result<bool, MediaServiceError> {
         todo!()
     }
 

@@ -7,7 +7,7 @@ use crate::common::TestContext;
 /// Test the health check endpoint of the API.
 #[tokio::test]
 async fn test_health_check_endpoint() {
-    let ctx = TestContext::new(None).await;
+    let ctx = TestContext::new(None, None).await;
 
     let response = ctx.server.get("/v1/health").await;
 

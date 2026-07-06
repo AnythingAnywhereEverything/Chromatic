@@ -8,6 +8,8 @@
 # media files
 media/*
 !media/.gitkeep
+temp/*
+!temp/.gitkeep
 .vscode/
 .next/
 

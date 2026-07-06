@@ -14,7 +14,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                test-module: [health, auth, doc]
+                test-module: [health_test, auth_tests, doc, user_tests]
 
         services:
             postgres:
@@ -78,5 +78,5 @@ jobs:
                 if [ "${{ matrix.test-module }}" = "doc" ]; then
                     cargo test --doc
                 else
-                    cargo test ${{ matrix.test-module }}
+                    cargo test --test ${{ matrix.test-module }}
                 fi

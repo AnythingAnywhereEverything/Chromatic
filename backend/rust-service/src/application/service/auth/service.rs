@@ -63,7 +63,6 @@ impl AuthService {
                         new_user_id,
                         None,
                         None,
-                        None,
                     ).await?;
 
                     new_user_id
@@ -141,7 +140,6 @@ impl AuthService {
             &mut tx,
             user_id,
             display_name.as_ref().map(|d| DisplayName::new(d)).transpose()?,
-            None,
             None,
         ).await?;
         
