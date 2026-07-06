@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "./button";
 import s from "@styles/ui/Chormatic/imageuploader.module.scss";

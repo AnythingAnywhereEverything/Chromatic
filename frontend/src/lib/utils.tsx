@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useRef, useState } from "react";
 
 export function cn(...classes: (string | undefined | false)[]): string {

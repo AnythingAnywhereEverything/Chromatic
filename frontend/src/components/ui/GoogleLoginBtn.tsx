@@ -1,9 +1,12 @@
-// * TODO: update the env
+ 'use client';
+
 import { useGoogleLogin } from "@react-oauth/google";
 import { Button, Icon } from "./chormaticUI";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { setCacheUserId, setToken } from "@/handler/token_handler";
+
+import { IoLogoGoogle } from "react-icons/io5";
 
 export default function GoogleAuthButton() {
   const router = useRouter();
@@ -38,7 +41,7 @@ export default function GoogleAuthButton() {
 
   return (
     <Button variant={"outline"} onClick={() => login()}>
-      <Icon value="" />
+      <IoLogoGoogle style={{ marginRight: "0.5rem" }} />
       Continue with Google
     </Button>
   );
