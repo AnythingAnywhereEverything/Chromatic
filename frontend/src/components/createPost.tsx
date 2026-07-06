@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Field, Icon, Textarea } from "./ui/chormaticUI";
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Field, Icon, Textarea } from "./ui/chromaticUI";
 import { PiGif } from "react-icons/pi";
 import { PiImage } from "react-icons/pi";
 import { PiVideoCamera } from "react-icons/pi";

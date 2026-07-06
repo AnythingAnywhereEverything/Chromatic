@@ -19,7 +19,7 @@ import {
     InputGroup,
     InputGroupAddon,
     InputGroupInput,
-} from "@components/ui/chormaticUI";
+} from "@components/ui/chromaticUI";
 import { Form } from "@base-ui/react";
 import Link from "next/link";
 import GoogleAuthButton from "@components/ui/GoogleLoginBtn";

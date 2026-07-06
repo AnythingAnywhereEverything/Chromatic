@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import style from '@styles/layouts/navbarDesktop.module.scss';
-import { Field, Label } from '@components/ui/chormaticUI';
+import { Field, Label } from '@components/ui/chromaticUI';
 import { IoSettingsOutline } from "react-icons/io5";
 import { IoHomeOutline } from "react-icons/io5";
 import { IoSearchOutline } from "react-icons/io5";

@@ -1,6 +1,6 @@
 import { LayoutProps } from "@/types/global";
 import { Navbar } from "../navbarWraper";
-import { Field } from "@components/ui/chormaticUI";
+import { Field } from "@components/ui/chromaticUI";
 import s from "@styles/layouts/defaultlayout.module.scss"
 import RightLayout from "./rightLayout";
 

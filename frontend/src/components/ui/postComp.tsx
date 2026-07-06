@@ -11,7 +11,7 @@ import { Button,
     DropdownMenuItem, 
     DropdownMenuTrigger, 
     Field, 
-    Label } from "./chormaticUI";
+    Label } from "./chromaticUI";
 import { HiOutlineDotsHorizontal } from "react-icons/hi";
 import { FiThumbsUp } from "react-icons/fi";
 import { RxLoop } from "react-icons/rx";

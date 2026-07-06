@@ -1,4 +1,4 @@
-import { Field } from "./ui/chormaticUI";
+import { Field } from "./ui/chromaticUI";
 import s from "@styles/components/postbox.module.scss"
 import { getUser } from "@/api/user";
 import { profile } from "console";

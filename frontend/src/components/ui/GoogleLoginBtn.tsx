@@ -1,7 +1,7 @@
  'use client';
 
 import { useGoogleLogin } from "@react-oauth/google";
-import { Button, Icon } from "./chormaticUI";
+import { Button, Icon } from "./chromaticUI";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { setCacheUserId, setToken } from "@/handler/token_handler";
