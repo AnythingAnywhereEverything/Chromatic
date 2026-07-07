@@ -1,37 +1,36 @@
 "use client";
-
 import { useEffect, useRef, useState } from "react";
 
 export function cn(...classes: (string | undefined | false)[]): string {
-    return classes.filter(Boolean).join(" ")
+    return classes.filter(Boolean).join(" ");
 }
 
 export function timeAgo(date: string | Date): string {
-    let parsed: Date
+    let parsed: Date;
     if (typeof date === "string") {
-        parsed = new Date(date.endsWith("Z") ? date : date + "Z")
+        parsed = new Date(date.endsWith("Z") ? date : date + "Z");
     } else {
-        parsed = date
+        parsed = date;
     }
 
-    if (isNaN(parsed.getTime())) return ""
+    if (isNaN(parsed.getTime())) return "";
 
-    const diff = Math.floor((Date.now() - parsed.getTime()) / 1000)
+    const diff = Math.floor((Date.now() - parsed.getTime()) / 1000);
 
-    const minute = 60
-    const hour = 60 * minute
-    const day = 24 * hour
-    const month = 30 * day
-    const year = 365 * day
+    const minute = 60;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+    const month = 30 * day;
+    const year = 365 * day;
 
-    if (diff < 10) return "just now"
-    if (diff < minute) return `${diff}s ago`
-    if (diff < hour) return `${Math.floor(diff / minute)}m ago`
-    if (diff < day) return `${Math.floor(diff / hour)}h ago`
-    if (diff < month) return `${Math.floor(diff / day)}d ago`
-    if (diff < year) return `${Math.floor(diff / month)}mo ago`
+    if (diff < 10) return "just now";
+    if (diff < minute) return `${diff}s ago`;
+    if (diff < hour) return `${Math.floor(diff / minute)}m ago`;
+    if (diff < day) return `${Math.floor(diff / hour)}h ago`;
+    if (diff < month) return `${Math.floor(diff / day)}d ago`;
+    if (diff < year) return `${Math.floor(diff / month)}mo ago`;
 
-    return `${Math.floor(diff / year)}y ago`
+    return `${Math.floor(diff / year)}y ago`;
 }
 
 export const useGridColumnCount = () => {
@@ -45,8 +44,7 @@ export const useGridColumnCount = () => {
 
         const calculateColumns = () => {
             const computedStyle = window.getComputedStyle(el);
-            const columns = computedStyle
-                .gridTemplateColumns
+            const columns = computedStyle.gridTemplateColumns
                 .split(" ")
                 .filter(Boolean).length;
 
@@ -64,14 +62,14 @@ export const useGridColumnCount = () => {
     return { containerRef, columnCount };
 };
 
-export const formatLargeNumber = (num:number|bigint) => {
-    return new Intl.NumberFormat('en-US', {
-        notation: 'compact',
-        maximumFractionDigits: 1
+export const formatLargeNumber = (num: number | bigint) => {
+    return new Intl.NumberFormat("en-US", {
+        notation: "compact",
+        maximumFractionDigits: 1,
     }).format(num);
-}
+};
 
-export const ratingStars = (itemrating:number) => {
+export const ratingStars = (itemrating: number) => {
     const stars = [];
     for (let i = 0; i < Math.floor(itemrating); i++) {
         stars.push("");
@@ -83,7 +81,7 @@ export const ratingStars = (itemrating:number) => {
         stars.push("");
     }
     return stars.join("");
-}
+};
 
 export function formatPhoneByCountry(digits: string, countryCode: string) {
     const numbers = digits.replace(/\D/g, "");
@@ -106,11 +104,57 @@ export function formatPhoneByCountry(digits: string, countryCode: string) {
     return `+${countryCode} ${numbers}`;
 }
 
-export function formatDateTime(time:string){
-    const standardizedString = time.replace(' ', 'T') + 'Z';
+export function formatDateTime(time: string) {
+    const standardizedString = time.replace(" ", "T") + "Z";
     const localDate = new Date(standardizedString);
-    
-    const datePart = localDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    const timePart = localDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    return (`${datePart} at ${timePart}`);
+
+    const datePart = localDate.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+    });
+    const timePart = localDate.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+    });
+    return `${datePart} at ${timePart}`;
+}
+
+export function useWindowWidth() {
+    const [windowWidth, setWindowWidth] = useState<number | null>(null);
+
+    useEffect(() => {
+        const update = () => setWindowWidth(window.innerWidth);
+
+        update();
+        window.addEventListener("resize", update);
+
+        return () => window.removeEventListener("resize", update);
+    }, []);
+
+    return windowWidth;
+}
+
+
+
+export function useCoarseCursor() {
+    const [isCoarse, setIsCoarse] = useState(false);
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia("(pointer: coarse)");
+        setIsCoarse(mediaQuery.matches);
+
+        const handleChange = (event: MediaQueryListEvent) => {
+            setIsCoarse(event.matches);
+        };
+
+        mediaQuery.addEventListener("change", handleChange);
+
+        return () => {
+            mediaQuery.removeEventListener("change", handleChange);
+        };
+    }, []);
+
+    return isCoarse;
 }

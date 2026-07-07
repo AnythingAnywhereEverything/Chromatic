@@ -1,4 +1,4 @@
-import s from "@styles/ui/Chormatic/inputgroup.module.scss"
+import s from "@styles/ui/chromatic/inputgroup.module.scss"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Button, Input, Textarea } from "../chromaticUI"
 import { cn } from "@/lib/utils"

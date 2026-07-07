@@ -1,4 +1,4 @@
-import style from "@styles/ui/Chormatic/button.module.scss"
+import style from "@styles/ui/chromatic/button.module.scss"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui";
 import { cn } from "@/lib/utils";

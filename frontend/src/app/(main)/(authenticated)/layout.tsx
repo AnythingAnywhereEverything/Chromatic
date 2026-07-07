@@ -21,7 +21,7 @@ export default function AuthenticatedLayout({
     //     }
     // }, [user, isLoading, router]);
 
-    // if (isLoading || !user) {
+    // if (!user) {
     //     return (
     //         <div>
     //             <p>Loading application...</p>
@@ -30,7 +30,7 @@ export default function AuthenticatedLayout({
     // }
 
     return (
-        <main className="page-body">
+        <main>
             {children}
         </main>
     );

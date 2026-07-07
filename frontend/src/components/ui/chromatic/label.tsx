@@ -2,7 +2,7 @@ import { Label as LabelPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 
-import s from "@styles/ui/Chormatic/label.module.scss"
+import s from "@styles/ui/chromatic/label.module.scss"
 
 function Label({
   className,

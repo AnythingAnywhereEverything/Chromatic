@@ -2,7 +2,7 @@ import { Checkbox as CheckboxPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
 import { Icon } from "./icon"
 
-import s from "@styles/ui/Chormatic/checkbox.module.scss"
+import s from "@styles/ui/chromatic/checkbox.module.scss"
 
 function Checkbox({
   className,

@@ -11,7 +11,7 @@ import {
 import React from "react"
 import { Icon } from "./icon"
 
-import s from "@styles/ui/Chormatic/combobox.module.scss"
+import s from "@styles/ui/chromatic/combobox.module.scss"
 
 const Combobox = ComboboxPrimitive.Root
 
