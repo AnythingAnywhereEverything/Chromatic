@@ -11,13 +11,13 @@ type ImageItem = {
 
 type UseImageUploaderOptions = {
     max?: number;
-    value?: ImageValue[];
+    imageValue?: ImageValue[];
     onChange?: (value: ImageValue[]) => void;
 };
 
 export function useImageUploader({
-    max = 5,
-    value,
+    max = 10,
+    imageValue,
     onChange
 }: UseImageUploaderOptions) {
     const [images, setImages] = useState<ImageItem[]>([]);
@@ -60,10 +60,10 @@ export function useImageUploader({
     }, [images]);
 
     useEffect(() => {
-    if (!value) return;
+    if (!imageValue) return;
 
     syncImages(
-        value.map(v =>
+        imageValue.map(v =>
             typeof v === "string"
                 ? {
                     id: crypto.randomUUID(),
@@ -77,7 +77,7 @@ export function useImageUploader({
                 }
         )
     );
-}, [value, syncImages]);
+}, [imageValue, syncImages]);
 
     return {
         images,
