@@ -1,13 +1,13 @@
 import { Combobox as ComboboxPrimitive } from "@base-ui/react"
 
 import { cn } from "@lib/utils"
-import { Button } from "@components/ui/chormatic/button"
+import { Button } from "@components/ui/chromatic/button"
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
-} from "@components/ui/chormatic/input-group"
+} from "@components/ui/chromatic/input-group"
 import React from "react"
 import { Icon } from "./icon"
 
