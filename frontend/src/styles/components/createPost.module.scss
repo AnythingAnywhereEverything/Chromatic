@@ -1,0 +1,30 @@
+.createContainer {
+    
+    max-width: 650px;
+}
+.userfield{
+    display: flex;
+    flex-direction: row;
+    padding-bottom: calc(var(--spacing) * 4);
+}
+.container{
+    margin-right: calc(var(--spacing)*1);
+    padding-top: var(--spacing);
+}
+.profile {
+    border-radius: var(--radius-medium);
+    overflow: hidden;
+    width: calc(var(--spacing) * 14) !important;
+    height: calc(var(--spacing) * 14) !important;
+    position: relative;
+
+    .textarea {
+        height: auto;
+    }
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+}

@@ -1,15 +1,23 @@
+"use client";
+
 import { useEffect, useRef, useState } from "react";
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Field, Icon, Textarea } from "./ui/chromaticUI";
+import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Field, Icon, Separator, Textarea } from "./ui/chromaticUI";
 import { PiGif } from "react-icons/pi";
 import { PiImage } from "react-icons/pi";
 import { PiVideoCamera } from "react-icons/pi";
 import { LuUndo2 } from "react-icons/lu";
 import { LuRedo2 } from "react-icons/lu";
-import { CiPaperplane } from "react-icons/ci";
+import { CiImageOn, CiPaperplane } from "react-icons/ci";
 import s from "@styles/components/postbox.module.scss";
+import cs from "@styles/components/createPost.module.scss"
 import Form from "next/form";
 import { useUndoRedo } from "@/hooks/useUndoRedo";
 import React from "react";
+import { getUser } from "@/api/user";
+import { ImageValue, useImageUploader } from "@/hooks/useImageUploader";
+import { HiOutlineDotsHorizontal } from "react-icons/hi";
+import { AutoHeightTextarea } from "./ui/custom/textarea";
+import { ContainerPreview, ContainerPreview2, ImageUploader2 } from "./ui/chromatic/image-uploader2";
 
 enum PostVisibility{
     Everyone = 1 << 0,
@@ -24,33 +32,56 @@ interface PostImage {
     position: number
 }
 
-interface media_post {
-    userid: string,
-    content: string,
-    
+const CreatePost: React.FC = () => {
+    // const user = getUser();
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button>Hello</Button>
+            </DialogTrigger>
+
+            <DialogContent className={cs["createContainer"]}>
+                <DialogTitle>Create your post</DialogTitle>
+                <DialogDescription>
+                    <PostFrom/>
+                </DialogDescription>
+            </DialogContent>
+        </Dialog>
+    )
 }
 
-type ImgPrepared = PostImage & { file: File | null }
-
-const CreatePost: React.FC = () => {
-    const { value, set, undo, redo, canUndo, canRedo} = useUndoRedo('');
-
-    const [status, setStatus] = useState(PostVisibility.Everyone);
+interface CreatePostContent {
+    userid : string
+    content : string
+    status : props
+    media : string[]
+}
+const PostFrom:React.FC = () => {
+    const [text, setText] = useState('');
+    const [status, setStatus] = useState<PostVisibility>(PostVisibility.Everyone);
+    const [imageValue, setImageValue] = useState<ImageValue[]>([])
     const inputRef = useRef(null);
-    const [imgPrepare, setImgPrepare] = useState<ImgPrepared[]>([])
-    const images = [...imgPrepare]
-    .sort((a, b) => a.position - b.position)
-    .map(i => i.image_url !== "" ? i.image_url : (i.file ?? ""));
+    const { value, set, undo, redo, canUndo, canRedo} = useUndoRedo('');
+    const uploader = useImageUploader({
+       imageValue,
+       onChange: setImageValue,
+       max: 10
+    });
+    const capText = (text: string, limit = 2500) => text.slice(0, limit);
 
-    const handleAddFiles = (files: File[]) => {
-        setImgPrepare(prev => [
-            ...prev,
-            ...files.map((file, i) => ({
-                image_url: "",
-                position: prev.length + i,
-                file,
-            } as ImgPrepared))
-        ])
+    function getStatusName(status: PostVisibility): string {
+        switch (status) {
+            case PostVisibility.Everyone:
+                return "Everyone";
+            case PostVisibility.FriendsOnly:
+                return "Friends Only";
+            case PostVisibility.TaggedPeople:
+                return "People You Tag";
+            case PostVisibility.NoOne:
+                return "No One";
+            default:
+                return "Unknown";
+        }
     }
 
     useEffect(() => {
@@ -70,47 +101,45 @@ const CreatePost: React.FC = () => {
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [undo, redo, inputRef]);
+
     return (
-        <Field className={s.createPostContainer}>
-            <Form action={'#'}>
-                <Field className={s.text}>
-                    <Textarea 
-                    placeholder="This is text box"
-                    ref={inputRef}
-                    value={value}
-                    onChange={(e) => set(e.target.value)}
+        <Form action={"#"}>
+            <div className={cs["userfield"]}>
+                <div className={cs["container"]}>
+                    <div className={cs["profile"]}>
+                        <img className={cs["avatar"]} src="https://placehold.co/200" alt="" />
+                    </div>
+                </div>
+                <Field style={{paddingTop: "calc(var(--spacing) * 1)"}}>
+                    <AutoHeightTextarea 
+                        className={cs["textarea"]}
+                        placeholder="What's your thought ?"
+                        value={text}
+                        ref={inputRef}
+                        onChange={(e) => setText(capText(e.target.value))}
+                    />
+                    <ContainerPreview2
+                        images={uploader.images}
+                        onDelete={uploader.removeImage}
+                    />
+                    <PostStatus
+                    visibility={status}
+                    onChange={setStatus}
                     />
                 </Field>
-                <ImageUploader
-                images={images}
-                onChange={handleAddFiles}
-                />
-                <Field orientation={'horizontal'}>
-                    <Field>
-                        <div>
-                            <PostStatus
-                            visibility={status}
-                            onChange={setStatus}
-                            />
-                        </div>
-
-                    </Field>
-                    <div style={{ display: "flex" }}>
-                        <Button onClick={undo} disabled={!canUndo}><LuUndo2 /></Button>
-                        <Button onClick={redo} disabled={!canRedo}><LuRedo2 /></Button>
-                    </div>
-                </Field>
-                <Field orientation={'horizontal'}>
-                    <Field orientation={'horizontal'}>
-                        <PiImage/>
-                        <PiGif/>
-                        <PiVideoCamera/>
-                    </Field>
-                    <CiPaperplane/>
-                </Field>
-            </Form>
-        </Field>
-    ); 
+            </div>
+            <Separator/>
+            <Field orientation={'horizontal'}>
+                <ImageUploader2
+                    uploader={uploader}
+                    >
+                    <button>
+                        <CiImageOn />
+                    </button>
+                </ImageUploader2>
+            </Field>
+        </Form>
+    )
 }
 
 type props = {
@@ -164,58 +193,5 @@ const PostStatus: React.FC<props> = ({visibility, onChange}) =>{
     )
 }
 
-type ImageUploaderProps = {
-    images: (string | File)[]
-    onChange: (files: File[]) => void
-    max? : number
-}
 
-const ImageUploader: React.FC<ImageUploaderProps> = ({ 
-    images, 
-    onChange, 
-    max = 5 }) => {
-    const inputRef = useRef<HTMLInputElement>(null)
-
-    // * revoke object urls on unmount to avoid memory leaks
-    const previews = images.map(img =>
-        typeof img === 'string' ? img : URL.createObjectURL(img)
-    )
-
-    useEffect(() => {
-        return () => {
-            previews.forEach((url, i) => {
-                if (typeof images[i] !== 'string') URL.revokeObjectURL(url)
-            })
-        }
-    }, [images])
-
-    const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files ?? [])
-        const remaining = max - images.length
-        // * silently drop extras past the limit, adjust if you want a warning instead
-        if (files.length && remaining > 0) onChange(files.slice(0, remaining))
-        e.target.value = ''
-    }
-
-    return (
-        <Field className={s.imageContainer}>
-            <input
-                ref={inputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                hidden
-                onChange={handleFiles}
-                disabled={images.length >= max}
-            />
-            <button type="button" onClick={() => inputRef.current?.click()} disabled={images.length >= max}>
-                Add image ({images.length}/{max})
-            </button>
-            {previews.map((url, i) => (
-                <img key={i} src={url} alt="" />
-            ))}
-        </Field>
-    )
-}
-
-export default React.memo(CreatePost);
+export default CreatePost;

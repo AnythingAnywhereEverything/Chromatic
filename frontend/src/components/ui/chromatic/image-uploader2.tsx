@@ -2,8 +2,8 @@ import s from "@styles/ui/chromatic/imageuploader2.module.scss"
 import { useImageUploader } from "@/hooks/useImageUploader";
 import React, { useRef } from "react";
 
-import style from "@styles/ui/Chormatic/imageuploader2.module.scss"
-import { Button, Dialog } from "../chromaticUI";
+import style from "@styles/ui/chromatic/imageuploader2.module.scss";
+import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../chromaticUI";
 type ImageItem = {
     id: string;
     file?: File;
@@ -108,13 +108,10 @@ const ContainerPreview2: React.FC<ContainerPreviewProps> = ({
         <div className={style["createImageContainer"]}>
             {!!images && (
                 <div className={`${style.gallery} ${style[galleryClass]}`}>
-                    <Button
-                    variant={'default'} 
-                    className={style["editButton"]}
-                    onClick={() => {}}
-                    >
-                        Edit all image
-                    </Button>
+                    <AllImagePreview
+                    images={images}
+                    onDelete={onDelete}
+                    />
                     {visibleImages.map((image, index) => (
                         <div
                             key={image.id ?? `${index}`}
@@ -122,7 +119,6 @@ const ContainerPreview2: React.FC<ContainerPreviewProps> = ({
                         >
                             <img src={image.preview} alt="" className={style.image} />
                             <button
-                                type="button"
                                 className={style.removeImage}
                                 onClick={() => onDelete(image.id)}
                             >
@@ -148,10 +144,40 @@ const AllImagePreview: React.FC<ContainerPreviewProps> = ({
 }) => {
     return (
         <Dialog>
-            
+            <DialogTrigger>
+                <Button
+                className={style["editButton"]}
+                    >
+                    Edit all image
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogTitle>Image editor</DialogTitle>
+                <DialogContent>
+                    <div className={style["allImageContainer"]}>
+                        {images.map((image, index) => (
+                            <div
+                            key={image.id ?? `${index}`}
+                            className={s.item}
+                            >
+                                <img src={image.preview} alt="" className={style.image} />
+                                <button
+                                    type="button"
+                                    className={style.removeImage}
+                                    onClick={() => onDelete(image.id)}
+                                    >
+                                    ✕
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </DialogContent>
+            </DialogContent>
         </Dialog>
     )
 }
+
+
 export {
     ImageUploader2, 
     ContainerPreview,
