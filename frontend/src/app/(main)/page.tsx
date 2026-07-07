@@ -14,8 +14,6 @@ const Home: React.FC = () => {
     // const { data: user, isLoading } = useUser();
     // const router = useRouter();
 
-    // Kick out unauthenticated users instantly from sub-pages
-
     // Commented  for frontend only development purposes, to allow access to authenticated pages without login
     // useEffect(() => {
     //     if (!isLoading && !user) {
