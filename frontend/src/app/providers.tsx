@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { LayerProvider } from "./_components/layer";
 import { ThemeProvider } from "next-themes";
+import { PortalProvider } from "./_components/portal";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
     const [queryClient] = useState(
@@ -24,9 +24,21 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                 <GoogleOAuthProvider
                     clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}
                 >
-                    <LayerProvider>
+                    <PortalProvider 
+                        className="portalProvider"
+                        style={{ 
+                            position: "fixed",
+                            top: 0,
+                            left: 0,
+                            width: "100vw",
+                            height: "100vh",
+                            overflow: "hidden",
+                            pointerEvents: "none",
+                            zIndex: 9999,
+                        }}
+                    >
                         {children}
-                    </LayerProvider>
+                    </PortalProvider>
                 </GoogleOAuthProvider>
             </QueryClientProvider>
         </ThemeProvider>

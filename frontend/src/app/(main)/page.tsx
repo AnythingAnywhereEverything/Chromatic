@@ -3,10 +3,6 @@
 import React from "react";
 import { ping } from "../../api/ping";
 import style from "@styles/home.module.scss";
-import { useLayer } from "@/app/_components/layer";
-// import { Tooltip } from "@/app/_components/ui/ztx-tooltips";
-// import { useRouter } from "next/navigation";
-// import { useUser } from "@/hooks/useUser";
 
 const Home: React.FC = () => {
     const [message, setMessage] = React.useState("Pinging...");
@@ -29,8 +25,6 @@ const Home: React.FC = () => {
     //     );
     // }
 
-    const layer = useLayer();
-
     React.useEffect(() => {
         async function fetchPing() {
             try {
@@ -43,20 +37,6 @@ const Home: React.FC = () => {
         }
         fetchPing();
     }, []);
-
-    const exampleOpenLayer = () => {
-        if (!layer) {
-            console.error("Layer context is not available.");
-            return;
-        }
-        const overlay = layer.open(
-            <div className={style.overlay}>
-                <h2>Overlay Content</h2>
-                <p>This is an example overlay.</p>
-                <button onClick={() => overlay.close()}>Close Overlay</button>
-            </div>,
-        );
-    };
 
     return (
         <main>

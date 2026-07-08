@@ -19,6 +19,7 @@ button, input, select, optgroup, textarea {
 }
 
 html, body {
+    overflow-x: hidden;
     background-color: var(--background);
     height: 100%;
     font-family:  "Geist Sans", 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
