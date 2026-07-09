@@ -33,7 +33,7 @@
 
 import React from "react";
 import { Positions } from "./types";
-import { Portal, usePortalProviderContext } from "../../portal";
+import { Portal } from "../../portal";
 import { getTooltipPosition } from "./utils";
 import style from "./style.module.scss";
 
@@ -276,9 +276,7 @@ const TooltipTrigger: React.FC<TooltipTriggerProps> = (props) => {
 };
 
 const TooltipPortal: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { container } = usePortalProviderContext();
-    console.log("Rendering tooltip portal with container:", container);
-    return <Portal container={container}>{children}</Portal>;
+    return <Portal>{children}</Portal>;
 };
 
 export { Tooltip, TooltipContent, TooltipTrigger, TooltipAnchor, TooltipArrow };

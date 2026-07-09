@@ -1,6 +1,6 @@
 "use client";
 
-import { Portal, usePortalContainer } from "@/app/_components/portal";
+import { Portal } from "@/app/_components/portal";
 import { Tooltip, TooltipAnchor, TooltipContent, TooltipTrigger } from "@/app/_components/ui/tooltip";
 
 import React from "react";
@@ -13,7 +13,6 @@ const TestPage = () => {
     };
 
     const [rootContent, setRootContent] = React.useState<HTMLElement | null>(null);
-    const container = usePortalContainer();
 
     const innerRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -22,7 +21,7 @@ const TestPage = () => {
             <button onMouseOver={showInner} onMouseOut={() => setInner(false)}>
                 Open Portal
             </button>
-            {inner && <Portal container={innerRef.current}>Something</Portal>}
+            {inner && <Portal target={innerRef.current}>Something</Portal>}
             <div>
                 <p>Hover over the button to open the portal.</p>
                 <div>
@@ -44,7 +43,7 @@ const TestPage = () => {
                 Show Root Content
             </button>
             {rootContent && (
-                <Portal container={container}>
+                <Portal>
                     <div style={{ zIndex: 899, position: "fixed", top: 0, left: 0, backgroundColor: "white", padding: "10px" }}>
                         This is root content!
                     </div>

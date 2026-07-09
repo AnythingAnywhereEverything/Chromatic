@@ -1,66 +1,111 @@
 "use client";
 
-import React from "react";
-import ReactDOM from "react-dom";
-type PortalElement = HTMLDivElement;
+import React, {
+    createContext,
+    useContext,
+    useEffect,
+    useState,
+    useMemo,
+    ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 
-interface PortalProps extends React.HTMLAttributes<PortalElement> {
-    container?: Element | DocumentFragment | null;
+type PortalContainer = HTMLElement | null;
+
+interface PortalProviderContextType {
+    container: PortalContainer;
 }
 
-type PortalProviderContextType = {
-    container: Element | DocumentFragment | null;
-};
+interface PortalProviderProps {
+    children: ReactNode;
+    /** An optional element to use as the portal container. Defaults to document.body */
+    container?: PortalContainer;
+}
 
-const PortalProviderContext = React.createContext<PortalProviderContextType | null>(null);
+const PortalContext = createContext<PortalProviderContextType | undefined>(
+    undefined,
+);
 
-export const usePortalProviderContext = () => {
-    const context = React.useContext(PortalProviderContext);
-    if (!context) {
-        throw new Error("usePortalProviderContext must be used within a PortalProvider");
-    }
-    return context;
-};
-
-// use to get the portal container from the context, or fallback to document.body
 export const usePortalContainer = () => {
-    const context = usePortalProviderContext();
-    return context.container || (typeof document !== "undefined" ? document.body : null);
+    const context = useContext(PortalContext);
+    if (context === undefined) {
+        throw new Error(
+            "usePortalContainer must be used within a PortalProvider",
+        );
+    }
+    return context.container;
 };
 
-// Generate dic of given div within provider
-export const PortalProvider: React.FC<PortalProps> = ({ children, ...props }) => {
-    const [container, setContainer] = React.useState<Element | DocumentFragment | null>(null);
+export const PortalProvider = ({
+    children,
+    container,
+}: PortalProviderProps) => {
+    const [mounted, setMounted] = useState(false);
+    const [internalContainer, setInternalContainer] =
+        useState<HTMLElement | null>(null);
 
-    const containerRef = React.useRef<HTMLDivElement>(null);
-
-    React.useEffect(() => {
-        if (containerRef.current) {
-            setContainer(containerRef.current);
+    useEffect(() => {
+        setMounted(true);
+        // If no container prop is provided, we use body,
+        // but we wait until useEffect to ensure we are on the client.
+        if (!container) {
+            setInternalContainer(document.body);
         }
-    }, []);
+    }, [container]);
+
+    if (!mounted) {
+        return null;
+    }
+
+    // Memoize context to prevent unnecessary re-renders
+    const value = useMemo(
+        () => ({
+            container: container || internalContainer,
+        }),
+        [container, internalContainer],
+    );
 
     return (
-        <PortalProviderContext.Provider value={{ container }}>
+        <PortalContext.Provider value={value}>
             {children}
-            <div ref={containerRef} {...props}></div>
-        </PortalProviderContext.Provider>
+        </PortalContext.Provider>
     );
 };
 
-const Portal = React.forwardRef<PortalElement, PortalProps>((props, ref) => {
-    const { container: containerProp, ...portalProps } = props;
-    const [isMounted, setIsMounted] = React.useState(false);
+interface PortalProps {
+    children: ReactNode;
+    /** Target element for the portal. If not provided, it uses the PortalProvider context or document.body */
+    target?: HTMLElement | null;
+    /** A wrapper element for the portaled content (Optional) */
+    wrapperProps?: React.HTMLAttributes<HTMLDivElement>;
+}
 
-    React.useEffect(() => {
-        setIsMounted(true);
-        return () => setIsMounted(false);
+export const Portal = ({ children, target, wrapperProps }: PortalProps) => {
+    const [mounted, setMounted] = useState(false);
+
+    let contextContainer = null;
+    try {
+        contextContainer = usePortalContainer();
+    } catch (error) {
+        // If the hook throws, it means we're not inside a PortalProvider.
+        // We'll just ignore and fallback to target or document.body.
+    }
+
+    useEffect(() => {
+        setMounted(true);
     }, []);
-    const container = containerProp || (isMounted && globalThis?.document?.body);
 
-    return container ?
-        ReactDOM.createPortal(<div ref={ref} {...portalProps} />, container) :
-        null;
-});
+    if (!mounted) return null;
 
-export { Portal };
+    // Priority: target | Context container | Fallback to body
+    const targetElement =
+        target ||
+        contextContainer ||
+        (typeof document !== "undefined" ? document.body : null);
+
+    console.log("Portal component using targetElement:", targetElement);
+
+    if (!targetElement) return null;
+
+    return createPortal(<div {...wrapperProps}>{children}</div>, targetElement);
+};
