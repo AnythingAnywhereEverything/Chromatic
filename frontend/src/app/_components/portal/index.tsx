@@ -46,24 +46,22 @@ export const PortalProvider = ({
 
     useEffect(() => {
         setMounted(true);
-        // If no container prop is provided, we use body,
-        // but we wait until useEffect to ensure we are on the client.
+
         if (!container) {
             setInternalContainer(document.body);
         }
     }, [container]);
 
-    if (!mounted) {
-        return null;
-    }
-
-    // Memoize context to prevent unnecessary re-renders
     const value = useMemo(
         () => ({
-            container: container || internalContainer,
+            container: container ?? internalContainer,
         }),
         [container, internalContainer],
     );
+
+    if (!mounted) {
+        return null;
+    }
 
     return (
         <PortalContext.Provider value={value}>
