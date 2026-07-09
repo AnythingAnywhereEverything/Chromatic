@@ -1,282 +1,300 @@
-/**
- * Objective: Create a better tooltip component that is more flexible and customizable than the current one.
- *
- * Features:
- * - Customizable position (top, bottom, left, right)
- * - Customizable offset
- * - Delay before showing and hiding the tooltip
- * - Support for rich content (HTML, React components)
- * - Accessible (ARIA attributes)
- * - Class names for styling
- * - Auto positioning to avoid clipping
- * - Component-based API for better integration with React
- * - Optionally has Arrow Anchor
- * - Tooltip content will be moved to a portal to avoid clipping issues
- * - Improve positioning to allow alignment of the tooltip relative to the trigger element (e.g., center, start, end)
- *
- * Usage:
- * <Tooltip align="center" position="top" offset={10} delay={300}>
- *      <TooltipContent>
- *          <div>Tooltip content goes here</div>
- *          <TooltipArrow />
- *      </TooltipContent>
- *      <TooltipTrigger>
- *          <TooltipTriggerAnchor>
- *              <div>Anchored</div>
- *          </TooltipTriggerAnchor>
- *          <div>
- *              This is a tooltip trigger
- *          </div>
- *      </TooltipTrigger>
- * </Tooltip>
- */
-
-import React from "react";
-import { Positions } from "./types";
+import * as React from "react";
+import {
+    useFloating,
+    autoUpdate,
+    offset,
+    flip,
+    shift,
+    useHover,
+    useFocus,
+    useDismiss,
+    useRole,
+    useInteractions,
+    useDelayGroup,
+    useMergeRefs,
+    useTransitionStyles,
+    safePolygon,
+    arrow,
+    FloatingArrow,
+} from "@floating-ui/react";
+import type {
+    FloatingArrowProps,
+    Middleware,
+    Placement,
+} from "@floating-ui/react";
 import { Portal } from "../../portal";
-import { getTooltipPosition } from "./utils";
-import style from "./style.module.scss";
 
-type TooltipContext = {
-    content: React.ReactNode | null;
-    setContent: (content: React.ReactNode | null) => void;
-    anchor: React.RefObject<HTMLElement | null> | null;
-    setAnchor: (anchor: React.RefObject<HTMLElement | null> | null) => void;
-    options: {
-        offset: number;
-        delay: number;
-        closeDelay: number;
-        position: Positions;
-        disableHoverableContent: boolean;
-    };
-};
-
-const TooltipContext = React.createContext<TooltipContext | null>(null);
-
-interface TooltipProps {
-    children: React.ReactNode;
-    align?: "start" | "center" | "end";
-    offset?: number;
-    delay?: number;
-    closeDelay?: number;
-    disableHoverableContent?: boolean;
-    position?: Positions;
+interface TooltipOptions {
+    initialOpen?: boolean;
+    placement?: Placement;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    allowHovering?: boolean;
 }
 
-const Tooltip: React.FC<TooltipProps> = (props) => {
-    const {
-        children,
-        offset = 8,
-        delay = 0,
-        closeDelay = 300,
-        disableHoverableContent = false,
-        align = "center",
-        position = "top",
-    } = props;
-    const [content, setContent] = React.useState<React.ReactNode | null>(null);
-    const [anchor, setAnchor] = React.useState<React.RefObject<HTMLElement | null> | null>(null);
+const anchorArrow = ({
+    anchorRef,
+    arrowRef,
+}: {
+    anchorRef: React.RefObject<HTMLElement | null>;
+    arrowRef: React.RefObject<HTMLElement | null>;
+}): Middleware => ({
+    name: "anchorArrow",
 
-    const contextValue = React.useMemo(
+    async fn(state) {
+        const anchor = anchorRef.current;
+        if (!anchor) {
+            return {};
+        }
+
+        const anchorRect = anchor.getBoundingClientRect();
+        const floatingRect = state.elements.floating.getBoundingClientRect();
+
+        let x: number | undefined;
+        let y: number | undefined;
+
+        const arrowWidth = arrowRef.current?.clientWidth ?? 0;
+        const arrowHeight = arrowRef.current?.clientHeight ?? 0;
+
+        switch (state.placement.split("-")[0]) {
+            case "top":
+            case "bottom":
+                x =
+                    anchorRect.left +
+                    anchorRect.width / 2 -
+                    floatingRect.left -
+                    arrowWidth / 2;
+                break;
+
+            case "left":
+            case "right":
+                y =
+                    anchorRect.top +
+                    anchorRect.height / 2 -
+                    floatingRect.top -
+                    arrowHeight / 2;
+                break;
+        }
+        
+        return {
+            data: {
+                x,
+                y,
+            },
+        };
+
+    },
+});
+
+export function useTooltip({
+    initialOpen = false,
+    placement = "top",
+    open: controlledOpen,
+    onOpenChange: setControlledOpen,
+    allowHovering = false,
+}: TooltipOptions = {}) {
+    const [uncontrolledOpen, setUncontrolledOpen] = React.useState(initialOpen);
+    const open = controlledOpen ?? uncontrolledOpen;
+    const setOpen = setControlledOpen ?? setUncontrolledOpen;
+
+    const { context: delayContext } = useFloating();
+    const { delay } = useDelayGroup(delayContext);
+
+    const arrowRef = React.useRef(null);
+    const arrowAnchorRef = React.useRef<HTMLElement | null>(null);
+
+    const data = useFloating({
+        placement,
+        open,
+        onOpenChange: setOpen,
+        whileElementsMounted: autoUpdate,
+        middleware: [
+            offset(5),
+            flip(),
+            shift(),
+            arrow({ element: arrowRef }),
+            anchorArrow({ anchorRef: arrowAnchorRef, arrowRef }),
+        ],
+    });
+
+    const context = data.context;
+
+    const hover = useHover(context, {
+        move: false,
+        enabled: controlledOpen == null,
+        delay,
+        handleClose: allowHovering ? safePolygon() : undefined,
+    });
+    const focus = useFocus(context, {
+        enabled: controlledOpen == null,
+    });
+    const dismiss = useDismiss(context);
+    const role = useRole(context, { role: "tooltip" });
+
+    const interactions = useInteractions([hover, focus, dismiss, role]);
+
+    return React.useMemo(
         () => ({
-            content,
-            setContent,
-            anchor,
-            setAnchor,
-            options: { offset, delay, closeDelay, position, disableHoverableContent },
+            open,
+            setOpen,
+            arrowAnchorRef,
+            ...interactions,
+            ...data,
+            getArrowProps: () => ({
+                ref: arrowRef,
+                context: data.context,
+            }),
         }),
-        [content, offset, delay, closeDelay, position, disableHoverableContent],
+        [open, setOpen, interactions, data],
     );
+}
 
-    return (
-        <TooltipContext.Provider value={contextValue}>
-            {children}
-        </TooltipContext.Provider>
-    );
-};
+type ContextType = ReturnType<typeof useTooltip> | null;
 
-const useProviderContext = () => {
+const TooltipContext = React.createContext<ContextType>(null);
+
+export const useTooltipState = () => {
     const context = React.useContext(TooltipContext);
-    if (!context) {
-        throw new Error("TooltipTrigger must be used within a Tooltip");
+
+    if (context == null) {
+        throw new Error("Tooltip components must be wrapped in <Tooltip />");
     }
+
     return context;
 };
 
-interface TooltipAnchorProps extends React.HTMLAttributes<HTMLDivElement> {
-    children: React.ReactNode;
-    asChild?: boolean;
-}
+type TooltipArrowProps = Omit<FloatingArrowProps, "ref" | "context">;
 
-const TooltipAnchor: React.FC<TooltipAnchorProps> = ({
-    children,
-    asChild = false,
-    ...props
-}) => {
-    const context = useProviderContext();
-    const { setAnchor } = context;
+export const TooltipArrowAnchor = React.forwardRef<
+    HTMLElement,
+    React.HTMLProps<HTMLElement>
+>(function TooltipArrowAnchor(props, propRef) {
+    const state = useTooltipState();
 
-    const anchorRef = React.useRef<HTMLElement | null>(null);
+    const ref = useMergeRefs([state.arrowAnchorRef, propRef]);
 
-    React.useEffect(() => {
-        setAnchor(anchorRef);
+    return <div ref={ref} {...props} />;
+});
 
-        return () => setAnchor(null);
-    }, [setAnchor]);
+export function TooltipArrow(props: TooltipArrowProps) {
+    const state = useTooltipState();
 
-    return asChild ? (
-        React.cloneElement(children as React.ReactElement<any>, {
-            ...props,
-            ref: (node: HTMLElement) => {
-                anchorRef.current = node;
+    const middlewareData = state.middlewareData["anchorArrow"];
 
-                const childRef = (children as any).ref;
-                if (typeof childRef === "function") childRef(node);
-                else if (childRef) childRef.current = node;
-            },
-        })
-    ) : (
-        <div ref={anchorRef as React.RefObject<HTMLDivElement>} {...props}>
-            {children}
-        </div>
+    let style: React.CSSProperties = {};
+
+    if (middlewareData) {
+        if (middlewareData.x != null) {
+            style.left = `${middlewareData.x}px`;
+        }
+        if (middlewareData.y != null) {
+            style.top = `${middlewareData.y}px`;
+        }
+    }
+
+    return (
+        <FloatingArrow
+            {...state.getArrowProps()}
+            {...props}
+            style={{
+                ...props.style,
+                ...style,
+            }}
+        />
     );
-};
-
-interface TooltipArrowProps {
-    children?: React.ReactNode;
-    anchorRef?: React.RefObject<HTMLElement>;
 }
 
-const TooltipArrow: React.FC<TooltipArrowProps> = ({ children }) => {
-    return <div className={style["tooltip-arrow"]}>{children}</div>;
-};
-
-interface TooltipContentProps {
-    children: React.ReactNode;
+export function Tooltip({
+    children,
+    ...options
+}: { children: React.ReactNode } & TooltipOptions) {
+    // This can accept any props as options, e.g. `placement`,
+    // or other positioning options.
+    const tooltip = useTooltip(options);
+    return (
+        <TooltipContext.Provider value={tooltip}>
+            {children}
+        </TooltipContext.Provider>
+    );
 }
 
-const TooltipContent: React.FC<TooltipContentProps> = ({ children }) => {
-    const context = useProviderContext();
-    const { setContent } = context;
+export const TooltipTrigger = React.forwardRef<
+    HTMLElement,
+    React.HTMLProps<HTMLElement> & { asChild?: boolean }
+>(function TooltipTrigger({ children, asChild = false, ...props }, propRef) {
+    const state = useTooltipState();
 
-    React.useEffect(() => {
-        setContent(children);
-        return () => setContent(null);
-    }, [children, setContent]);
+    const childrenRef = (children as any).ref;
+    const ref = useMergeRefs([state.refs.setReference, propRef, childrenRef]);
 
-    return null;
-};
-
-interface TooltipTriggerProps extends React.HTMLAttributes<HTMLDivElement> {
-    children: React.ReactNode;
-    asChild?: boolean;
-}
-
-const TooltipTrigger: React.FC<TooltipTriggerProps> = (props) => {
-    const context = useProviderContext();
-
-    // Destructure context and props
-    const { content, options, anchor } = context;
-    const { children, asChild = false, ...rest } = props;
-    const { offset, position, closeDelay, delay, disableHoverableContent } = options;
-
-    const compId = React.useId();
-    
-    // References
-    const triggerRef = React.useRef<HTMLDivElement>(null);
-    const closeDelayTimerRef = React.useRef<NodeJS.Timeout | null>(null);
-
-    const [isVisible, setIsVisible] = React.useState(false);
-    const [isFullyClosed, setIsFullyClosed] = React.useState(true);
-    const [coords, setCoords] = React.useState({
-        top: 0,
-        left: 0,
-        position: position,
-    });
-
-    const updatePosition = React.useCallback(() => {
-
-        const targetElement = anchor?.current ?? triggerRef.current;
-        console.log("Updating tooltip position for target:", targetElement);
-        if (!targetElement) return;
-        const {
-            top,
-            left,
-            position: pos,
-        } = getTooltipPosition(targetElement, position, offset);
-        setCoords({ top, left, position: pos });
-    }, [position, offset, anchor]);
-
-    const renderTooltip = () => {
-        return (
-            <div
-                className={`${style["tooltip-wrapper"]} ${style[coords.position]} ${disableHoverableContent ? style["disable-hoverable-content"] : ""}`}
-                style={{ 
-                    top: `${coords.top}px`, 
-                    left: `${coords.left}px`,
-                    "--tooltip-offset": `${offset}px`,
-                } as React.CSSProperties}
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
-            >
-                <div
-                    className={`${style["tooltip-content"]} ${isVisible ? style["visible"] : style["hidden"]}`}
-                >
-                    {content}
-                    <div className={style["tooltip-arrow"]} />
-                </div>
-            </div>
+    if (asChild && React.isValidElement(children)) {
+        return React.cloneElement(
+            children,
+            state.getReferenceProps({
+                ref,
+                ...props,
+                ...(children.props as Record<string, unknown>),
+                "data-state": state.open ? "open" : "closed",
+            } as Record<string, unknown>),
         );
-    };
+    }
 
-    const handleMouseEnter = () => {
-        if (closeDelayTimerRef.current) clearTimeout(closeDelayTimerRef.current);
-        updatePosition();
-        setIsFullyClosed(false);
-        setIsVisible(true);
-        window.addEventListener("scroll", updatePosition, true);
-    };
-
-    const handleMouseLeave = () => {
-        if (closeDelayTimerRef.current) clearTimeout(closeDelayTimerRef.current);
-        setIsVisible(false);
-        closeDelayTimerRef.current = setTimeout(() => {
-            setIsFullyClosed(true);
-            window.removeEventListener("scroll", updatePosition, true);
-        }, closeDelay);
-    };
-
-    return asChild ? (
-        <>
-            {React.cloneElement(children as React.ReactElement, {
-                ...(React.isValidElement(children) ? (children.props as any) : {}),
-                ref: (node: HTMLElement) => {
-                    (
-                        triggerRef as React.RefObject<HTMLElement | null>
-                    ).current = node;
-                    const { ref } = children as any;
-                    if (typeof ref === "function") ref(node);
-                    else if (ref) ref.current = node;
-                },
-                onMouseEnter: handleMouseEnter,
-                onMouseLeave: handleMouseLeave,
-            })}
-            {!isFullyClosed && <TooltipPortal>{renderTooltip()}</TooltipPortal>}
-        </>
-    ) : (
-        <div
-            ref={triggerRef}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            {...rest}
+    return (
+        <button
+            ref={ref}
+            data-state={state.open ? "open" : "closed"}
+            {...state.getReferenceProps(props)}
         >
             {children}
-            {!isFullyClosed && <TooltipPortal>{renderTooltip()}</TooltipPortal>}
-        </div>
+        </button>
     );
-};
+});
 
-const TooltipPortal: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    return <Portal>{children}</Portal>;
-};
+export const TooltipContent = React.forwardRef<
+    HTMLDivElement,
+    React.HTMLProps<HTMLDivElement>
+>(function TooltipContent(props, propRef) {
+    const state = useTooltipState();
 
-export { Tooltip, TooltipContent, TooltipTrigger, TooltipAnchor, TooltipArrow };
+    const { context: delayContext } = useFloating();
+    const { isInstantPhase, currentId } = useDelayGroup(delayContext);
+    const ref = useMergeRefs([state.refs.setFloating, propRef]);
+
+    useDelayGroup(state.context, { id: state.context.floatingId });
+
+    const instantDuration = 0;
+    const duration = 250;
+
+    const { isMounted, styles } = useTransitionStyles(state.context, {
+        duration: isInstantPhase
+            ? {
+                  open: instantDuration,
+                  // `id` is this component's `id`
+                  // `currentId` is the current group's `id`
+                  close:
+                      currentId === state.context.floatingId
+                          ? duration
+                          : instantDuration,
+              }
+            : duration,
+        initial: {
+            opacity: 0,
+        },
+    });
+
+    if (!isMounted) return null;
+
+    return (
+        <Portal>
+            <div
+                ref={ref}
+                style={{
+                    ...state.floatingStyles,
+                    ...props.style,
+                    ...styles,
+                }}
+                {...state.getFloatingProps(props)}
+            />
+        </Portal>
+    );
+});

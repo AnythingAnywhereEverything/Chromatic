@@ -40,28 +40,14 @@ export const PortalProvider = ({
     children,
     container,
 }: PortalProviderProps) => {
-    const [mounted, setMounted] = useState(false);
-    const [internalContainer, setInternalContainer] =
-        useState<HTMLElement | null>(null);
-
-    useEffect(() => {
-        setMounted(true);
-
-        if (!container) {
-            setInternalContainer(document.body);
-        }
-    }, [container]);
-
     const value = useMemo(
         () => ({
-            container: container ?? internalContainer,
+            container:
+                container ??
+                (typeof document !== "undefined" ? document.body : null),
         }),
-        [container, internalContainer],
+        [container],
     );
-
-    if (!mounted) {
-        return null;
-    }
 
     return (
         <PortalContext.Provider value={value}>
@@ -78,16 +64,13 @@ interface PortalProps {
     wrapperProps?: React.HTMLAttributes<HTMLDivElement>;
 }
 
-export const Portal = ({ children, target, wrapperProps }: PortalProps) => {
+export const Portal = ({
+    children,
+    target,
+    wrapperProps,
+}: PortalProps) => {
+    const contextContainer = usePortalContainer();
     const [mounted, setMounted] = useState(false);
-
-    let contextContainer = null;
-    try {
-        contextContainer = usePortalContainer();
-    } catch (error) {
-        // If the hook throws, it means we're not inside a PortalProvider.
-        // We'll just ignore and fallback to target or document.body.
-    }
 
     useEffect(() => {
         setMounted(true);
@@ -95,15 +78,13 @@ export const Portal = ({ children, target, wrapperProps }: PortalProps) => {
 
     if (!mounted) return null;
 
-    // Priority: target | Context container | Fallback to body
     const targetElement =
-        target ||
-        contextContainer ||
-        (typeof document !== "undefined" ? document.body : null);
+        target ??
+        contextContainer ??
+        document.body;
 
-    console.log("Portal component using targetElement:", targetElement);
-
-    if (!targetElement) return null;
-
-    return createPortal(<div {...wrapperProps}>{children}</div>, targetElement);
+    return createPortal(
+        <div {...wrapperProps}>{children}</div>,
+        targetElement,
+    );
 };

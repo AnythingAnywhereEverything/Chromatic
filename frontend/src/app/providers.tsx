@@ -18,7 +18,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             }),
     );
 
-    const portalRootRef = useRef<HTMLDivElement | null>(null);
+    const [portalRoot, setPortalRoot] = useState<HTMLDivElement | null>(null);
 
     return (
         <ThemeProvider enableSystem>
@@ -26,22 +26,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                 <GoogleOAuthProvider
                     clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}
                 >
-                    <PortalProvider container={portalRootRef.current}>
+                    <PortalProvider container={portalRoot}>
                         {children}
                     </PortalProvider>
-                    <div 
-                        id="portal-root" 
-                        ref={portalRootRef}
-                        style={{ 
-                            position: "fixed",
-                            zIndex: 9999,
-                            width: "100vw",
-                            height: "100vh",
-                            pointerEvents: "none",
-                            top: 0,
-                            left: 0,
-                        }}
-                    />
+                    <div data-portal-root ref={setPortalRoot} />
                 </GoogleOAuthProvider>
             </QueryClientProvider>
         </ThemeProvider>

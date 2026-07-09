@@ -1,7 +1,7 @@
 "use client";
 
 import { Portal } from "@/app/_components/portal";
-import { Tooltip, TooltipAnchor, TooltipContent, TooltipTrigger } from "@/app/_components/ui/tooltip";
+import { Tooltip, TooltipAnchor, TooltipContent, TooltipTrigger } from "@/app/_components/ui/tooltip/old";
 
 import React from "react";
 
