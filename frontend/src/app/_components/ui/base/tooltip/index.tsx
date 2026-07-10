@@ -16,13 +16,14 @@ import {
     safePolygon,
     arrow,
     FloatingArrow,
+    useTransitionStatus,
 } from "@floating-ui/react";
 import type {
     FloatingArrowProps,
     Middleware,
     Placement,
 } from "@floating-ui/react";
-import { Portal } from "../../portal";
+import { Portal } from "../../../portal";
 
 interface TooltipOptions {
     initialOpen?: boolean;
@@ -111,7 +112,10 @@ export function useTooltip({
         middleware: [
             offset(5),
             flip(),
-            shift(),
+            shift({
+                mainAxis: true,
+                padding: 8,
+            }),
             arrow({ element: arrowRef }),
             anchorArrow({ anchorRef: arrowAnchorRef, arrowRef }),
         ],
@@ -253,33 +257,22 @@ export const TooltipTrigger = React.forwardRef<
 export const TooltipContent = React.forwardRef<
     HTMLDivElement,
     React.HTMLProps<HTMLDivElement>
->(function TooltipContent(props, propRef) {
+>(function TooltipContent(
+    { children, style, className, ...props },
+    propRef,
+) {
     const state = useTooltipState();
 
-    const { context: delayContext } = useFloating();
-    const { isInstantPhase, currentId } = useDelayGroup(delayContext);
     const ref = useMergeRefs([state.refs.setFloating, propRef]);
 
     useDelayGroup(state.context, { id: state.context.floatingId });
 
-    const instantDuration = 0;
-    const duration = 250;
+    const { isMounted, status } = useTransitionStatus(state.context);
 
-    const { isMounted, styles } = useTransitionStyles(state.context, {
-        duration: isInstantPhase
-            ? {
-                  open: instantDuration,
-                  // `id` is this component's `id`
-                  // `currentId` is the current group's `id`
-                  close:
-                      currentId === state.context.floatingId
-                          ? duration
-                          : instantDuration,
-              }
-            : duration,
-        initial: {
-            opacity: 0,
-        },
+    React.useLayoutEffect(() => {
+        console.log(
+            state.refs.floating.current?.getBoundingClientRect(),
+        );
     });
 
     if (!isMounted) return null;
@@ -288,13 +281,30 @@ export const TooltipContent = React.forwardRef<
         <Portal>
             <div
                 ref={ref}
-                style={{
-                    ...state.floatingStyles,
-                    ...props.style,
-                    ...styles,
-                }}
-                {...state.getFloatingProps(props)}
-            />
+                style={state.floatingStyles}
+                {...state.getFloatingProps()}
+            >
+                <div
+                    className={className}
+                    data-status={status}
+                    data-side={state.placement.split("-")[0]}
+                    style={style}
+                    {...props}
+                >
+                    {children}
+                </div>
+            </div>
         </Portal>
     );
 });
+
+const TooltipPrimitive = {
+    Provider: Tooltip,
+    Root: Tooltip,
+    Trigger: TooltipTrigger,
+    Content: TooltipContent,
+    Anchor: TooltipArrowAnchor,
+    Arrow: TooltipArrow,
+};
+
+export { TooltipPrimitive };

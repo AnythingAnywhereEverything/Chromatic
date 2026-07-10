@@ -1,0 +1,46 @@
+
+.content {
+    background-color: var(--popover);
+    color: var(--popover-foreground);
+    border-radius: var(--radius-small);
+    padding-inline: calc(var(--spacing) * 2);
+    padding-block: var(--spacing);
+    font-size: var(--text-small);
+    overflow: hidden;
+
+    transition: opacity 0.2s ease, transform 0.2s ease;
+
+    & > [data-component="tooltip-arrow"] {
+        fill: var(--popover);
+    }
+}
+
+.content[data-status="open"] {
+    animation: tooltip-in 200ms ease;
+}
+
+.content[data-status="close"] {
+    animation: tooltip-out 200ms ease forwards;
+}
+
+@keyframes tooltip-in {
+    from {
+        opacity: 0;
+        transform: scale(.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes tooltip-out {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(.95);
+    }
+}

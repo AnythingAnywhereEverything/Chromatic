@@ -1,7 +1,8 @@
 "use client";
 
 import { Portal } from "@/app/_components/portal";
-import { Tooltip, TooltipAnchor, TooltipContent, TooltipTrigger } from "@/app/_components/ui/tooltip/old";
+import { Tooltip, TooltipAnchor, TooltipArrow, TooltipContent, TooltipTrigger } from "@/app/_components/ui/chromatic/tooltip";
+import { FloatingDelayGroup } from "@floating-ui/react";
 
 import React from "react";
 
@@ -77,15 +78,22 @@ const TestPage = () => {
             </section>
 
             <div>
-                <Tooltip>
-                    <TooltipTrigger>
-                        <TooltipAnchor asChild>
-                            <button>🔥</button>
-                        </TooltipAnchor>
-                        <button style={{width: "fit-content"}}>The tooltip will appear on the 🔥</button>
+                <Tooltip 
+                    allowHovering
+                    openDelayDuration={500}
+                    closeDelayDuration={50000}
+                >
+                    <TooltipTrigger asChild>
+                        <div>
+                            <TooltipAnchor>
+                                <button>🔥</button>
+                            </TooltipAnchor>
+                            <button style={{width: "fit-content"}}>The tooltip will appear on the 🔥</button>
+                        </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                        Amazing
+                            Amazing
+                        <TooltipArrow />
                     </TooltipContent>
                 </Tooltip>
             </div>
