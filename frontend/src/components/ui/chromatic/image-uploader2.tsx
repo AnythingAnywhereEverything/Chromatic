@@ -2,8 +2,7 @@ import s from "@styles/ui/chromatic/imageuploader2.module.scss"
 import { useImageUploader } from "@/hooks/useImageUploader";
 import React, { useRef } from "react";
 
-import style from "@styles/ui/chromatic/imageuploader2.module.scss";
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../chromaticUI";
+import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../chromaticUI";
 type ImageItem = {
     id: string;
     file?: File;
@@ -105,9 +104,10 @@ const ContainerPreview2: React.FC<ContainerPreviewProps> = ({
     }
 
     return (
-        <div className={style["createImageContainer"]}>
+        <div className={s["createImageContainer"]}>
+            
             {!!images && (
-                <div className={`${style.gallery} ${style[galleryClass]}`}>
+                <div className={`${s.gallery} ${s[galleryClass]}`}>
                     <AllImagePreview
                     images={images}
                     onDelete={onDelete}
@@ -117,16 +117,11 @@ const ContainerPreview2: React.FC<ContainerPreviewProps> = ({
                             key={image.id ?? `${index}`}
                             className={s.item}
                         >
-                            <img src={image.preview} alt="" className={style.image} />
-                            <button
-                                className={style.removeImage}
-                                onClick={() => onDelete(image.id)}
-                            >
-                                ✕
-                            </button>
+                            <img src={image.preview} alt="" className={s.image} />
+
                             
                             {count > 4 && index === 3 && (
-                                <div className={style.overlay}>
+                                <div className={s.overlay}>
                                     +{count - 4}
                                 </div>
                             )}
@@ -144,26 +139,25 @@ const AllImagePreview: React.FC<ContainerPreviewProps> = ({
 }) => {
     return (
         <Dialog>
-            <DialogTrigger>
+            <DialogTrigger asChild>
                 <Button
-                className={style["editButton"]}
+                className={s["editButton"]}
                     >
                     Edit all image
                 </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className={s["imageContent"]}>
                 <DialogTitle>Image editor</DialogTitle>
-                <DialogContent>
-                    <div className={style["allImageContainer"]}>
+                <DialogDescription>
+                    <div className={s["allImageContainer"]}>
                         {images.map((image, index) => (
                             <div
                             key={image.id ?? `${index}`}
                             className={s.item}
                             >
-                                <img src={image.preview} alt="" className={style.image} />
+                                <img src={image.preview} alt="" className={s.image} />
                                 <button
-                                    type="button"
-                                    className={style.removeImage}
+                                    className={s.removeImage}
                                     onClick={() => onDelete(image.id)}
                                     >
                                     ✕
@@ -171,11 +165,20 @@ const AllImagePreview: React.FC<ContainerPreviewProps> = ({
                             </div>
                         ))}
                     </div>
-                </DialogContent>
+                </DialogDescription>
             </DialogContent>
         </Dialog>
     )
 }
+// todo: Create a imageCropper
+// - Create a cache for default image to be able on reset or re-crop
+// - Create a new ID on cropped-image and replace in imagesValue(Main container)
+// - On reset or not doing anything will not count as crop
+// -- function check is image has been crop yet?
+
+// function ImageCropper() {
+//     const
+// }
 
 
 export {
