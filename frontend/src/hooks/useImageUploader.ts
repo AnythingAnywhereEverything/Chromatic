@@ -15,6 +15,12 @@ type UseImageUploaderOptions = {
     onChange?: (value: ImageValue[]) => void;
 };
 
+// todo: Create a imageCropper
+// - Create a cache for default image to be able on reset or re-crop
+// - Create a new ID on cropped-image and replace in imagesValue(Main container)
+// - On reset or not doing anything will not count as crop
+// -- function check is image has been crop yet?
+
 export function useImageUploader({
     max = 10,
     imageValue,
