@@ -8,7 +8,6 @@ import { PiVideoCamera } from "react-icons/pi";
 import { LuUndo2 } from "react-icons/lu";
 import { LuRedo2 } from "react-icons/lu";
 import { CiImageOn, CiPaperplane } from "react-icons/ci";
-import s from "@styles/components/postbox.module.scss";
 import cs from "@styles/components/createPost.module.scss"
 import Form from "next/form";
 import { useUndoRedo } from "@/hooks/useUndoRedo";
