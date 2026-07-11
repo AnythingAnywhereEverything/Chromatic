@@ -6,9 +6,12 @@
     padding-inline: calc(var(--spacing) * 2);
     padding-block: var(--spacing);
     font-size: var(--text-small);
-    overflow: hidden;
+    opacity: 0;
+    transform: scale(.95);
 
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+
+    transition: opacity 200ms ease, transform 200ms ease;
 
     & > [data-component="tooltip-arrow"] {
         fill: var(--popover);
@@ -16,31 +19,11 @@
 }
 
 .content[data-status="open"] {
-    animation: tooltip-in 200ms ease;
+    opacity: 1;
+    transform: scale(1);
 }
 
 .content[data-status="close"] {
-    animation: tooltip-out 200ms ease forwards;
-}
-
-@keyframes tooltip-in {
-    from {
-        opacity: 0;
-        transform: scale(.95);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-@keyframes tooltip-out {
-    from {
-        opacity: 1;
-        transform: scale(1);
-    }
-    to {
-        opacity: 0;
-        transform: scale(.95);
-    }
+    opacity: 0;
+    transform: scale(.95);
 }

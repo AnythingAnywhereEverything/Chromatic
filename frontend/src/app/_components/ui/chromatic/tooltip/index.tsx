@@ -34,7 +34,9 @@ const Tooltip = ({
             closeDelayDuration > 0)
     ) {
         return (
-            <FloatingDelayGroup delay={{ open: openDelayDuration, close: closeDelayDuration }}>
+            <FloatingDelayGroup
+                delay={{ open: openDelayDuration, close: closeDelayDuration }}
+            >
                 <TooltipPrimitive.Root data-component="tooltip" {...props} />
             </FloatingDelayGroup>
         );
@@ -60,7 +62,9 @@ const TooltipArrow = ({
 const TooltipAnchor = ({
     ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Anchor>) => {
-    return <TooltipPrimitive.Anchor data-component="tooltip-anchor" {...props} />;
+    return (
+        <TooltipPrimitive.Anchor data-component="tooltip-anchor" {...props} />
+    );
 };
 
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipArrow, TooltipAnchor };

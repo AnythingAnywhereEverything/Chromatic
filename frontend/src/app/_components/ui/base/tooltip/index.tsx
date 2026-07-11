@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import {
     useFloating,
@@ -268,12 +270,6 @@ export const TooltipContent = React.forwardRef<
     useDelayGroup(state.context, { id: state.context.floatingId });
 
     const { isMounted, status } = useTransitionStatus(state.context);
-
-    React.useLayoutEffect(() => {
-        console.log(
-            state.refs.floating.current?.getBoundingClientRect(),
-        );
-    });
 
     if (!isMounted) return null;
 
