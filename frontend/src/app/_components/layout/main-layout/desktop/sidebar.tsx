@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import style from "./style.module.scss";
 import {
     IoCompass,
@@ -30,6 +31,9 @@ const SidebarNavigator: React.FC = () => {
         item.classList.remove(style["hovered"]);
     };
 
+    //get user theme for logo
+    const userTheme = typeof window !== "undefined" ? localStorage.getItem("theme") : null;
+
     return (
         <nav 
             className={style["sidebar"]}
@@ -37,7 +41,12 @@ const SidebarNavigator: React.FC = () => {
             onMouseLeave={handleMouseLeave}
         >
             <div className={style["sidebar-logo"]}>
-                <h1>Absolute Cinema</h1>
+                <Image
+                    src={userTheme === "dark" ? "/asset/icon-light.png" : "/asset/icon-dark.png"}
+                    alt="Absolute Cinema"
+                    width={40}
+                    height={40}
+                />
             </div>
 
             <div className={style["sidebar-items"]}>
