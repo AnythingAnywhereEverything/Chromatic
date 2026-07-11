@@ -30,7 +30,7 @@
     }
 }
 
-.editButton{
+    .editButton{
     position: absolute;
     top: 12;
     left: 4;
@@ -40,6 +40,19 @@
         background-color: var(--background);
     }
 
+}
+.item {
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    aspect-ratio: 4 / 3;
+    height: max-content;
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
 }
 
 .gallery {
@@ -56,30 +69,17 @@
 .gallery2 { grid-template-columns: repeat(2, 1fr); }
 
 .gallery3 {
-    grid-template-columns: repeat(2, 1fr);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
 
-    .item:first-child {
-        grid-column: span 2 / span 2;
-        aspect-ratio: 6 / 2;
-        
-    }
+  .item:nth-child(1 of .item) {
+    grid-column: span 2 / span 2;
+    aspect-ratio: 6 / 2;
+  }
 }
 
 .gallery4 { grid-template-columns: repeat(2, 1fr); }
 
-.item {
-    position: relative;
-    overflow: hidden;
-    border-radius: 12px;
-    aspect-ratio: 4 / 3;
-
-    img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-    }
-}
 
 .overlay {
     position: absolute;
@@ -90,4 +90,18 @@
     color: white;
     font-size: 2rem;
     font-weight: 600;
+}
+.imageContent{
+    max-width: 800px;
+}
+
+.allImageContainer{
+    max-width: 800px;
+    max-height: 85vh;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); 
+    grid-template-rows: repeat(auto, 1fr);
+    gap: calc(var(--spacing) * 2);
+    overflow-y: auto;
+
 }
