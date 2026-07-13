@@ -40,7 +40,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                             height: "100%",
                             pointerEvents: "none",
                             zIndex: 9999,
-                            overflow: "hidden",
+                            // overflow: "hidden",
                         }}
                     />
                 </GoogleOAuthProvider>

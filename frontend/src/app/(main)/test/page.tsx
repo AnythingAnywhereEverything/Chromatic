@@ -1,7 +1,14 @@
 "use client";
 
 import { Portal } from "@/app/_components/portal";
-import { Tooltip, TooltipAnchor, TooltipArrow, TooltipContent, TooltipTrigger } from "@/app/_components/ui/chromatic/tooltip";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeading, DialogTrigger } from "@/app/_components/ui/chromatic/dialogue";
+import {
+    Tooltip,
+    TooltipAnchor,
+    TooltipArrow,
+    TooltipContent,
+    TooltipTrigger,
+} from "@/app/_components/ui/chromatic/tooltip";
 import { FloatingDelayGroup } from "@floating-ui/react";
 
 import React from "react";
@@ -13,7 +20,9 @@ const TestPage = () => {
         setInner(true);
     };
 
-    const [rootContent, setRootContent] = React.useState<HTMLElement | null>(null);
+    const [rootContent, setRootContent] = React.useState<HTMLElement | null>(
+        null,
+    );
 
     const innerRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -37,7 +46,7 @@ const TestPage = () => {
                     />
                 </div>
             </div>
-            <button 
+            <button
                 onMouseOver={(event) => setRootContent(event.currentTarget)}
                 onMouseOut={() => setRootContent(null)}
             >
@@ -45,7 +54,16 @@ const TestPage = () => {
             </button>
             {rootContent && (
                 <Portal>
-                    <div style={{ zIndex: 899, position: "fixed", top: 0, left: 0, backgroundColor: "white", padding: "10px" }}>
+                    <div
+                        style={{
+                            zIndex: 899,
+                            position: "fixed",
+                            top: 0,
+                            left: 0,
+                            backgroundColor: "white",
+                            padding: "10px",
+                        }}
+                    >
                         This is root content!
                     </div>
                 </Portal>
@@ -55,30 +73,32 @@ const TestPage = () => {
 
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <button style={{width: "fit-content"}}>Hover me</button>
+                    <button style={{ width: "fit-content" }}>Hover me</button>
                 </TooltipTrigger>
-                <TooltipContent>
-                    Hewoo
-                </TooltipContent>
+                <TooltipContent>Hewoo</TooltipContent>
             </Tooltip>
 
-            <section 
+            <section
                 className="longScreen"
-                style={{backgroundColor: "lightgray", maxHeight: "300px", overflowY: "scroll" }}
+                style={{
+                    backgroundColor: "lightgray",
+                    maxHeight: "300px",
+                    overflowY: "scroll",
+                }}
             >
                 <div style={{ height: "600px" }}></div>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <button style={{width: "fit-content"}}>Hover me</button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            Amazing
-                        </TooltipContent>
-                    </Tooltip>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <button style={{ width: "fit-content" }}>
+                            Hover me
+                        </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Amazing</TooltipContent>
+                </Tooltip>
             </section>
 
             <div>
-                <Tooltip 
+                <Tooltip
                     allowHovering
                     openDelayDuration={500}
                     closeDelayDuration={50000}
@@ -88,15 +108,26 @@ const TestPage = () => {
                             <TooltipAnchor>
                                 <button>🔥</button>
                             </TooltipAnchor>
-                            <button style={{width: "fit-content"}}>The tooltip will appear on the 🔥</button>
+                            <button style={{ width: "fit-content" }}>
+                                The tooltip will appear on the 🔥
+                            </button>
                         </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                            Amazing
+                        Amazing
                         <TooltipArrow />
                     </TooltipContent>
                 </Tooltip>
             </div>
+
+            <Dialog>
+                <DialogTrigger>My trigger</DialogTrigger>
+                <DialogContent>
+                    <DialogHeading>My dialog heading</DialogHeading>
+                    <DialogDescription>My dialog description</DialogDescription>
+                    <DialogClose>Close</DialogClose>
+                </DialogContent>
+            </Dialog>
         </section>
     );
 };
