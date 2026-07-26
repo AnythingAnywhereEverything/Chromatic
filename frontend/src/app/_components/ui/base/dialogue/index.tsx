@@ -18,6 +18,7 @@ interface DialogOptions {
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
     overlayClassName?: string;
+    outsidePress?: boolean;
 }
 
 function useDialog({
@@ -25,6 +26,7 @@ function useDialog({
     open: controlledOpen,
     onOpenChange: setControlledOpen,
     overlayClassName,
+    outsidePress = true,
 }: DialogOptions = {}) {
     const [uncontrolledOpen, setUncontrolledOpen] = React.useState(initialOpen);
     const [labelId, setLabelId] = React.useState<string | undefined>();
@@ -45,7 +47,10 @@ function useDialog({
     const click = useClick(context, {
         enabled: controlledOpen == null,
     });
-    const dismiss = useDismiss(context, { outsidePressEvent: "mousedown" });
+    const dismiss = useDismiss(context, {
+        outsidePressEvent: "mousedown",
+        outsidePress,
+    });
     const role = useRole(context);
 
     const interactions = useInteractions([click, dismiss, role]);
