@@ -1,7 +1,11 @@
 "use client";
 
 import { Portal } from "@/app/_components/portal";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeading, DialogTrigger } from "@/app/_components/ui/chromatic/dialogue";
+import { AlertDialogue} from "@/app/_components/ui/chromatic/confirmation";
+import { CreatePost } from "@/app/_components/ui/chromatic/createPost";
+import { PostStatus, PostVisibility } from "@/app/_components/ui/chromatic/createPost/status";
+import {  Dialog, DialogClose, DialogContent, DialogDescription, DialogHeading,DialogTrigger } from "@/app/_components/ui/chromatic/dialogue";
+import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from "@/app/_components/ui/chromatic/dropdown";
 import {
     Tooltip,
     TooltipAnchor,
@@ -9,9 +13,8 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from "@/app/_components/ui/chromatic/tooltip";
-import { FloatingDelayGroup } from "@floating-ui/react";
 
-import React from "react";
+import React, { useState } from "react";
 
 const TestPage = () => {
     const [inner, setInner] = React.useState(false);
@@ -25,7 +28,8 @@ const TestPage = () => {
     );
 
     const innerRef = React.useRef<HTMLDivElement | null>(null);
-
+    const [testStatus, setTestStatus] = useState<PostVisibility>(PostVisibility.Everyone);
+    
     return (
         <section>
             <button onMouseOver={showInner} onMouseOut={() => setInner(false)}>
@@ -128,6 +132,85 @@ const TestPage = () => {
                     <DialogClose>Close</DialogClose>
                 </DialogContent>
             </Dialog>
+
+            <section>
+                <AlertDialogue
+                type="info"
+                title="My Alert Dialog: Info"
+                message="Hello world"
+                triggerName="Normal variant"
+                />
+            </section>
+
+            <section>
+                <AlertDialogue
+                type="warning"
+                title="My Alert Dialog: Warning"
+                message="Are you sure?"
+                triggerName="Warning with checkbox"
+                hasButton
+                onConfirm={() => console.log("Your function here")}
+                />
+            </section>
+
+            <section>
+                <AlertDialogue
+                type="destructive"
+                title="My Alert Dialog: Destrcutive"
+                message="Are you sure?"
+                triggerName="Destructive button"
+                hasButton
+                typeCheck
+                checkTextValue="Write me"
+                onConfirm={() => console.log("Your function here")}
+                />
+            </section>
+
+            <section>
+                <AlertDialogue
+                type="confirm"
+                title="My Alert Dialog: Confirm"
+                message="Are you sure?"
+                triggerName="Confirm with checkbox"
+                hasButton
+                onConfirm={() => console.log("Your function here")}
+                />
+            </section> 
+
+            <section>
+                <CreatePost
+                ownerId="1"
+                ownerName="Username"
+                ownerPfp="#"
+                />
+            </section>
+
+            <section>
+                {/* <PostStatus
+                    visibility={testStatus}
+                    onChange={(value) => setStatus(value)}
+                /> */}
+            </section>
+            <section>
+                <Dropdown>
+                    <DropdownTrigger>
+                        Hello
+                    </DropdownTrigger>
+                    <DropdownContent>
+                        {Array.from({ length: 10 }, (_, i) => (
+                          <DropdownItem key={i}>Item {i + 1}</DropdownItem>
+                        ))}
+                    </DropdownContent>
+                </Dropdown>
+            </section>
+
+            <section>
+                <PostStatus
+                visibility={testStatus}
+                onChange={(value) => setTestStatus(value)}
+                />
+            </section>
+              
         </section>
     );
 };
