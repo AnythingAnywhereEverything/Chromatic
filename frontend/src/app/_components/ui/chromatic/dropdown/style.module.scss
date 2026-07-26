@@ -1,0 +1,43 @@
+.content {
+    width: calc(var(--spacing) * 36);
+    background-color: var(--popover);
+    color: var(--popover-foreground);
+    z-index: 9999;
+    overflow: hidden;
+    position: absolute;
+    top: 35px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: scale(0.95) translateY(-6px);
+
+    transition: 
+        opacity 200ms ease, 
+        transform 200ms ease, 
+        visibility 200ms ease;
+}
+
+.content[data-state="open"] {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: scale(1) translateY(0);
+}
+
+.content[data-state="closed"] {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: scale(0.95) translateY(-6px);
+}
+
+.trigger, .content {
+    cursor: pointer;
+    user-select: none;
+}
+.seperator{
+    background: var(--border);
+    margin-inline: calc(var(--spacing) * -1);
+    margin-block: var(--spacing);
+    height: 1px;
+};
