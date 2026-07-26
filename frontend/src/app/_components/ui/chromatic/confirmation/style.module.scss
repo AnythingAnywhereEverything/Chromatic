@@ -1,0 +1,77 @@
+
+.container{
+    width: 450px;
+    background-color: var(--background);
+    border-radius: var(--radius);
+    opacity: 1;
+}
+
+.dialog-header{
+    padding: calc(var(--spacing) * 4);
+    display: flex;
+    align-items: center;
+}
+
+.dialog-heading{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--spacing) * 1);
+    text-align: center;
+    margin: 0;
+}
+.timer{
+    padding: calc(var(--spacing) * 0.2)
+}
+
+
+.dialog-description{
+    background-color: color-mix(in srgb, var(--background) , white 10%);
+    border-radius: 0 0 var(--radius) var(--radius);
+    padding: calc(var(--spacing) * 3) calc(var(--spacing) * 4);
+}
+.description {
+    padding: calc(var(--spacing) * 2) 0;
+}
+.actions{
+    display: flex;
+    justify-content: center;
+    padding: calc(var(--spacing) * 2);
+    margin-top: calc(var(--spacing) * 1);
+    :nth-child(n) {
+        width: 100%;
+        margin-inline: calc(var(--spacing) * 6);
+        padding: calc(var(--spacing) * 2);
+        border-radius: var(--radius);
+    }
+    
+}
+.typecheck-box{
+    padding: calc(var(--spacing) * 1) 0;
+    .input-box{
+        width: 100%;
+        margin-top: calc(var(--spacing) * 1);
+        padding: calc(var(--spacing) * 2) ;
+    }
+}
+
+// It's not timer but I alreay name it my bad
+.timer-info {
+    background-color: rgb(30, 89, 207);
+}
+.timer-warning {
+    background-color: var(--warning);
+}
+.button-warning{
+    background-color: var(--warning);
+}
+.timer-destructive{
+    background-color: var(--destructive);
+}
+.button-destructive{
+    background-color: var(--destructive-foreground);
+}
+.timer-confirm{
+    background-color: rgb(71, 220, 41);
+
+}
