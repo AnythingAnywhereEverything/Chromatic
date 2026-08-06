@@ -1,27 +1,16 @@
 -- Add down migration script here
-ALTER TABLE media_likes 
-    DROP is_liked IF EXISTS;
+
+DROP INDEX IF EXISTS media_posts_tags_x;
+DROP INDEX IF EXISTS users_interest_tags_x;
 
 ALTER TABLE media_likes
-    DROP CONSTRAINT media_likes_pkey;
-
-ALTER TABLE media_likes
-    DROP CONSTRAINT IF EXISTS media_likes_user_id_media_post_id_key;
+    DROP COLUMN IF EXISTS is_liked;
 
 ALTER TABLE media_posts
-    DROP media_tags IF EXISTS;
+    DROP COLUMN IF EXISTS media_tags;
 
 ALTER TABLE users
-    DROP interest_tags IF EXISTS;
-
-ALTER TABLE users  
-    DROP visibility IF EXISTS;
+    DROP COLUMN IF EXISTS interest_tags;
 
 ALTER TABLE media_posts
-    DROP visibility IF EXISTS;
-
-ALTER TABLE media_likes 
-    DROP CONSTRAINT media_likes_pkey IF EXISTS;
-
-ALTER TABLE media_likes
-    DROP id IF EXISTS;
+    DROP COLUMN IF EXISTS visibility;
