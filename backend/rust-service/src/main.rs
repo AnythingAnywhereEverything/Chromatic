@@ -1,3 +1,4 @@
+use libvips::VipsApp;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use chromatic::application::app;
@@ -16,6 +17,9 @@ async fn main() {
         .with(filter_layer)
         .with(fmt_layer)
         .init();
+
+
+    let _vips_app = VipsApp::new(env!("CARGO_PKG_NAME"), false).expect("Failed to initialize libvips");
 
     tracing::info!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
 
