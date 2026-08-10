@@ -110,7 +110,6 @@ pub async fn upload_avatar_handler(
         }),
         processing_order: MediaProcessing {
             options: ProcessingOptions {
-                use_gpu_acceleration: true,
                 use_raw_name: false,
                 use_raw_name_with_extension: false,
                 use_hash_as_name: true,
