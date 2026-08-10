@@ -1,12 +1,12 @@
 import Config
 import Dotenvy
 
-env_dir_prefix = System.get_env("RELEASE_ROOT") || Path.expand("./envs")
+env_file_location = System.get_env("ENV_FILE")
 
 source!([
-  Path.absname(".env", env_dir_prefix),
-  Path.absname(".#{config_env()}.env", env_dir_prefix),
-  Path.absname(".#{config_env()}.overrides.env", env_dir_prefix),
+  Path.absname(env_file_location),
+  Path.absname(".#{config_env()}.env", env_file_location),
+  Path.absname(".#{config_env()}.overrides.env", env_file_location),
   System.get_env()
 ])
 
@@ -41,5 +41,5 @@ config :elixir_service, :worker,
 config :elixir_service, ElixirServiceWeb.Endpoint,
     http: [
         ip: {0, 0, 0, 0},
-        port: env!("PORT", :integer)
+        port: 4000
     ]

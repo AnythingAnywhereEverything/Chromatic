@@ -1,6 +1,5 @@
 defmodule ElixirService.Auth do
   import Ecto.Query
-  require Logger
 
   alias ElixirService.Repo
   alias ElixirService.Redis
@@ -11,6 +10,10 @@ defmodule ElixirService.Auth do
   @session_extend_ttl 60 * 60
 
   def validate_token(token) when is_binary(token) do
+    # this will run in order:
+    # 1. parse the token
+    # 2. convert the timestamp to datetime
+    # 3. validate the session in redis or database
     with {:ok, parsed} <- SessionToken.parse(token),
          {:ok, created_at} <- millis_to_datetime(parsed.timestamp),
          {:ok, user} <- validate_session(parsed.user_id, parsed.timestamp, created_at, token) do
@@ -51,7 +54,7 @@ defmodule ElixirService.Auth do
             {:error, :unauthorized}
         end
 
-      {:error, reason} ->
+      {:error, _reason} ->
         {:error, :unauthorized}
     end
   end

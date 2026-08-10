@@ -1,5 +1,12 @@
 services:
-  # Use this file only if you have Redis and Postgres(internal/external)
+  elixir:
+    build: ./backend/elixir-service
+    env_file:
+      - .env_docker_global
+    ports:
+      - "4000:4000"
+    networks:
+      - app
 
   rust:
     build: ./backend/rust-service
@@ -12,6 +19,8 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./media:/app/media
+    networks:
+      - app
 
   nextjs:
     build:
@@ -22,6 +31,12 @@ services:
         DOCKER: "true"
     ports:
       - "5175:5175"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5173"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
 
   nginx:
     build:
@@ -29,10 +44,14 @@ services:
       dockerfile: Dockerfile.nginx
     ports:
       - "80:80"
-      # - "443:443" -- enable if have SSL
     depends_on:
       - nextjs
       - rust
     volumes:
       - ./media:/etc/nginx/media
-      # - ./.certificates:/etc/nginx/ssl
+    networks:
+      - app
+
+networks:
+  app:
+    driver: bridge

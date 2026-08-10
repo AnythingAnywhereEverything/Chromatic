@@ -25,3 +25,5 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 elixir_service-*.tar
 
+/.elixir_ls/
+
