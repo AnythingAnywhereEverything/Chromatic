@@ -1,6 +1,9 @@
 use sqlx::Transaction;
 
-use crate::application::repository::{RepositoryResult, media::row::{MediaDataRow, MediaMetadataRow}};
+use crate::application::repository::{
+    RepositoryResult,
+    media::row::{MediaDataRow, MediaMetadataRow},
+};
 
 pub async fn media_data(
     tx: &mut Transaction<'_, sqlx::Postgres>,
@@ -8,16 +11,32 @@ pub async fn media_data(
 ) -> RepositoryResult<()> {
     sqlx::query(
         r#"
-        INSERT INTO media_data (id, user_id, media_url, media_preview_url, media_category, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO media_data (
+            id, 
+            uploader_id, 
+            name, 
+            path, 
+            status, 
+            thumbhash, 
+            lock_hash, 
+            created_at, 
+            updated_at, 
+            lock_expiration, 
+            deleted_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         "#,
     )
     .bind(media_data.id)
-    .bind(&media_data.user_id)
-    .bind(&media_data.media_url)
-    .bind(&media_data.media_preview_url)
-    .bind(&media_data.media_category)
+    .bind(media_data.uploader_id)
+    .bind(&media_data.name)
+    .bind(&media_data.path)
+    .bind(&media_data.status)
+    .bind(&media_data.thumbhash)
+    .bind(&media_data.lock_hash)
     .bind(media_data.created_at)
+    .bind(media_data.updated_at)
+    .bind(media_data.lock_expiration)
+    .bind(media_data.deleted_at)
     .execute(tx.as_mut())
     .await?;
     Ok(())
