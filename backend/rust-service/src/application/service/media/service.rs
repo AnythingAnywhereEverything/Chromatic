@@ -380,6 +380,24 @@ impl MediaService {
             return Err(e);
         }
 
+        // ----------------------------
+        // * File Size Gate Layer
+        // ----------------------------
+
+        if let Some(size_gates) = &options.size_gate {
+            for gate in size_gates {
+                if super::utils::get_media_types_from_mime(mime).contains(&gate.media_type) && temp_media_object.size > gate.max_size {
+                    tracing::error!(
+                        "Media file size exceeds the limit for type {:?}: {} bytes (max allowed: {} bytes)",
+                        gate.media_type,
+                        temp_media_object.size,
+                        gate.max_size
+                    );
+                    return Err(MediaServiceError::FileTooLarge);
+                }
+            }
+        }
+
         // ----------------------------------
         // * Processing Configuration Layer
         // ----------------------------------
