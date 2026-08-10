@@ -1,8 +1,7 @@
 use sqlx::Transaction;
 
-use crate::application::{repository::post::row::{ PostLikesRow, PostRow, TotalLikedRow}, service::errors::PostServiceError};
+use crate::application::{repository::post::row::{ HasAttachmentRow, PostLikesRow, PostRow, TotalLikedRow}, service::errors::PostServiceError};
 
-// todo: func get feed max 15 contents ++
 // todo: func get YOUR FRIEND post
 // todo: func get feed comment :d
 // ! check visiblity
@@ -20,9 +19,7 @@ use crate::application::{repository::post::row::{ PostLikesRow, PostRow, TotalLi
 // * Schuding them for show some of there friends post
 // ? Do feed setting to let user edit the feed to show friend first, no friend, normal 
 //// ! BUT there's not see post in DB so the post will be always show on using Friend first how gonna 
-// ! private post will be show on owner profile, can only see by Owner (ofc..)
-// ? Do update count comment AND like should be seperate function?
-// * 
+
 pub async fn get_feed_public(
     tx: &mut Transaction<'_,sqlx::Postgres>,
     cursor_id: Option<i64>,
@@ -185,6 +182,26 @@ pub async fn delete_post(
     Ok(())
 }
 
+pub async fn add_has_attachment(
+    tx: &mut Transaction<'_,sqlx::Postgres>,
+    media_id: i64,
+    user_id: i64,
+    target_type: String
+) -> Result<Vec<HasAttachmentRow>, sqlx::Error> {
+    sqlx::query_as::<_,HasAttachmentRow>(
+        r#"
+            INSERT INTO media_attachments( media_id,
+            user_id,
+            target_type)
+            VALUES($1, $2,$3)
+        "#
+    )
+    .bind(media_id)
+    .bind(user_id)
+    .bind(target_type)
+    .fetch_all(tx.as_mut())
+    .await
+}
 
 // -------------------------------------
 // * Small like patch

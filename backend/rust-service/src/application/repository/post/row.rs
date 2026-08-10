@@ -18,6 +18,13 @@ pub struct PostRow {
 }
 
 #[derive(sqlx::FromRow)]
+pub struct HasAttachmentRow{
+    pub target_id: i64,
+    pub media_id: i64,
+    pub target_type: String
+}
+
+#[derive(sqlx::FromRow)]
 pub struct TotalLikedRow{
     pub id: i64,
     pub total_liked: i32
