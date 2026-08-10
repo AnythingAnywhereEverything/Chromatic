@@ -1,7 +1,11 @@
 // src/application/service/media/multipart_ex.rs
 
 use crate::application::service::{
-    errors::MediaServiceError, media::{storage::MediaStorage, types::{MediaType, TempUpload, ValidationOptions}},
+    errors::MediaServiceError,
+    media::{
+        storage::MediaStorage,
+        types::{MediaType, TempUpload, ValidationOptions},
+    },
 };
 use axum::extract::Multipart;
 use serde::de::DeserializeOwned;
@@ -157,14 +161,20 @@ impl MultipartExtractor {
                             }
                         }
 
-                        MultipartFieldCardinality::Many | MultipartFieldCardinality::OptionalMany => {}
+                        MultipartFieldCardinality::Many
+                        | MultipartFieldCardinality::OptionalMany => {}
                     }
 
                     file_count += 1;
 
                     let upload = self
                         .storage
-                        .save_temp_stream(&mut field, options.limits.max_file_size, options.validation.as_ref(), options.size_filter_gate.as_ref())
+                        .save_temp_stream(
+                            &mut field,
+                            options.limits.max_file_size,
+                            options.validation.as_ref(),
+                            options.size_filter_gate.as_ref(),
+                        )
                         .await?;
 
                     // * Track every successful upload for rollback.
@@ -181,7 +191,8 @@ impl MultipartExtractor {
                             values.insert(name, upload_value);
                         }
 
-                        MultipartFieldCardinality::Many | MultipartFieldCardinality::OptionalMany => {
+                        MultipartFieldCardinality::Many
+                        | MultipartFieldCardinality::OptionalMany => {
                             let entry_name = name.clone();
 
                             let entry = values
@@ -207,7 +218,8 @@ impl MultipartExtractor {
                     let value = parse_multipart_value(&value);
 
                     match schema.cardinality {
-                        MultipartFieldCardinality::Many | MultipartFieldCardinality::OptionalMany => {
+                        MultipartFieldCardinality::Many
+                        | MultipartFieldCardinality::OptionalMany => {
                             let entry_name = name.clone();
 
                             let entry = values
