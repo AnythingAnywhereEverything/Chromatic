@@ -1,15 +1,11 @@
 import s from "@styles/ui/chromatic/imageuploader2.module.scss"
-import { useImageUploader } from "@/hooks/useImageUploader";
+import { ImageItem, useImageUploader } from "@/hooks/useImageUploader";
 import React, { useRef } from "react";
 
 import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../chromaticUI";
-type ImageItem = {
-    id: string;
-    file?: File;
-    url?: string;
-    preview: string;
-};
+import ImageCropper from "@/app/_components/ui/chromatic/crop";
 
+// todo: Rework to saving the Video
 type ImageUploaderProps = {
     id?: string;
     accept?: string;
@@ -20,6 +16,8 @@ type ImageUploaderProps = {
 type ContainerPreviewProps = {
     images: ImageItem[];
     onDelete: (id: string) => void;
+    onReplace: (id: string, file: File) => void;
+    onReset: (id: string) => void;
 };
 
 const ImageUploader2: React.FC<ImageUploaderProps> = ({
@@ -59,7 +57,8 @@ const ImageUploader2: React.FC<ImageUploaderProps> = ({
 
 const ContainerPreview: React.FC<ContainerPreviewProps> = ({
     images,
-    onDelete
+    onDelete,
+    
 }) => {
     if (images.length === 0) {
         return null;
@@ -93,7 +92,9 @@ const ContainerPreview: React.FC<ContainerPreviewProps> = ({
 
 const ContainerPreview2: React.FC<ContainerPreviewProps> = ({
     images,
-    onDelete
+    onDelete,
+    onReplace,
+    onReset
 }) => {
     const visibleImages = images.slice(0, 4);
     const count = images.length;
@@ -111,6 +112,8 @@ const ContainerPreview2: React.FC<ContainerPreviewProps> = ({
                     <AllImagePreview
                     images={images}
                     onDelete={onDelete}
+                    onReplace={onReplace}
+                    onReset={onReset}
                     />
                     {visibleImages.map((image, index) => (
                         <div
@@ -135,7 +138,9 @@ const ContainerPreview2: React.FC<ContainerPreviewProps> = ({
 
 const AllImagePreview: React.FC<ContainerPreviewProps> = ({
     images,
-    onDelete    
+    onDelete ,
+    onReplace,
+    onReset
 }) => {
     return (
         <Dialog>
@@ -151,18 +156,13 @@ const AllImagePreview: React.FC<ContainerPreviewProps> = ({
                 <DialogDescription>
                     <div className={s["allImageContainer"]}>
                         {images.map((image, index) => (
-                            <div
-                            key={image.id ?? `${index}`}
-                            className={s.item}
-                            >
-                                <img src={image.preview} alt="" className={s.image} />
-                                <button
-                                    className={s.removeImage}
-                                    onClick={() => onDelete(image.id)}
-                                    >
-                                    ✕
-                                </button>
-                            </div>
+                            <ImageCropper
+                            key={index}
+                            id={image.id}
+                            media={image.preview}
+                            onReplace={onReplace}
+                            onReset={onReset}
+                            />
                         ))}
                     </div>
                 </DialogDescription>
@@ -179,7 +179,20 @@ const AllImagePreview: React.FC<ContainerPreviewProps> = ({
 // function ImageCropper() {
 //     const
 // }
-
+// {images.map((image, index) => (
+//                             <div
+//                             key={image.id ?? `${index}`}
+//                             className={s.item}
+//                             >
+//                                 <img src={image.preview} alt="" className={s.image} />
+//                                 <button
+//                                     className={s.removeImage}
+//                                     onClick={() => onDelete(image.id)}
+//                                     >
+//                                     ✕
+//                                 </button>
+//                             </div>
+//                         ))}
 
 export {
     ImageUploader2, 

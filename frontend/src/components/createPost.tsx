@@ -120,6 +120,8 @@ const PostFrom:React.FC = () => {
                     <ContainerPreview2
                         images={uploader.images}
                         onDelete={uploader.removeImage}
+                        onReplace={uploader.replaceImage}
+                        onReset={uploader.resetImage}
                     />
                     <PostStatus
                     visibility={status}
