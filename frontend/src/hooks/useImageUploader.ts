@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect,useRef, useState } from "react";
 
 export type ImageValue = File | string;
 
-type ImageItem = {
+export type ImageItem = {
     id: string;
     file?: File;
     url?: string;
@@ -16,6 +16,7 @@ type UseImageUploaderOptions = {
 };
 
 // todo: Create a imageCropper
+// IHATEIT
 // - Create a cache for default image to be able on reset or re-crop
 // - Create a new ID on cropped-image and replace in imagesValue(Main container)
 // - On reset or not doing anything will not count as crop
@@ -27,11 +28,14 @@ export function useImageUploader({
     onChange
 }: UseImageUploaderOptions) {
     const [images, setImages] = useState<ImageItem[]>([]);
-    
+    // * id -> original item, set the first time that id is cropped
+    // ! resync doesn't clear old ids, map can grow if imageValue changes a lot
+    const defaultCacheRef = useRef<Map<string, ImageItem>>(new Map());
+
     const syncImages = useCallback((items: ImageItem[]) => {
         setImages(items);
     }, []);
-    
+
     const updateImages = useCallback((items: ImageItem[]) => {
         setImages(items);
         onChange?.(
@@ -62,32 +66,81 @@ export function useImageUploader({
             URL.revokeObjectURL(image.preview);
         }
 
+        const defaultItem = defaultCacheRef.current.get(id);
+        // * cropped image also holds a cached original blob, revoke that too
+        if (defaultItem && defaultItem.id !== id && defaultItem.file) {
+            URL.revokeObjectURL(defaultItem.preview);
+        }
+        defaultCacheRef.current.delete(id);
+
         updateImages(images.filter(x => x.id !== id));
     }, [images]);
 
-    useEffect(() => {
-    if (!imageValue) return;
+    const replaceImage = useCallback((id: string, file: File) => {
+        const current = images.find(x => x.id === id);
+        if (!current) return;
 
-    syncImages(
-        imageValue.map(v =>
-            typeof v === "string"
-                ? {
-                    id: crypto.randomUUID(),
-                    url: v,
-                    preview: `/cdn/${v}`
-                }
-                : {
-                    id: crypto.randomUUID(),
-                    file: v,
-                    preview: URL.createObjectURL(v)
-                }
-        )
-    );
-}, [imageValue, syncImages]);
+        // * nothing cached yet on first crop, current becomes the default
+        const defaultItem = defaultCacheRef.current.get(id) ?? current;
+
+        if (current.file && current.id !== defaultItem.id) {
+            URL.revokeObjectURL(current.preview);
+        }
+
+        const newItem = {
+            id: crypto.randomUUID(),
+            file,
+            preview: URL.createObjectURL(file)
+        };
+
+        defaultCacheRef.current.delete(id);
+        defaultCacheRef.current.set(newItem.id, defaultItem);
+
+        updateImages(images.map(x => (x.id === id ? newItem : x)));
+    }, [images]);
+
+    const resetImage = useCallback((id: string) => {
+        const defaultItem = defaultCacheRef.current.get(id);
+        // * nothing cached, or already showing the default
+        if (!defaultItem || defaultItem.id === id) return;
+
+        const current = images.find(x => x.id === id);
+        if (!current) return;
+
+        if (current.file) {
+            URL.revokeObjectURL(current.preview);
+        }
+
+        defaultCacheRef.current.delete(id);
+
+        updateImages(images.map(x => (x.id === id ? defaultItem : x)));
+    }, [images]);
+
+    useEffect(() => {
+        if (!imageValue) return;
+
+        syncImages(
+            imageValue.map(v =>
+                typeof v === "string"
+                    ? {
+                        id: crypto.randomUUID(),
+                        url: v,
+                        preview: `/cdn/${v}`
+                    }
+                    : {
+                        id: crypto.randomUUID(),
+                        file: v,
+                        preview: URL.createObjectURL(v)
+                    }
+            )
+        );
+    }, [imageValue, syncImages]);
 
     return {
         images,
         addFiles,
-        removeImage
+        removeImage,
+        replaceImage,
+        resetImage
     };
 }
