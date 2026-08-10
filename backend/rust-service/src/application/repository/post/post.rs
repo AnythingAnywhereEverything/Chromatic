@@ -1,6 +1,6 @@
 use sqlx::Transaction;
 
-use crate::application::{repository::post::row::{ HasAttachmentRow, PostLikesRow, PostRow, TotalLikedRow}, service::errors::PostServiceError};
+use crate::{api::handlers::post_handler::PostStatus, application::{repository::post::row::{ HasAttachmentRow, PostById, PostLikesRow, PostRow, TotalLikedRow}, service::errors::PostServiceError}};
 
 // todo: func get YOUR FRIEND post
 // todo: func get feed comment :d
@@ -102,15 +102,32 @@ pub async fn get_friend_post(
     
 }
 
+pub async fn get_post_by_id(
+    tx: &mut Transaction<'_,sqlx::Postgres>,
+    post_id: i64
+) -> Result<PostById, sqlx::Error> {
+    sqlx::query_as::<_, PostById>(
+        r#"
+            SELECT *
+            FROM media_posts
+            WHERE id = $1
+        "#
+    )
+    .bind(post_id)
+    .fetch_one(tx.as_mut())
+    .await
+}
+
 // ! THE TAGS column has been chagne, re-new this function
 pub async fn create_post(
     tx: &mut Transaction<'_,sqlx::Postgres>,
-    id:i64,
+    id: &i64,
     user_id: i64,
     content: &str,
-    status: &str,
-    // ? attachment: Option<String>,
-    media_tags: Vec<String>
+    status: PostStatus,
+    repost_from: Option<i64>,
+    is_repost: bool,
+    visibility: &str
 ) -> Result<PostRow, sqlx::Error>{
     sqlx::query_as::<_,PostRow>(
         r#"
@@ -118,12 +135,14 @@ pub async fn create_post(
         id, 
         user_id, 
         content, 
-        status, 
+        status,
+        reposted_from,
+        is_repost, 
         created_at, 
-        updated_at, 
-        media_tags
+        updated_at,
+        visibility
         )
-        VALUES ($1, $2, $3, $4, NOW(), NOW(), $5)
+        VALUES ($1, $2, $3, $4, $5, $6,NOW(), NOW(), $7)
         RETURNING *
         "#,
     )
@@ -131,7 +150,9 @@ pub async fn create_post(
     .bind(user_id)
     .bind(content)
     .bind(status)
-    .bind(media_tags)
+    .bind(repost_from)
+    .bind(is_repost)
+    .bind(visibility)
     .fetch_one(&mut **tx)
     .await
 }
@@ -319,4 +340,12 @@ pub async fn remove_bookmark_post(
     .execute(tx.as_mut())
     .await;
     Ok(())
+}
+
+pub async fn tag_management(
+    tx: &mut Transaction<'_,sqlx::Postgres>,
+    post_id: i64,
+    tag_id: Option<Vec<i64>>
+) {
+    
 }

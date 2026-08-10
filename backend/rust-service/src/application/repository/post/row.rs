@@ -12,11 +12,14 @@ pub struct PostRow {
     pub has_attachment: bool,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
-    pub media_tags: Vec<String>,
+    pub visibility: String,
     #[sqlx(skip)]
     pub media_attachment: Option<Vec<MediaDataRow>>
 }
-
+#[derive(sqlx::FromRow)]
+pub struct PostById{
+    pub id: i64,
+}
 #[derive(sqlx::FromRow)]
 pub struct HasAttachmentRow{
     pub target_id: i64,
