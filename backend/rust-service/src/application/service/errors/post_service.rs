@@ -1,0 +1,37 @@
+use thiserror::Error;
+
+use crate::application::service::errors::SnowflakeServiceError;
+
+#[derive(Debug, Error)]
+pub enum PostServiceError {
+    #[error("Database error")]
+    Database,
+    
+    #[error("ID generation failed.")]
+    IdGenerationFailed,
+
+    #[error("Failed to create post")]
+    CreatePostFailed,
+
+    #[error("Post not found")]
+    InvalidPost,
+    
+    #[error("Failed to update post")]
+    UpdatePostFailed,
+
+    #[error("Failed to delete post")]
+    DeletePostFailed,
+    
+}
+
+impl From<sqlx::Error> for PostServiceError {
+    fn from(_: sqlx::Error) -> Self {
+        PostServiceError::Database
+    }
+}
+
+impl From<SnowflakeServiceError> for PostServiceError {
+    fn from(_: SnowflakeServiceError) -> Self {
+        PostServiceError::IdGenerationFailed
+    }
+}

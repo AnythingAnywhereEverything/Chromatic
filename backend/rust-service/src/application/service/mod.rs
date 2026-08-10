@@ -5,3 +5,4 @@ pub mod auth;
 pub mod media;
 
 pub mod errors;
+pub mod post;
