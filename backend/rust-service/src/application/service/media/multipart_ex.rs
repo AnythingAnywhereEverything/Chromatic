@@ -20,6 +20,7 @@ pub enum MultipartFieldCardinality {
     Single,
     Optional,
     Many,
+    OptionalMany,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -127,7 +128,7 @@ impl MultipartExtractor {
                             }
                         }
 
-                        MultipartFieldCardinality::Many => {}
+                        MultipartFieldCardinality::Many | MultipartFieldCardinality::OptionalMany => {}
                     }
 
                     file_count += 1;
@@ -151,7 +152,7 @@ impl MultipartExtractor {
                             values.insert(name, upload_value);
                         }
 
-                        MultipartFieldCardinality::Many => {
+                        MultipartFieldCardinality::Many | MultipartFieldCardinality::OptionalMany => {
                             let entry_name = name.clone();
 
                             let entry = values
@@ -177,7 +178,7 @@ impl MultipartExtractor {
                     let value = parse_multipart_value(&value);
 
                     match schema.cardinality {
-                        MultipartFieldCardinality::Many => {
+                        MultipartFieldCardinality::Many | MultipartFieldCardinality::OptionalMany => {
                             let entry_name = name.clone();
 
                             let entry = values

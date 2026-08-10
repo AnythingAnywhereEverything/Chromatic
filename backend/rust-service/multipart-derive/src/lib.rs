@@ -101,6 +101,22 @@ fn cardinality_for_type(ty: &Type) -> proc_macro2::TokenStream {
             crate::application::service::media::multipart_ex::MultipartFieldCardinality::Many
         }
     } else if is_option(ty) {
+        // check if it's an Option<Vec<T>>
+        if let Type::Path(type_path) = ty {
+            if let Some(segment) = type_path.path.segments.last() {
+                if segment.ident == "Option" {
+                    if let syn::PathArguments::AngleBracketed(angle_bracketed) = &segment.arguments {
+                        if let Some(syn::GenericArgument::Type(inner_ty)) = angle_bracketed.args.first() {
+                            if is_vec(inner_ty) {
+                                return quote! {
+                                    crate::application::service::media::multipart_ex::MultipartFieldCardinality::OptionalMany
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+        }
         quote! {
             crate::application::service::media::multipart_ex::MultipartFieldCardinality::Optional
         }

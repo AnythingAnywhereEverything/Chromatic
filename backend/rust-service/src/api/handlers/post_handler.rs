@@ -6,7 +6,7 @@ use crate::{api::{APIError, dtos::post_dtos::PostDTO, version}, application::{se
 
 #[derive(serde::Deserialize, Debug,  Multipart)]
 
-pub struct create_post_req{
+pub struct CreatePostRequest {
     pub content: String,
     #[multipart]
     pub multipart: Option<Vec<TempUpload>>,
@@ -17,16 +17,15 @@ pub async fn create_new_post_handler(
     State(state): State<SharedState>,
     Path(version): Path<String>,
     multipart: Multipart
-) -> Result<(), APIError > {
+) -> Result<(), APIError> {
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
-    tracing::trace!("create post request: {:#?}", multipart);
-
+    
     let limits = MultipartLimits{
         max_file_size:512_000_000,
         max_files: 5
     };
-    let extracted = state.multipart_extractor.extract::<create_post_req>(multipart, limits).await?;
+    let extracted = state.multipart_extractor.extract::<CreatePostRequest>(multipart, limits).await?;
     tracing::debug!("Extracted payload: {:?}", extracted);
     
     Ok(())
