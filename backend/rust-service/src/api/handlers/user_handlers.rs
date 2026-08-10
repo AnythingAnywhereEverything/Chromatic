@@ -2,12 +2,22 @@ use axum::{
     Json,
     extract::{Multipart, Path, State},
 };
+use multipart_derive::Multipart;
 
 use crate::{
-    api::{APIError, RequestAuth, dtos::user_dtos::{MediaFullDTO, UserDTO}, version}, application::{
-        repository::{media::{self as media_repo, row::MediaStatus}, user::{self as user_repo}}, service::{
-            errors::{AuthServiceError, MediaServiceError}, media::{
-                service::MediaService, types::{CropStyle, ImageTransform, MediaOptions, MediaProcessingType},
+    api::{
+        APIError, RequestAuth,
+        dtos::user_dtos::{MediaFullDTO, UserDTO},
+        version,
+    }, application::{
+        repository::{
+            media::{self as media_repo, row::MediaStatus},
+            user::{self as user_repo},
+        }, service::{
+            errors::{AuthServiceError}, media::{
+                multipart_ex::MultipartLimits, service::MediaService, types::{
+                    CropStyle, MediaOptions, MediaProcessing, MediaType, OnProcessingType, ProcessingOptions, ResizeStyle, TempUpload, ValidationOptions, ValidationType,
+                },
             },
         }, state::SharedState,
     },
@@ -52,11 +62,14 @@ pub async fn get_current_user_handler(
     }))
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, Debug, Multipart)]
 pub struct UploadAvatarPayload {
     position_x: f32,
     position_y: f32,
     scale: f32,
+
+    #[multipart]
+    pub uploaded_avatar: TempUpload,
 }
 
 #[axum::debug_handler]
@@ -69,63 +82,71 @@ pub async fn upload_avatar_handler(
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
 
-
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
         None => return Err(AuthServiceError::InvalidCredentials.into()),
     };
+    
 
-    let extracted: crate::application::service::media::types::ExtractedPayload<UploadAvatarPayload> = MediaService::extract_payload_with_type::<UploadAvatarPayload>(
-        &state.media_service,
-        multipart,
-        10_000_000,
-    )
-    .await?;
-
-    tracing::debug!("Extracted payload: {:?}", extracted.payload);
-
-    let file = extracted.files;
-
-    //log the extracted payload for debugging
-    tracing::warn!("Extracted payload: {:?}", extracted.payload);
-
-    let options = MediaOptions {
-        max_size: 10_000_000, // 10 MB
-        allowed_types: None,
-        folder: "avatars".to_string(),
-        // image_transforms: Some(ImageTransform::Crop {
-        //     style: CropStyle::Ratio {
-        //         ratio: (1, 1),
-        //         scale: extracted.payload.scale,
-        //     },
-        //     position: Some((extracted.payload.position_x, extracted.payload.position_y)),
-        // }),
-        image_transforms: Some(vec![ImageTransform::Crop {
-            style: CropStyle::Ratio {
-                ratio: (1, 1),
-                scale: extracted.payload.scale,
-            },
-            position: Some((extracted.payload.position_x, extracted.payload.position_y)),
-        }]),
-        mode: MediaProcessingType::Transform,
-        hls_fallback: false,
-        manual_preview: None, // no auto preview for profile bozo
+    let limits = MultipartLimits {
+        max_file_size: 10_000_000, // 10 MB limit for avatar uploads
+        max_files: 1, // 1 file limit for avatar uploads
     };
 
-    if file.is_empty() {
-        return Err(MediaServiceError::MediaMissing.into());
-    }
+    let extracted = state.multipart_extractor.extract::<UploadAvatarPayload>(multipart, limits).await?;
 
-    let temp_uploaded = &file[0];
+    tracing::debug!("Extracted payload: {:?}", extracted);
+
+    let options = MediaOptions {
+        folder: format!("avatars/{}", user_id),
+        validation: Some(ValidationOptions {
+            validation_type: ValidationType::Whitelisted,
+            value: vec![
+                MediaType::GenericJpeg,
+                MediaType::GenericPng,
+                MediaType::GenericWebP,
+                MediaType::GenericGif,
+            ],
+        }),
+        processing_order: MediaProcessing {
+            options: ProcessingOptions {
+                use_gpu_acceleration: true,
+                use_raw_name: false,
+                use_raw_name_with_extension: false,
+                use_hash_as_name: true,
+                use_animated_image_indicator: true,
+                use_thumbhash_generation: true,
+                ..Default::default()
+            },
+            on_processing: Some(vec![
+                OnProcessingType::ImageCrop {
+                    style: CropStyle::Ratio {
+                        ratio: (1, 1),
+                        scale: extracted.scale,
+                    },
+                    position: Some((extracted.position_x, extracted.position_y)),
+                },
+                OnProcessingType::ImageResize {
+                    style: ResizeStyle::AbsoluteKeepsRatio {
+                        width: 512,
+                        height: 512,
+                    },
+                    upscale: false,
+                },
+            ]),
+            post_processing: None,
+        },
+        ..Default::default()
+    };
 
     // local test, doing this for now.
     let mut tx = state.db_pool.begin().await?;
-    let uploaded_id = MediaService::save_media(&state.media_service, &mut tx, user_id, temp_uploaded.clone(), options, None)
-        .await?;
+    let uploaded_medias =
+        MediaService::save_media(&state.media_service, user_id, extracted.uploaded_avatar, options).await?;
 
-    user_repo::update::avatar_media_id(&mut tx, user_id, Some(uploaded_id)).await?;
+    user_repo::update::avatar_media_id(&mut tx, user_id, Some(uploaded_medias.file_id)).await?;
 
-    media_repo::update::media_status(&mut tx, &uploaded_id, &MediaStatus::Completed).await?;
+    media_repo::update::media_status(&mut tx, &uploaded_medias.file_id, &MediaStatus::Completed).await?;
 
     let updated_user = user_repo::find::profile_full_by_id(&mut tx, user_id).await?;
 

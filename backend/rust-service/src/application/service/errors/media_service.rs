@@ -17,6 +17,21 @@ pub enum MediaServiceError {
     #[error("Unable to extract payload.")]
     UnableToExtract,
 
+    #[error("Unknown multipart field: {0}.")]
+    UnknownMultipartField(String),
+
+    #[error("Too many files uploaded. Maximum allowed is {0}.")]
+    TooManyFiles(usize),
+
+    #[error("Duplicate multipart field: {0}.")]
+    DuplicateMultipartField(String),
+
+    #[error("Invalid multipart field value: {0}.")]
+    InvalidMultipartField(String),
+
+    #[error("Video trimming failed.")]
+    VideoTrimFailed,
+
     #[error("Internal system error.")]
     InternalServer,
 
@@ -31,6 +46,12 @@ pub enum MediaServiceError {
 
     #[error("Invalid scale value.")]
     InvalidScale,
+
+    #[error("Failed to strip metadata.")]
+    MetadataStripFailed,
+
+    #[error("Failed to generate thumbnail.")]
+    ThumbnailGenerationFailed,
 
     #[error("Transmission too slow.")]
     TransmissionTooSlow,
@@ -49,4 +70,7 @@ pub enum MediaServiceError {
 
     #[error(transparent)]
     SqlxError(#[from] sqlx::Error),
+
+    #[error(transparent)]
+    TokioJoinError(#[from] tokio::task::JoinError),
 }

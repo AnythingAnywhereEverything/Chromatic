@@ -16,10 +16,8 @@ use tower_http::cors::{Any, CorsLayer};
 
 use crate::{
     api::{
-        error::APIError,
-        routes::{auth_routes, user_routes},
-    },
-    application::{state::SharedState},
+        error::APIError, routes::{auth_routes, user_routes},
+    }, application::state::SharedState,
 };
 
 pub async fn create_router(state: SharedState) -> Router {
