@@ -13,10 +13,10 @@ pub async fn media_full_data(
         r#"
         SELECT
             md.id,
-            md.media_url,
-            md.media_preview_url,
-            md.media_category,
-            md.media_status,
+            md.path,
+            md.name,
+            md.thumbhash,
+            md.status,
             md.created_at,
             mm.file_size,
             mm.mime_type,

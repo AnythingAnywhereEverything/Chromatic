@@ -1,25 +1,54 @@
 use chrono::{NaiveDateTime, Utc};
+use serde::Serialize;
 
-use crate::application::service::media::types::MediaCategory;
-
-
-#[derive(Debug, sqlx::Type)]
+#[derive(Debug, sqlx::Type, Serialize)]
 #[sqlx(type_name = "media_status", rename_all = "lowercase")]
 pub enum MediaStatus {
+    // Prioritized Over All Other Statuses
+    Locked,
+    // Prioritized Over Pending
     Processing,
-    Completed,
+    // Prioritized Over Failed
+    Pending,
+    // Prioritized Over Pending but not over Processing
+    Ready,
+    // Prioritized Over All Other Statuses
     Failed,
+    // Completed
+    Completed,
 }
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct MediaDataRow {
     pub id: i64,
-    pub user_id: i64,
-    pub media_url: String,
-    pub media_preview_url: Option<String>,
-    pub media_category: MediaCategory,
-    pub media_status: MediaStatus,
+    pub uploader_id: i64,
+    pub name: String,
+    pub path: String,
+    pub status: MediaStatus,
+    pub thumbhash: Option<String>,
+    pub lock_hash: Option<String>,
     pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+    pub lock_expiration: Option<NaiveDateTime>,
+    pub deleted_at: Option<NaiveDateTime>,
+}
+
+impl Default for MediaDataRow {
+    fn default() -> Self {
+        MediaDataRow {
+            id: 0,
+            uploader_id: 0,
+            name: String::new(),
+            path: String::new(),
+            status: MediaStatus::Processing,
+            thumbhash: None,
+            lock_hash: None,
+            created_at: Utc::now().naive_utc(),
+            updated_at: Utc::now().naive_utc(),
+            lock_expiration: None,
+            deleted_at: None,
+        }
+    }
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -32,23 +61,16 @@ pub struct MediaMetadataRow {
     pub duration: Option<f32>,
 }
 
-// video manifest row
-#[derive(Debug, sqlx::FromRow)]
-pub struct VideoManifestRow {
-    pub media_id: i64,
-    pub variant_resolution: i32, // * height (e.g. 720). master.m3u8 will be in media_data table, and the variants will be in this table
-}
-
 #[derive(Debug, sqlx::FromRow)]
 pub struct MediaDataWithMetadataRow {
     pub id: i64,
-    pub media_url: String,
-    pub media_preview_url: Option<String>,
-    pub media_category: MediaCategory,
-    pub media_status: MediaStatus,
+    pub path: String,
+    pub name: String,
+    pub thumbhash: Option<String>,
+    pub status: MediaStatus,
     pub created_at: chrono::DateTime<Utc>,
 
-    pub file_size: i64, // * in bytes
+    pub file_size: i64,
     pub mime_type: String,
     pub width: Option<i32>,
     pub height: Option<i32>,
