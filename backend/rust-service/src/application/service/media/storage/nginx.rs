@@ -1,10 +1,10 @@
-use std::path::PathBuf;
 use async_trait::async_trait;
-use axum::{http::HeaderMap, extract::multipart::Field};
+use axum::{extract::multipart::Field, http::HeaderMap};
+use std::path::{Path, PathBuf};
 
-use crate::application::service::{errors::MediaServiceError, media::storage::StorageResponse};
-use crate::application::service::media::types::TempUpload;
 use super::{MediaStorage, local::LocalStorage};
+use crate::application::service::media::types::TempUpload;
+use crate::application::service::{errors::MediaServiceError, media::storage::StorageResponse};
 
 pub struct NginxStorage {
     // file uploads, temp streaming, and deletes remain identical!
@@ -33,12 +33,32 @@ impl MediaStorage for NginxStorage {
         self.local.save(path, data).await
     }
 
+    async fn save_temp(&self, path: &str, data: &[u8]) -> Result<(), MediaServiceError> {
+        self.local.save_temp(path, data).await
+    }
+
     async fn delete(&self, path: &str) {
         self.local.delete(path).await;
     }
 
     async fn exists(&self, path: &str) -> Result<bool, MediaServiceError> {
         self.local.exists(path).await
+    }
+
+    async fn move_file(&self, from: &Path, to: &Path) -> Result<(), MediaServiceError> {
+        self.local.move_file(from, to).await
+    }
+
+    async fn move_all_to_directory(&self, from: &Path, to: &Path) -> Result<(), MediaServiceError> {
+        self.local.move_all_to_directory(from, to).await
+    }
+
+    async fn copy_file(&self, from: &Path, to: &Path) -> Result<(), MediaServiceError> {
+        self.local.copy_file(from, to).await
+    }
+
+    async fn prepare_directory(&self, path: &Path) -> Result<(), MediaServiceError> {
+        self.local.prepare_directory(path).await
     }
 
     async fn save_temp_stream(
@@ -69,17 +89,27 @@ impl MediaStorage for NginxStorage {
         self.local.new_temp_relative_path(prefix)
     }
 
-    async fn read(&self, path: &str, mime_type: &str) -> Result<StorageResponse, MediaServiceError> {
+    async fn read(
+        &self,
+        path: &str,
+        mime_type: &str,
+    ) -> Result<StorageResponse, MediaServiceError> {
         if !self.local.exists(path).await.unwrap_or(false) {
             return Err(MediaServiceError::MediaMissing);
         }
 
         let mut headers = HeaderMap::new();
-        
-        let redirect_path = format!("{}{}", self.internal_redirect_prefix, path);
-        headers.insert("X-Accel-Redirect", axum::http::HeaderValue::from_str(&redirect_path).unwrap());
 
-        headers.insert("Content-Type", axum::http::HeaderValue::from_str(mime_type).unwrap());
+        let redirect_path = format!("{}{}", self.internal_redirect_prefix, path);
+        headers.insert(
+            "X-Accel-Redirect",
+            axum::http::HeaderValue::from_str(&redirect_path).unwrap(),
+        );
+
+        headers.insert(
+            "Content-Type",
+            axum::http::HeaderValue::from_str(mime_type).unwrap(),
+        );
 
         // No bytes are returned, as the actual file is served by Nginx via the X-Accel-Redirect header.
         // Accel-Redirect is a mechanism in Nginx that allows internal redirection to a different location, often used for serving files securely.

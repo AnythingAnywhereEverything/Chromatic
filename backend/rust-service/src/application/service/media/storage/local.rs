@@ -1,4 +1,5 @@
-use std::path::PathBuf;
+use std::io::ErrorKind;
+use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
 use axum::extract::multipart::Field;
@@ -19,6 +20,7 @@ pub struct LocalStorage {
 }
 
 impl LocalStorage {
+
     pub fn new(root: String, temp_root: String) -> Self {
         Self { root, temp_root }
     }
@@ -53,6 +55,17 @@ impl MediaStorage for LocalStorage {
         Ok(())
     }
 
+    async fn save_temp(&self, path: &str, data: &[u8]) -> Result<(), MediaServiceError> {
+        let full = self.build_temp_full_path(path);
+
+        if let Some(parent) = full.parent() {
+            fs::create_dir_all(parent).await?;
+        }
+
+        fs::write(full, data).await?;
+        Ok(())
+    }
+
     async fn delete(&self, path: &str) {
         let full = self.build_full_path(path);
         let _ = fs::remove_file(full).await;
@@ -67,6 +80,65 @@ impl MediaStorage for LocalStorage {
     async fn exists(&self, path: &str) -> Result<bool, MediaServiceError> {
         let full = self.build_full_path(path);
         Ok(full.exists())
+    }
+
+    // Fix: Return nothing when there is nothing to move
+    async fn move_file(&self, from: &Path, to: &Path) -> Result<(), MediaServiceError> {
+        if let Some(parent) = to.parent() {
+            fs::create_dir_all(parent).await?;
+        }
+
+        match fs::rename(from, to).await {
+            Ok(()) => Ok(()),
+            Err(err) if err.kind() == ErrorKind::NotFound => {
+                Ok(())
+            }
+            Err(err) => Err(err.into()),
+        }
+    }
+
+    // This function allows moving all files from one directory to another, creating the destination directory if it doesn't exist. It only moves files and ignores subdirectories.
+    // warning: this method is slower than moving a whole directory, but it safer
+    // due to it will just insert the file to the target destination and not replace the directory, which is safer for production use cases
+    async fn move_all_to_directory(&self, from: &Path, to: &Path) -> Result<(), MediaServiceError> {
+        if !to.exists() {
+            fs::create_dir_all(to).await?;
+        }
+
+        let mut entries = fs::read_dir(from).await?;
+        while let Some(entry) = entries.next_entry().await? {
+            let file_type = entry.file_type().await?;
+            if file_type.is_file() {
+                let file_name = entry.file_name();
+                let from_path = entry.path();
+                let to_path = to.join(file_name);
+                fs::rename(from_path, to_path).await?;
+            }
+        }
+
+        // finally remove the source directory if it's empty
+        if fs::read_dir(from).await?.next_entry().await?.is_none() {
+            fs::remove_dir(from).await?;
+        }
+
+        Ok(())
+    }
+
+    // create directory of the exact path if it doesn't exist, otherwise do nothing
+    async fn prepare_directory(&self, path: &Path) -> Result<(), MediaServiceError> {
+        if !path.exists() {
+            fs::create_dir_all(path).await?;
+        }
+        Ok(())
+    }
+
+    async fn copy_file(&self, from: &Path, to: &Path) -> Result<(), MediaServiceError> {
+        if let Some(parent) = to.parent() {
+            fs::create_dir_all(parent).await?;
+        }
+
+        fs::copy(from, to).await?;
+        Ok(())
     }
 
     async fn save_temp_stream(

@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
 use axum::extract::multipart::Field;
@@ -23,15 +23,39 @@ impl MediaStorage for R2Storage {
         todo!()
     }
 
+    async fn save_temp(&self, _path: &str, _data: &[u8]) -> Result<(), MediaServiceError> {
+        todo!()
+    }
+
     async fn delete(&self, _path: &str) {
         todo!()
     }
 
-    async fn read(&self, _path: &str, _mime_type: &str) -> Result<StorageResponse, MediaServiceError> {
+    async fn read(
+        &self,
+        _path: &str,
+        _mime_type: &str,
+    ) -> Result<StorageResponse, MediaServiceError> {
         todo!()
     }
 
     async fn exists(&self, _path: &str) -> Result<bool, MediaServiceError> {
+        todo!()
+    }
+
+    async fn move_file(&self, _from: &Path, _to: &Path) -> Result<(), MediaServiceError> {
+        todo!()
+    }
+
+    async fn move_all_to_directory(&self, _from: &Path, _to: &Path) -> Result<(), MediaServiceError> {
+        todo!()
+    }
+
+    async fn copy_file(&self, _from: &Path, _to: &Path) -> Result<(), MediaServiceError> {
+        todo!()
+    }
+
+    async fn prepare_directory(&self, _path: &Path) -> Result<(), MediaServiceError> {
         todo!()
     }
 
