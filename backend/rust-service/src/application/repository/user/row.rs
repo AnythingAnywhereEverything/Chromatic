@@ -16,3 +16,17 @@ pub struct UserProfileFullRow {
     pub banner_media_id: Option<i64>,
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
 }
+// * target_type is enum for User / Guild
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct ReportUserAndGuildRow {
+    pub id: i64,
+    pub reporter_id: i64,
+    pub target_id: i64,
+    pub target_type: String,
+    pub report_category: String,
+    pub description: Option<String>,
+    pub status: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub resolved_at: chrono::DateTime<chrono::Utc>
+}
