@@ -9,8 +9,10 @@ use tokio::time::Instant;
 use uuid::Uuid;
 
 use crate::application::service::errors::MediaServiceError;
+use crate::application::service::media::multipart_ex::FileSizeGate;
 use crate::application::service::media::storage::StorageResponse;
-use crate::application::service::media::types::TempUpload;
+use crate::application::service::media::types::{TempUpload, ValidationOptions};
+use crate::application::service::media::utils::{get_media_types_from_mime, get_mime_and_extension_validation_options, validate_media_type};
 
 use super::MediaStorage;
 
@@ -145,7 +147,10 @@ impl MediaStorage for LocalStorage {
         &self,
         field: &mut Field<'_>,
         max_size: usize,
+        validation: Option<&ValidationOptions>,
+        filter_gate: Option<&Vec<FileSizeGate>>,
     ) -> Result<TempUpload, MediaServiceError> {
+        // * Generate a unique temporary file path
         let relative_path = format!("upload/{}.part", Uuid::new_v4());
         let full_path = self.build_temp_full_path(&relative_path);
 
@@ -155,6 +160,10 @@ impl MediaStorage for LocalStorage {
 
         let mut file = fs::File::create(&full_path).await?;
         let mut written = 0usize;
+        let mut validated = false;
+
+        let mut mime = String::new();
+        let mut extension = String::new();
 
         let write_result = async {
             // * throughput monitoring variables
@@ -168,6 +177,34 @@ impl MediaStorage for LocalStorage {
                 .map_err(|e| MediaServiceError::MultipartError(e))?
             {
                 written += chunk.len();
+
+                if !validated && written > 8192 { // Validate after 8KB of data has been written
+                    if let Some(validation) = validation {
+                        let (detected_mime, detected_extension) = 
+                        get_mime_and_extension_validation_options(
+                            &chunk[..8192], // Use the first 8KB of the file for MIME type detection
+                            validation,
+                        )?;
+                        mime = detected_mime;
+                        extension = detected_extension;
+
+                        validate_media_type(&mime, &Some(validation.clone()))?;
+                    }
+
+                    tracing::trace!("Detected MIME type: {}, extension: {}", mime, extension);
+                    validated = true;
+                };
+
+                if validated {
+                    if let Some(filter_gate) = filter_gate {
+                        let mimes = get_media_types_from_mime(&mime);
+                        for gate in filter_gate {
+                            if mimes.contains(&gate.media_type) && written > gate.max_size {
+                                return Err(MediaServiceError::FileTooLarge);
+                            }
+                        }
+                    }
+                }
 
                 if written > max_size {
                     return Err(MediaServiceError::FileTooLarge);
@@ -194,6 +231,8 @@ impl MediaStorage for LocalStorage {
             Ok(()) => Ok(TempUpload {
                 path: relative_path,
                 size: written,
+                mime: mime,
+                extension: extension,
             }),
             Err(err) => {
                 // * partial temp file is removed on failure/cancel

@@ -1,4 +1,9 @@
-use crate::application::service::{errors::MediaServiceError, media::types::{MediaCategory, MediaType, ValidationOptions, ValidationType}};
+use content_inspector::{ContentType, inspect};
+
+use crate::application::service::{
+    errors::MediaServiceError,
+    media::types::{MediaCategory, MediaType, ValidationOptions, ValidationType},
+};
 
 pub fn categorize(mime: &str) -> MediaCategory {
     match mime {
@@ -40,6 +45,32 @@ pub fn get_media_types_from_mime(mime: &str) -> Vec<MediaType> {
 
         _ => vec![],
     }
+}
+
+pub fn get_mime_and_extension_validation_options(
+    bytes: &[u8],
+    validation: &ValidationOptions,
+) -> Result<(String, String), MediaServiceError> {
+    let (mime, extension) = if let Some(kind) = infer::get(bytes) {
+        (kind.mime_type(), kind.extension())
+    } else {
+        match inspect(bytes) {
+            ContentType::UTF_8
+            | ContentType::UTF_8_BOM
+            | ContentType::UTF_16LE
+            | ContentType::UTF_16BE
+            | ContentType::UTF_32LE
+            | ContentType::UTF_32BE => ("text/plain", "txt"),
+
+            ContentType::BINARY => {
+                return Err(MediaServiceError::InvalidMediaType);
+            }
+        }
+    };
+
+    validate_media_type(mime, &Some(validation.clone()))?;
+
+    Ok((mime.to_string(), extension.to_string()))
 }
 
 pub fn validate_media_type(

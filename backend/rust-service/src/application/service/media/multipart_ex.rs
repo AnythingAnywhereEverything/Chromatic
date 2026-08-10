@@ -1,8 +1,7 @@
 // src/application/service/media/multipart_ex.rs
 
 use crate::application::service::{
-    errors::MediaServiceError,
-    media::{storage::MediaStorage, types::TempUpload},
+    errors::MediaServiceError, media::{storage::MediaStorage, types::{MediaType, TempUpload, ValidationOptions}},
 };
 use axum::extract::Multipart;
 use serde::de::DeserializeOwned;
@@ -45,6 +44,36 @@ pub struct MultipartLimits {
     pub max_files: usize,
 }
 
+pub struct MultipartExtractorOptions {
+    // Limit for other types of files
+    pub limits: MultipartLimits,
+
+    // Optional validation options for uploaded files
+    pub validation: Option<ValidationOptions>,
+
+    // Optional size filter gates for uploaded files
+    // This allows for different size limits based on the media type of the uploaded file.
+    pub size_filter_gate: Option<Vec<FileSizeGate>>,
+}
+
+impl Default for MultipartExtractorOptions {
+    fn default() -> Self {
+        Self {
+            limits: MultipartLimits {
+                max_file_size: 10 * 1024 * 1024, // 10 MB
+                max_files: 5,
+            },
+            validation: None,
+            size_filter_gate: None,
+        }
+    }
+}
+
+pub struct FileSizeGate {
+    pub media_type: MediaType,
+    pub max_size: usize,
+}
+
 pub struct MultipartExtractor {
     storage: Arc<dyn MediaStorage>,
 }
@@ -69,7 +98,7 @@ impl MultipartExtractor {
     pub async fn extract<T>(
         &self,
         mut multipart: Multipart,
-        limits: MultipartLimits,
+        options: MultipartExtractorOptions,
     ) -> Result<T, MediaServiceError>
     where
         T: DeserializeOwned + MultipartSchema,
@@ -77,7 +106,7 @@ impl MultipartExtractor {
         let mut uploaded_files = Vec::new();
 
         let result = self
-            .extract_inner::<T>(&mut multipart, &mut uploaded_files, &limits)
+            .extract_inner::<T>(&mut multipart, &mut uploaded_files, &options)
             .await;
 
         match result {
@@ -94,7 +123,7 @@ impl MultipartExtractor {
         &self,
         multipart: &mut Multipart,
         uploaded_files: &mut Vec<TempUpload>,
-        limits: &MultipartLimits,
+        options: &MultipartExtractorOptions,
     ) -> Result<T, MediaServiceError>
     where
         T: DeserializeOwned + MultipartSchema,
@@ -117,8 +146,8 @@ impl MultipartExtractor {
 
             match schema.kind {
                 MultipartFieldKind::File => {
-                    if file_count >= limits.max_files {
-                        return Err(MediaServiceError::TooManyFiles(limits.max_files));
+                    if file_count >= options.limits.max_files {
+                        return Err(MediaServiceError::TooManyFiles(options.limits.max_files));
                     }
 
                     match schema.cardinality {
@@ -135,7 +164,7 @@ impl MultipartExtractor {
 
                     let upload = self
                         .storage
-                        .save_temp_stream(&mut field, limits.max_file_size)
+                        .save_temp_stream(&mut field, options.limits.max_file_size, options.validation.as_ref(), options.size_filter_gate.as_ref())
                         .await?;
 
                     // * Track every successful upload for rollback.

@@ -3,7 +3,8 @@ use axum::{extract::multipart::Field, http::HeaderMap};
 use std::path::{Path, PathBuf};
 
 use super::{MediaStorage, local::LocalStorage};
-use crate::application::service::media::types::TempUpload;
+use crate::application::service::media::multipart_ex::FileSizeGate;
+use crate::application::service::media::types::{TempUpload, ValidationOptions};
 use crate::application::service::{errors::MediaServiceError, media::storage::StorageResponse};
 
 pub struct NginxStorage {
@@ -65,8 +66,10 @@ impl MediaStorage for NginxStorage {
         &self,
         field: &mut Field<'_>,
         max_size: usize,
+        validation: Option<&ValidationOptions>,
+        filter_gate: Option<&Vec<FileSizeGate>>,
     ) -> Result<TempUpload, MediaServiceError> {
-        self.local.save_temp_stream(field, max_size).await
+        self.local.save_temp_stream(field, max_size, validation, filter_gate).await
     }
 
     async fn read_temp(&self, path: &str) -> Result<Vec<u8>, MediaServiceError> {

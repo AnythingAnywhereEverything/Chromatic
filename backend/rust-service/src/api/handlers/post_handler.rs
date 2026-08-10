@@ -8,7 +8,7 @@ use serde::Serialize;
 use crate::{
     api::{APIError, dtos::post_dtos::PostDTO, version}, application::{
         service::media::{
-            multipart_ex::MultipartLimits, service::MediaService, types::{MediaOptions, MediaProcessing, MediaType, OnProcessingType, PostProcessingType, ProcessingOptions, ResizeStyle, TempUpload, ValidationOptions, ValidationType},
+            multipart_ex::{MultipartExtractorOptions, MultipartLimits}, service::MediaService, types::{MediaOptions, MediaProcessing, MediaType, OnProcessingType, PostProcessingType, ProcessingOptions, ResizeStyle, TempUpload, ValidationOptions, ValidationType},
         }, state::SharedState,
     },
 };
@@ -30,13 +30,16 @@ pub async fn create_new_post_handler(
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
 
-    let limits = MultipartLimits {
-        max_file_size: 512_000_000,
-        max_files: 5,
+    let options = MultipartExtractorOptions {
+        limits: MultipartLimits {
+            max_file_size: 512_000_000,
+            max_files: 5,
+        },
+        ..Default::default()
     };
     let extracted = state
         .multipart_extractor
-        .extract::<CreatePostRequest>(multipart, limits)
+        .extract::<CreatePostRequest>(multipart, options)
         .await?;
     tracing::debug!("Extracted payload: {:#?}", extracted);
 
