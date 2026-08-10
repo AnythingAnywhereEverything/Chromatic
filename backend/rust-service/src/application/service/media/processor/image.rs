@@ -2,18 +2,84 @@ use libvips::{VipsImage, ops};
 
 use crate::application::service::errors::MediaServiceError;
 
-pub fn resize_image(
+/// Resizes the image to fit within the specified width and height while maintaining the aspect ratio.
+pub fn image_resize_keep_ratio(
     mut image: VipsImage,
     width: u32,
     height: u32,
     rz_width: u32,
     rz_height: u32,
+    upscale: bool,
 ) -> Result<VipsImage, MediaServiceError> {
-    if width > rz_width || height > rz_height {
-        let scale = (rz_width as f64 / width as f64).min(rz_height as f64 / height as f64);
+    let scale = (rz_width as f64 / width as f64).min(rz_height as f64 / height as f64);
 
+    if scale < 1.0 || upscale {
         image = ops::resize(&image, scale)?;
     }
+    Ok(image)
+}
+
+pub fn image_resize_normalized(
+    mut image: VipsImage,
+    width: u32,
+    height: u32,
+    rz_width: f32,
+    rz_height: f32,
+    upscale: bool,
+) -> Result<VipsImage, MediaServiceError> {
+    let target_width = (rz_width * width as f32).round() as u32;
+    let target_height = (rz_height * height as f32).round() as u32;
+
+    let scale = (target_width as f64 / width as f64).min(target_height as f64 / height as f64);
+    
+    if scale < 1.0 || upscale {
+        image = ops::resize(&image, scale)?;
+    }
+
+    Ok(image)
+}
+
+/// if the image is 512x512
+/// and the target is 215x100
+/// the image will first decide a cropping ratio of 215:100
+/// then it will crop the image to 215x100
+/// and resize it to 215x100
+pub fn image_resize_absolute(
+    mut image: VipsImage,
+    width: u32,
+    height: u32,
+    rz_width: u32,
+    rz_height: u32,
+    upscale: bool,
+) -> Result<VipsImage, MediaServiceError> {
+    let target_aspect = rz_width as f64 / rz_height as f64;
+    let current_aspect = width as f64 / height as f64;
+
+    let (crop_width, crop_height) = if (current_aspect - target_aspect).abs() > f64::EPSILON {
+        if current_aspect > target_aspect {
+            let crop_width = (height as f64 * target_aspect).round() as u32;
+            (crop_width, height)
+        } else {
+            let crop_height = (width as f64 / target_aspect).round() as u32;
+            (width, crop_height)
+        }
+    } else {
+        (width, height)
+    };
+
+    if (current_aspect - target_aspect).abs() > f64::EPSILON {
+        let left = ((width - crop_width) / 2) as i32;
+        let top = ((height - crop_height) / 2) as i32;
+
+        image = ops::extract_area(&image, left, top, crop_width as i32, crop_height as i32)?;
+    }
+
+    // Finally, resize the image to the target dimensions
+    let scale = (rz_width as f64 / crop_width as f64).min(rz_height as f64 / crop_height as f64);
+    if scale < 1.0 || upscale {
+        image = ops::resize(&image, scale)?;
+    }
+
     Ok(image)
 }
 
@@ -37,26 +103,6 @@ pub fn crop_image_absolute(
         }
         None => (max_left / 2, max_top / 2),
     };
-
-    tracing::warn!(
-        "Cropping with\n\t absolute dimensions: {}x{},\n\t position: ({}, {}),\n\t resulting dimensions: {}x{}",
-        cr_width,
-        cr_height,
-        left,
-        top,
-        cr_width,
-        cr_height
-    );
-
-    tracing::warn!(
-        "Cropping with\n\t original dimensions: {}x{},\n\t position: ({}, {}),\n\t resulting dimensions: {}x{}",
-        width,
-        height,
-        left,
-        top,
-        cr_width,
-        cr_height
-    );
 
     image = ops::extract_area(
         &image,
@@ -111,14 +157,6 @@ pub fn crop_image_ratio(
 
     let cr_width = (max_crop_width as f32 * scale).round() as u32;
     let cr_height = (max_crop_height as f32 * scale).round() as u32;
-
-    tracing::warn!(
-        "Cropping with ratio: {:?}, scale: {}, resulting dimensions: {}x{}",
-        ratio,
-        scale,
-        cr_width,
-        cr_height
-    );
 
     crop_image_absolute(image, width, height, cr_width, cr_height, position)
 }
