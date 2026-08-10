@@ -48,6 +48,12 @@ pub enum APIErrorCode {
     MediaSnowflakeError,
     MediaLibvipsError,
     MediaInvalidScale,
+    MediaInvalidMultipartField,
+    MediaDuplicateMultipartField,
+    MediaTransmissionTooSlow,
+    MediaTimeout,
+    MediaTooManyFiles,
+    MediaUnknownMultipartField,
 
     // Session
     SessionError,
