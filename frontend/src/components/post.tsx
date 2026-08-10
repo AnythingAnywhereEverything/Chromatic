@@ -71,5 +71,3 @@ const Post: React.FC<PostProp> = (
         </article>
     );
 };
-
-export default Post;
