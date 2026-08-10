@@ -10,7 +10,7 @@ COPY . .
 RUN cargo build --release
 
 
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 WORKDIR /opt
 
 RUN apt-get update && apt-get install -y \
@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y \
     libvips \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /opt/target/release/exppt .
+COPY --from=builder /opt/target/release/chromatic .
 
 EXPOSE 3000
 CMD ["./chromatic"]
