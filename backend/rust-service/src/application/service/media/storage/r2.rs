@@ -4,8 +4,9 @@ use async_trait::async_trait;
 use axum::extract::multipart::Field;
 
 use crate::application::service::errors::MediaServiceError;
+use crate::application::service::media::multipart_ex::FileSizeGate;
 use crate::application::service::media::storage::StorageResponse;
-use crate::application::service::media::types::TempUpload;
+use crate::application::service::media::types::{TempUpload, ValidationOptions};
 
 use super::MediaStorage;
 
@@ -63,6 +64,8 @@ impl MediaStorage for R2Storage {
         &self,
         _field: &mut Field<'_>,
         _max_size: usize,
+        _validation: Option<&ValidationOptions>,
+        _filter_gate: Option<&Vec<FileSizeGate>>,
     ) -> Result<TempUpload, MediaServiceError> {
         Err(MediaServiceError::ProcessingFailed)
     }

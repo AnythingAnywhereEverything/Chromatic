@@ -14,8 +14,8 @@ use crate::{
             media::{self as media_repo, row::MediaStatus},
             user::{self as user_repo},
         }, service::{
-            errors::{AuthServiceError}, media::{
-                multipart_ex::MultipartLimits, service::MediaService, types::{
+            errors::AuthServiceError, media::{
+                multipart_ex::{MultipartExtractorOptions, MultipartLimits}, service::MediaService, types::{
                     CropStyle, MediaOptions, MediaProcessing, MediaType, OnProcessingType, ProcessingOptions, ResizeStyle, TempUpload, ValidationOptions, ValidationType,
                 },
             },
@@ -88,17 +88,11 @@ pub async fn upload_avatar_handler(
     };
     
 
-    let limits = MultipartLimits {
-        max_file_size: 10_000_000, // 10 MB limit for avatar uploads
-        max_files: 1, // 1 file limit for avatar uploads
-    };
-
-    let extracted = state.multipart_extractor.extract::<UploadAvatarPayload>(multipart, limits).await?;
-
-    tracing::debug!("Extracted payload: {:?}", extracted);
-
-    let options = MediaOptions {
-        folder: format!("avatars/{}", user_id),
+    let options = MultipartExtractorOptions {
+        limits: MultipartLimits {
+            max_file_size: 10_000_000, // 10 MB
+            max_files: 5,
+        },
         validation: Some(ValidationOptions {
             validation_type: ValidationType::Whitelisted,
             value: vec![
@@ -108,6 +102,16 @@ pub async fn upload_avatar_handler(
                 MediaType::GenericGif,
             ],
         }),
+        ..Default::default()
+    };
+
+    let extracted = state.multipart_extractor.extract::<UploadAvatarPayload>(multipart, options).await?;
+
+    tracing::debug!("Extracted payload: {:?}", extracted);
+
+    let options = MediaOptions {
+        folder: format!("avatars/{}", user_id),
+        
         processing_order: MediaProcessing {
             options: ProcessingOptions {
                 use_raw_name: false,

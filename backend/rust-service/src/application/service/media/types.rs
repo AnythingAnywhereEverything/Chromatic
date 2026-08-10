@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy)]
@@ -237,8 +235,7 @@ pub struct ProcessObject {
     pub path: String,
     pub size: usize,
     pub data: Option<RawFileValue>,
-    pub thumbnail_path: Option<String>,
-    pub thumbnail_size: Option<usize>,
+    pub thumbnail: Option<TempUpload>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -256,8 +253,7 @@ impl Into<ProcessObject> for TempUpload {
             path: self.path,
             size: self.size,
             data: None,
-            thumbnail_path: None,
-            thumbnail_size: None,
+            thumbnail: None,
         }
     }
 }
@@ -266,17 +262,6 @@ impl Into<ProcessObject> for TempUpload {
 pub struct TempUpload {
     pub path: String,
     pub size: usize,
-}
-
-#[derive(Debug, Clone)]
-pub struct LocalTempUpload {
-    pub full_path: PathBuf,
-    pub relative_path: String,
-    pub size: usize,
-}
-
-#[derive(Debug, Clone)]
-pub struct ExtractedPayload<T> {
-    pub payload: T,
-    pub files: Vec<TempUpload>,
+    pub mime: String,
+    pub extension: String,
 }
