@@ -1,0 +1,78 @@
+.container{
+    width: 575px;
+    background-color: rgb(90, 90, 90);
+    padding: calc(var(--spacing) * 2);
+}
+
+.title, .create-title, .user, .icon-container, .button-container{
+    display: flex;
+    gap: calc(var(--spacing) * 2);
+}
+
+.create-title{
+    justify-content: space-between;
+}
+
+.user{
+    align-items: center;
+    position: relative;
+}
+
+.avatar {
+    border-radius: var(--radius-medium);
+    overflow: hidden;
+    width: calc(var(--spacing) * 14) !important;
+    height: calc(var(--spacing) * 14) !important;
+    position: relative;
+
+    .textarea {
+        height: auto;
+    }
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+}
+.image-container, .video-container,.tag-container{
+    width: 100%;
+    height: 18vh;
+    background-color: green;
+    border-bottom: 1px solid black;
+}
+.tag-container{
+    height: 4vh;
+}
+.image-input{
+    width: 100%;
+    height: 10vh;
+    background-color: red;
+}
+
+.bottom{
+    display: flex;
+    justify-content: space-between;
+}
+
+.submit, .cancel{
+    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 2.5);
+}
+
+.submit{
+    background-color: green;
+}
+// -----Status
+
+.status-body{
+    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 1);
+    background-color: var(--popover);
+}
+.status-trigger{
+    padding: calc(var(--spacing) * 1) calc(var(--spacing) * 1);
+    position: relative;
+}
+.status-item{
+    padding: calc(var(--spacing) * 1);
+    margin: calc(var(--spacing) * 2)
+}
