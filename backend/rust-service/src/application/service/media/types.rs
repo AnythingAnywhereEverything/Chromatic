@@ -46,7 +46,7 @@ pub enum ValidationType {
     Blacklisted,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MediaType {
     // Blacklist & Whitelist
     GenericJpeg,
@@ -150,9 +150,17 @@ pub struct ValidationOptions {
 }
 
 #[derive(Debug, Clone)]
+pub struct FileSizeGate {
+    pub media_type: MediaType,
+    pub max_size: usize,
+}
+
+#[derive(Debug, Clone)]
 pub struct MediaOptions {
     // Identify the destination folder for media files
     pub folder: String,
+
+    pub size_gate: Option<Vec<FileSizeGate>>,
 
     // Optional validation settings to enforce specific media types or categories
     pub validation: Option<ValidationOptions>,
@@ -182,6 +190,7 @@ impl Default for MediaOptions {
     fn default() -> Self {
         MediaOptions {
             folder: String::new(),
+            size_gate: None,
             validation: None,
             processing_order: MediaProcessing::default(),
         }

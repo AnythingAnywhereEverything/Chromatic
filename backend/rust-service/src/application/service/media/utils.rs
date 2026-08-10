@@ -26,6 +26,22 @@ pub fn categorize(mime: &str) -> MediaCategory {
     }
 }
 
+pub fn get_media_types_from_mime(mime: &str) -> Vec<MediaType> {
+    match mime {
+        "image/jpeg" => vec![MediaType::GenericJpeg, MediaType::Image],
+        "image/png" => vec![MediaType::GenericPng, MediaType::Image],
+        "image/webp" => vec![MediaType::GenericWebP, MediaType::Image],
+        "video/mp4" => vec![MediaType::GenericMp4, MediaType::Video],
+        "image/gif" => vec![MediaType::GenericGif, MediaType::Image],
+
+        m if m.starts_with("image/") => vec![MediaType::Image],
+        m if m.starts_with("video/") => vec![MediaType::Video],
+        m if m.starts_with("audio/") => vec![MediaType::Audio],
+
+        _ => vec![],
+    }
+}
+
 pub fn validate_media_type(
     mime: &str,
     validation: &Option<ValidationOptions>,
