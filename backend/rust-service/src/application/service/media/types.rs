@@ -2,65 +2,32 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
-pub enum MediaProcessingType {
-    Transform,       // transform
-    Hls,
-    Raw,            // keep original but strip some metadata e.g. exif, gps, etc.
-}
-
 #[derive(Debug, Clone, Copy)]
 pub enum CropStyle {
     /// Freeform cropping based on exact width and height dimensions
-    Absolute {
-        width: u32,
-        height: u32,
-    },
+    Absolute { width: u32, height: u32 },
 
     /// Normalized cropping based on a percentage of the original image dimensions (e.g., 0.5 for 50% of the original size)
-    Normalized {
-        width: f32,
-        height: f32,
-    },
+    Normalized { width: f32, height: f32 },
 
     /// Proportion-locked cropping using a ratio and a defining dimension (e.g., width)
-    Ratio {
-        ratio: (u32, u32),
-        scale: f32,
-    },
+    Ratio { ratio: (u32, u32), scale: f32 },
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum ImageTransform {
-    Resize {
-        rz_width: u32,
-        rz_height: u32,
-    },
-    Crop {
-        style: CropStyle,
-        /// The anchor point (x, y). None defaults to center cropping.
-        /// The coordinates are normalized (0.0 to 1.0) for Ratio and Normalized styles, and absolute pixel values for Absolute style.
-        position: Option<(f32, f32)>,
-    },
-    None,
+pub enum ResizeStyle {
+    /// Resize to exact width and height dimensions
+    /// will be cropped if the aspect ratio is different from the original image
+    AbsoluteWithCrop { width: u32, height: u32 },
+
+    /// Resize based on a percentage of the original image dimensions (e.g., 0.5 for 50% of the original size)
+    Normalized { width: f32, height: f32 },
+
+    /// Proportion-locked resizing using a ratio and a defining dimension (e.g., width)
+    AbsoluteKeepsRatio { width: u32, height: u32 },
 }
 
-pub struct ImagePostProcessingOptions {
-    pub keep_preview: bool,
-    pub ouput_format: Option<String>, 
-}
-
-
-#[derive(Debug, Clone, Copy)]
-pub enum AllowedMediaType {
-    Jpeg,
-    Png,
-    WebP,
-    Mp4,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize)]
-#[sqlx(type_name = "media_category", rename_all = "lowercase")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum MediaCategory {
     Image,
     Video,
@@ -71,54 +38,175 @@ pub enum MediaCategory {
     Unknown,
 }
 
-/// Refactor Draft:
-/// Sanitize should be reanemd to "Transform" or "Process" to better reflect its purpose of modifying media files, not just cleaning them.
-/// Transform should have an order of operations, e.g., Sanitize -> Resize -> Crop, to ensure consistent processing.
-/// Transform as Vec<ImageTransform> could allow for multiple transformations in a single operation, providing more flexibility and efficiency in media processing.
-/// 
-/// This allow for modular extnesive design as well as adding more feature to create dynamic media size generator.
-/// 
 
+
+#[derive(Debug, Clone)]
+pub enum ValidationType {
+    Whitelisted,
+    Blacklisted,
+}
+
+#[derive(Debug, Clone)]
+pub enum MediaType {
+    // Blacklist & Whitelist
+    GenericJpeg,
+    GenericPng,
+    GenericWebP,
+    GenericMp4,
+    GenericGif,
+
+    // Categorized
+    Image,
+    Video,
+    Audio,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProcessingOptions {
+    pub use_video_transcoding: bool,
+    pub use_generated_id_as_container: bool,
+    pub use_gpu_acceleration: bool,
+    pub use_raw_name: bool,
+    pub use_raw_name_with_extension: bool,
+    // this will add a_ at the first of the file name, to indicate that this is an animated image, and will be used for the thumbnail generation
+    pub use_animated_image_indicator: bool,
+    pub use_hash_as_name: bool,
+    pub use_thumbhash_generation: bool,
+    pub locked: bool,
+}
+
+impl Default for ProcessingOptions {
+    fn default() -> Self {
+        ProcessingOptions {
+            use_video_transcoding: false,
+            use_generated_id_as_container: false,
+            use_gpu_acceleration: false,
+            use_raw_name: false,
+            use_raw_name_with_extension: false,
+            use_animated_image_indicator: false,
+            use_hash_as_name: false,
+            use_thumbhash_generation: true,
+            locked: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum OnProcessingType {
+    ImageResize {
+        style: ResizeStyle,
+        upscale: bool,
+    },
+    ImageCrop {
+        style: CropStyle,
+        position: Option<(f32, f32)>,
+    },
+
+    // Video transformations
+    // * Not implemented yet
+    VideoTrim {
+        start_time: f32,
+        end_time: f32,
+    },
+}
+#[derive(Debug, Clone)]
+pub enum PostProcessingType {
+    VideoResize {
+        width: u32,
+        height: u32,
+    },
+    VideoCrop {
+        style: CropStyle,
+        position: Option<(f32, f32)>,
+    },
+    VideoHls {
+        segment_duration: u32,
+    },
+    NSFWImageDetection {
+        onyx_model_path: String,
+    },
+}
+#[derive(Debug, Clone)]
+pub struct MediaProcessing {
+    pub options: ProcessingOptions,
+    pub on_processing: Option<Vec<OnProcessingType>>,
+    pub post_processing: Option<Vec<PostProcessingType>>,
+}
+
+impl Default for MediaProcessing {
+    fn default() -> Self {
+        MediaProcessing {
+            options: ProcessingOptions::default(),
+            on_processing: None,
+            post_processing: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ValidationOptions {
+    pub validation_type: ValidationType,
+    pub value: Vec<MediaType>,
+}
 
 #[derive(Debug, Clone)]
 pub struct MediaOptions {
+    // Identify the destination folder for media files
     pub folder: String,
-    pub max_size: usize,
-    pub allowed_types: Option<Vec<AllowedMediaType>>,
-    pub image_transforms: Option<Vec<ImageTransform>>,
 
-    pub mode: MediaProcessingType,
-    pub manual_preview: Option<TempUpload>,
+    // Optional validation settings to enforce specific media types or categories
+    pub validation: Option<ValidationOptions>,
 
-    // * only for video
-    // * if the mode set to raw, these will be ignore unconditionally
-    pub hls_fallback: bool
+    // Optional processing order for media transformations
+    pub processing_order: MediaProcessing,
 }
-
-#[derive(Debug, Clone)]
-pub struct SavedMedia {
+#[derive(Debug, Clone, Serialize)]
+pub struct ProcessedMedia {
+    // The unique identifier for the processed media file
+    pub file_id: i64,
+    // The relative path where the processed media file is stored
     pub path: String,
-    pub preview_path: Option<String>,
+    // The name of the processed media file
+    pub file_name: String,
+    // The category of the processed media file (e.g., image, video, audio)
     pub category: MediaCategory,
-
+    // Thumbhash for the processed media file, if applicable (e.g., for images)
+    pub thumbhash: Option<String>,
+    // Metadata associated with the processed media file, including size, MIME type, dimensions, and duration
     pub meta: MediaMeta,
-    pub video_manifest: Option<VideoManifest>,
+    // Optional directory for post-processing jobs (e.g., HLS processing)
+    pub post_job_dir: Option<String>,
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VideoVariant {
-    pub resolution: i32,   // * height (e.g. 720)
-    pub playlist: String,  // * path to m3u8
+impl Default for MediaOptions {
+    fn default() -> Self {
+        MediaOptions {
+            folder: String::new(),
+            validation: None,
+            processing_order: MediaProcessing::default(),
+        }
+    }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VideoManifest {
-    pub master: String, // * master.m3u8
-    pub variants: Vec<VideoVariant>,
+/// --------------------------------
+/// Media Data Group
+/// --------------------------------
+pub struct MediaData {
+    pub id: i64,
+    pub uploader_id: i64,
+    pub path: String,
+    pub name: String,
+    pub meta: MediaMeta,
+    pub is_animated: bool,
+    pub locked: bool,
+    pub lock_hashed: Option<String>,
+    pub thumbhash: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+///* Note: master.m3u8 will provide the variant playlist for HLS streaming, can be extracted in frontend
+///* Often get from Hls.level in React.
+
+#[derive(Debug, Clone, Serialize)]
 pub struct MediaMeta {
     pub size: usize,
     pub mime: String,
@@ -128,7 +216,44 @@ pub struct MediaMeta {
     pub duration: Option<f32>,
 }
 
-#[derive(Debug, Clone)]
+/// --------------------------------
+/// Media Extractor Types
+/// --------------------------------
+/// No refactor needed. (thankfully)
+
+/// ProcessObject is the object that service will use to process media files.
+/// Allowing to add extra information for the file to work with, such as the name of the file, and the path of the file.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ProcessObject {
+    pub path: String,
+    pub size: usize,
+    pub data: Option<RawFileValue>,
+    pub thumbnail_path: Option<String>,
+    pub thumbnail_size: Option<usize>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RawFileValue {
+    pub name: String,
+    pub extension: String,
+}
+
+
+/// TempUpload is the object that service will use to extract media files from the multipart form data.
+/// Easier for some file that doesnt need extra information, such as the name of the file, and the path of the file.
+impl Into<ProcessObject> for TempUpload {
+    fn into(self) -> ProcessObject {
+        ProcessObject {
+            path: self.path,
+            size: self.size,
+            data: None,
+            thumbnail_path: None,
+            thumbnail_size: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TempUpload {
     pub path: String,
     pub size: usize,
