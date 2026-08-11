@@ -3,8 +3,13 @@ use std::sync::Arc;
 use libvips::VipsImage;
 
 use crate::application::service::{
-    errors::MediaServiceError, media::{
-        processor, storage, types::{CropStyle, OnProcessingType, PostProcessingType, ResizeStyle},
+    errors::MediaServiceError,
+    media::{
+        processor, storage,
+        types::{
+            image_transform::{CropStyle, ResizeStyle},
+            media_options::{OnProcessingType, PostProcessingType},
+        },
     },
 };
 
@@ -22,22 +27,27 @@ impl Transformer {
         let img_height = image.get_height();
 
         match style {
-            ResizeStyle::AbsoluteKeepsRatio { width: rw, height: rh } => processor::image::image_resize_keep_ratio(
+            ResizeStyle::AbsoluteKeepsRatio {
+                width: rw,
+                height: rh,
+            } => processor::image::image_resize_keep_ratio(
                 image,
                 img_width as u32,
                 img_height as u32,
                 rw,
                 rh,
-                upscale
+                upscale,
             ),
-            ResizeStyle::AbsoluteWithCrop { width, height } => processor::image::image_resize_absolute(
-                image,
-                img_width as u32,
-                img_height as u32,
-                width,
-                height,
-                upscale
-            ),
+            ResizeStyle::AbsoluteWithCrop { width, height } => {
+                processor::image::image_resize_absolute(
+                    image,
+                    img_width as u32,
+                    img_height as u32,
+                    width,
+                    height,
+                    upscale,
+                )
+            }
 
             ResizeStyle::Normalized { width, height } => processor::image::image_resize_normalized(
                 image,
@@ -45,7 +55,7 @@ impl Transformer {
                 img_height as u32,
                 width,
                 height,
-                upscale
+                upscale,
             ),
         }
     }
@@ -95,7 +105,8 @@ impl Transformer {
         source_path: String,
         storage: Arc<dyn storage::MediaStorage>,
     ) -> Result<(), MediaServiceError> {
-        processor::video::process_video_hls(segment_duration, job_dir_path, source_path, storage).await?;
+        processor::video::process_video_hls(segment_duration, job_dir_path, source_path, storage)
+            .await?;
         Ok(())
     }
 
@@ -137,7 +148,10 @@ impl Transformer {
         storage: Arc<dyn storage::MediaStorage>,
     ) -> Result<(), MediaServiceError> {
         match transform {
-            OnProcessingType::VideoTrim { start_time, end_time } => {
+            OnProcessingType::VideoTrim {
+                start_time,
+                end_time,
+            } => {
                 let output_path = format!("{}.trimmed.{}", input_path, file_ext);
                 processor::video::process_video_trim(
                     input_path,
@@ -145,7 +159,8 @@ impl Transformer {
                     end_time,
                     output_path,
                     storage,
-                ).await?;
+                )
+                .await?;
                 Ok(())
             }
             _ => Ok(()), // If it's a wrong OnProcessingType, we can just return Ok without any transformation

@@ -14,11 +14,7 @@ use crate::{
             media::{self as media_repo, row::MediaStatus},
             user::{self as user_repo},
         }, service::{
-            errors::AuthServiceError, media::{
-                multipart_ex::{MultipartExtractorOptions, MultipartLimits}, service::MediaService, types::{
-                    CropStyle, MediaOptions, MediaProcessing, MediaType, OnProcessingType, ProcessingOptions, ResizeStyle, TempUpload, ValidationOptions, ValidationType,
-                },
-            },
+            errors::AuthServiceError, media::{service::MediaService, types::{image_transform::{CropStyle, ResizeStyle}, media_options::{MediaOptions, MediaProcessing, MediaType, MultipartExtractorOptions, MultipartLimits, OnProcessingType, ProcessingOptions, TempUpload, ValidationOptions, ValidationType}}},
         }, state::SharedState,
     },
 };

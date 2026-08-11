@@ -9,10 +9,13 @@ use tokio::time::Instant;
 use uuid::Uuid;
 
 use crate::application::service::errors::MediaServiceError;
-use crate::application::service::media::multipart_ex::FileSizeGate;
 use crate::application::service::media::storage::StorageResponse;
-use crate::application::service::media::types::{TempUpload, ValidationOptions};
-use crate::application::service::media::utils::{get_media_types_from_mime, get_mime_and_extension_validation_options, validate_media_type};
+use crate::application::service::media::types::media_options::{
+    FileSizeGate, TempUpload, ValidationOptions,
+};
+use crate::application::service::media::utils::{
+    get_media_types_from_mime, get_mime_and_extension_validation_options, validate_media_type,
+};
 
 use super::MediaStorage;
 
@@ -22,7 +25,6 @@ pub struct LocalStorage {
 }
 
 impl LocalStorage {
-
     pub fn new(root: String, temp_root: String) -> Self {
         Self { root, temp_root }
     }
@@ -73,7 +75,11 @@ impl MediaStorage for LocalStorage {
         let _ = fs::remove_file(full).await;
     }
 
-    async fn read(&self, path: &str, _mime_type: &str) -> Result<StorageResponse, MediaServiceError> {
+    async fn read(
+        &self,
+        path: &str,
+        _mime_type: &str,
+    ) -> Result<StorageResponse, MediaServiceError> {
         let full = self.build_full_path(path);
         let data = fs::read(full).await?;
         Ok(StorageResponse::Bytes(data))
@@ -92,9 +98,7 @@ impl MediaStorage for LocalStorage {
 
         match fs::rename(from, to).await {
             Ok(()) => Ok(()),
-            Err(err) if err.kind() == ErrorKind::NotFound => {
-                Ok(())
-            }
+            Err(err) if err.kind() == ErrorKind::NotFound => Ok(()),
             Err(err) => Err(err.into()),
         }
     }
@@ -171,20 +175,22 @@ impl MediaStorage for LocalStorage {
             let min_bytes_per_second = 512;
 
             // * cancel/disconnect is detected here when the multipart stream read fails
-            while let Some(chunk) = tokio::time::timeout(std::time::Duration::from_secs(10), field.chunk())
-                .await
-                .map_err(|_| MediaServiceError::Timeout)?
-                .map_err(|e| MediaServiceError::MultipartError(e))?
+            while let Some(chunk) =
+                tokio::time::timeout(std::time::Duration::from_secs(10), field.chunk())
+                    .await
+                    .map_err(|_| MediaServiceError::Timeout)?
+                    .map_err(|e| MediaServiceError::MultipartError(e))?
             {
                 written += chunk.len();
 
-                if !validated && written > 8192 { // Validate after 8KB of data has been written
+                if !validated && written > 8192 {
+                    // Validate after 8KB of data has been written
                     if let Some(validation) = validation {
-                        let (detected_mime, detected_extension) = 
-                        get_mime_and_extension_validation_options(
-                            &chunk[..8192], // Use the first 8KB of the file for MIME type detection
-                            validation,
-                        )?;
+                        let (detected_mime, detected_extension) =
+                            get_mime_and_extension_validation_options(
+                                &chunk[..8192], // Use the first 8KB of the file for MIME type detection
+                                validation,
+                            )?;
                         mime = detected_mime;
                         extension = detected_extension;
 
@@ -211,7 +217,8 @@ impl MediaStorage for LocalStorage {
                 }
 
                 let elapsed = start_time.elapsed().as_secs();
-                if elapsed > 5 { // Give the connection a 5-second grace period to spin up
+                if elapsed > 5 {
+                    // Give the connection a 5-second grace period to spin up
                     let throughput = written / (elapsed as usize);
                     if throughput < min_bytes_per_second {
                         tracing::warn!("Dropped connection due to low throughput rate.");

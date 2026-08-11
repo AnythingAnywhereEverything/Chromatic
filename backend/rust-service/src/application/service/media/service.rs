@@ -13,11 +13,11 @@ use crate::{
     application::{
         repository::media::{self, row::{MediaDataRow, MediaStatus}}, service::{
             errors::MediaServiceError, media::{
-                processor, transformer::Transformer, types::{
+                processor, transformer::Transformer, types::{media_options::{
                     MediaCategory, MediaMeta, MediaOptions,
                     OnProcessingType, PostProcessingType, ProcessObject, ProcessedMedia,
-                    ResizeStyle, TempUpload,
-                },
+                    TempUpload,
+                }, image_transform::ResizeStyle},
             }, snowflake_service::SnowflakeGenerator,
         },
     }, constant::LOCKED_UPLOADS_DIR,
@@ -288,6 +288,7 @@ impl MediaService {
                     && !transforms.is_empty()
                 {
                     let storage = self.storage.clone();
+                    let connection = self.connection.clone();
                     tokio::spawn(async move {
                         if let Err(e) = (async {
                             let source_path = &format!("{}/{}", job_dir_path, media.file_name);
@@ -309,10 +310,16 @@ impl MediaService {
                             storage.move_file(&job_dir_full_path, &destination).await?;
                             // remove the job directory after moving
                             let _ = storage.delete_temp(&job_dir_path).await;
+
+                            let mut tx = connection.begin().await?;
+
+                            media::update::media_status(&mut tx, &media.file_id, &MediaStatus::Completed).await?;
+
+                            let _ = tx.commit().await;
+
                             Ok::<(), MediaServiceError>(())
                         })
-                        .await
-                        {
+                        .await {
                             // erase the job directory if processing failed
                             let _ = storage.delete_temp(&job_dir_path).await;
                             // log the error but don't crash the service
@@ -322,6 +329,12 @@ impl MediaService {
                                 format!("{}/{}", final_destination, media.file_id),
                                 e
                             );
+
+                            if let Ok(mut tx) = connection.begin().await {
+                                let _ = media::update::media_status(&mut tx, &media.file_id, &MediaStatus::Failed).await;
+                                let _ = tx.commit().await;
+                            }
+
                         }
                     });
                     return Ok(MediaStatus::Processing);

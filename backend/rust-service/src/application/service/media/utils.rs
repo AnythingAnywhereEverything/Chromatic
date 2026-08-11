@@ -2,7 +2,7 @@ use content_inspector::{ContentType, inspect};
 
 use crate::application::service::{
     errors::MediaServiceError,
-    media::types::{MediaCategory, MediaType, ValidationOptions, ValidationType},
+    media::types::media_options::{MediaCategory, MediaType, ValidationOptions, ValidationType},
 };
 
 pub fn categorize(mime: &str) -> MediaCategory {

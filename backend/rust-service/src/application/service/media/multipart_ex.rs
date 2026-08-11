@@ -1,82 +1,16 @@
 // src/application/service/media/multipart_ex.rs
 
 use crate::application::service::{
-    errors::MediaServiceError,
-    media::{
-        storage::MediaStorage,
-        types::{MediaType, TempUpload, ValidationOptions},
+    errors::MediaServiceError, media::{
+        storage::MediaStorage, types::media_options::{
+            MultipartExtractorOptions, MultipartFieldCardinality, MultipartFieldKind, MultipartSchema, TempUpload,
+        },
     },
 };
 use axum::extract::Multipart;
 use serde::de::DeserializeOwned;
 use serde_json::{Map, Value};
 use std::sync::Arc;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MultipartFieldKind {
-    Text,
-    File,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MultipartFieldCardinality {
-    Single,
-    Optional,
-    Many,
-    OptionalMany,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct MultipartField {
-    pub name: &'static str,
-    pub kind: MultipartFieldKind,
-    pub cardinality: MultipartFieldCardinality,
-}
-
-pub trait MultipartSchema {
-    fn multipart_fields() -> &'static [MultipartField];
-
-    fn multipart_field(name: &str) -> Option<&'static MultipartField> {
-        Self::multipart_fields()
-            .iter()
-            .find(|field| field.name == name)
-    }
-}
-
-pub struct MultipartLimits {
-    pub max_file_size: usize,
-    pub max_files: usize,
-}
-
-pub struct MultipartExtractorOptions {
-    // Limit for other types of files
-    pub limits: MultipartLimits,
-
-    // Optional validation options for uploaded files
-    pub validation: Option<ValidationOptions>,
-
-    // Optional size filter gates for uploaded files
-    // This allows for different size limits based on the media type of the uploaded file.
-    pub size_filter_gate: Option<Vec<FileSizeGate>>,
-}
-
-impl Default for MultipartExtractorOptions {
-    fn default() -> Self {
-        Self {
-            limits: MultipartLimits {
-                max_file_size: 10 * 1024 * 1024, // 10 MB
-                max_files: 5,
-            },
-            validation: None,
-            size_filter_gate: None,
-        }
-    }
-}
-
-pub struct FileSizeGate {
-    pub media_type: MediaType,
-    pub max_size: usize,
-}
 
 pub struct MultipartExtractor {
     storage: Arc<dyn MediaStorage>,

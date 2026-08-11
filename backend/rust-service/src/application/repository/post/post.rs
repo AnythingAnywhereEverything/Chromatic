@@ -124,7 +124,7 @@ pub async fn create_post(
     id: &i64,
     user_id: i64,
     content: &str,
-    status: PostStatus,
+    status: String,
     repost_from: Option<i64>,
     is_repost: bool,
     visibility: &str

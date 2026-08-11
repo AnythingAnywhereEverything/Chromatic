@@ -7,10 +7,10 @@ use std::path::{Path, PathBuf};
 use async_trait::async_trait;
 use axum::{extract::multipart::Field, http::HeaderMap};
 
-use crate::application::service::errors::MediaServiceError;
-use crate::application::service::media::multipart_ex::FileSizeGate;
-use crate::application::service::media::types::TempUpload;
-use crate::application::service::media::types::ValidationOptions;
+use crate::application::service::{
+    errors::MediaServiceError,
+    media::types::media_options::{FileSizeGate, TempUpload, ValidationOptions},
+};
 
 pub enum StorageResponse {
     /// Used by LocalStorage when Rust must read and stream the file bytes directly.
