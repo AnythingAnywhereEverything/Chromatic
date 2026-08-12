@@ -1,3 +1,5 @@
 mod common;
 
-mod _suites;
+mod _suites {
+    pub mod post_tests;
+}

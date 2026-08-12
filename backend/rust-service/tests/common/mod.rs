@@ -20,6 +20,8 @@ pub struct TestContext {
     pub testing_job_id: String,
 }
 
+static TRACING: OnceLock<()> = OnceLock::new();
+
 static VIPS_APP: OnceLock<Vips> = OnceLock::new();
 
 fn init_libvips() {
@@ -28,6 +30,14 @@ fn init_libvips() {
 
         Vips::concurrency_set(2);
         Vips
+    });
+}
+
+fn init_tracing() {
+    TRACING.get_or_init(|| {
+        tracing_subscriber::fmt()
+            .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+            .init();
     });
 }
 

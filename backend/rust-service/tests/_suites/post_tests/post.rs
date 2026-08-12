@@ -108,7 +108,7 @@ async fn test_create_post_with_image(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_create_post_fail_on_fake_img(pool: PgPool) {
-    let test_id = "test_create_post_with_image";
+    let test_id = "test_create_post_fail_on_fake_img";
     let ctx = TestContext::new(Some(pool), Some(test_id)).await;
     let token = create_user(
         &ctx,
