@@ -47,9 +47,8 @@ pub fn get_media_types_from_mime(mime: &str) -> Vec<MediaType> {
     }
 }
 
-pub fn get_mime_and_extension_validation_options(
-    bytes: &[u8],
-    validation: &ValidationOptions,
+pub fn get_mime_and_extension(
+    bytes: &[u8]
 ) -> Result<(String, String), MediaServiceError> {
     let (mime, extension) = if let Some(kind) = infer::get(bytes) {
         (kind.mime_type(), kind.extension())
@@ -63,12 +62,10 @@ pub fn get_mime_and_extension_validation_options(
             | ContentType::UTF_32BE => ("text/plain", "txt"),
 
             ContentType::BINARY => {
-                return Err(MediaServiceError::InvalidMediaType);
+                return Ok(("unknown/unknown".to_string(), "".to_string()));
             }
         }
     };
-
-    validate_media_type(mime, &Some(validation.clone()))?;
 
     Ok((mime.to_string(), extension.to_string()))
 }

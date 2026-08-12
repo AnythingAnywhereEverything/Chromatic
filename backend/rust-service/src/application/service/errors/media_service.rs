@@ -44,6 +44,9 @@ pub enum MediaServiceError {
     #[error("Operation timed out.")]
     Timeout,
 
+    #[error("Invalid crop scale value: {0}.")]
+    InvalidCropScale(f32),
+
     #[error("Invalid scale value.")]
     InvalidScale,
 
@@ -63,7 +66,7 @@ pub enum MediaServiceError {
     SnowflakeError(#[from] SnowflakeServiceError),
 
     #[error(transparent)]
-    LibvipsError(#[from] libvips::error::Error),
+    LibvipsError(#[from] rs_vips::error::Error),
 
     #[error(transparent)]
     IoError(#[from] std::io::Error),
