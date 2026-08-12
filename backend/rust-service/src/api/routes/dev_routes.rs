@@ -1,5 +1,5 @@
 use axum::{
-    Router, routing::{get, patch, post},
+    Router, routing::{ post},
 };
 
 use crate::{

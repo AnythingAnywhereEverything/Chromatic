@@ -14,23 +14,23 @@ pub struct UserDTO {
     pub created_at: Option<String>,
 }
 
-pub struct PublicUserProfileDTO {
-    pub id: String,
-    pub email: String,
-    pub username: Option<String>,
-    pub display_name: Option<String>,
-    pub bio: Option<String>,
-    pub avatar_media_id: Option<MediaFullDTO>,
-    pub banner_media_id: Option<MediaFullDTO>,
-    pub is_verified: bool,
-    pub is_private: bool,
-    pub is_blocked: bool,
-    pub is_following: bool,
-    pub is_friend: bool,
-    pub followers_count: i64,
-    pub following_count: i64,
-    pub created_at: Option<String>,
-}
+// pub struct PublicUserProfileDTO {
+//     pub id: String,
+//     pub email: String,
+//     pub username: Option<String>,
+//     pub display_name: Option<String>,
+//     pub bio: Option<String>,
+//     pub avatar_media_id: Option<MediaFullDTO>,
+//     pub banner_media_id: Option<MediaFullDTO>,
+//     pub is_verified: bool,
+//     pub is_private: bool,
+//     pub is_blocked: bool,
+//     pub is_following: bool,
+//     pub is_friend: bool,
+//     pub followers_count: i64,
+//     pub following_count: i64,
+//     pub created_at: Option<String>,
+// }
 
 #[derive(Debug, Serialize)]
 pub struct MediaFullDTO {
