@@ -1,6 +1,6 @@
-use sqlx::Transaction;
+use sqlx::{Postgres, Transaction};
 
-use crate::{api::handlers::post_handler::PostStatus, application::{repository::post::row::{ HasAttachmentRow, PostById, PostLikesRow, PostRow, TotalLikedRow}, service::errors::PostServiceError}};
+use crate::{api::handlers::post_handler::{ PostVisibility}, application::{repository::{media::row::{ MediaDataWithMetadataRow}, post::row::{ HasAttachmentRow, PostById, PostLikesRow, PostRow, TagAttachmentFull, TagAttachmentRow, TotalLikedRow}}, service::errors::PostServiceError}};
 
 // todo: func get YOUR FRIEND post
 // todo: func get feed comment :d
@@ -18,7 +18,7 @@ use crate::{api::handlers::post_handler::PostStatus, application::{repository::p
 // ? How am I gonna balanced the feed between friends and normal since there's no ML for the feed
 // * Schuding them for show some of there friends post
 // ? Do feed setting to let user edit the feed to show friend first, no friend, normal 
-//// ! BUT there's not see post in DB so the post will be always show on using Friend first how gonna 
+//// ! BUT there's not see post in DB so the post will be always show
 
 pub async fn get_feed_public(
     tx: &mut Transaction<'_,sqlx::Postgres>,
@@ -94,13 +94,13 @@ pub async fn get_feed_public(
 }
 
 
-pub async fn get_friend_post(
-    tx: &mut Transaction<'_,sqlx::Postgres>,
-    user_id: i64,
+// pub async fn get_friend_post(
+//     tx: &mut Transaction<'_,sqlx::Postgres>,
+//     user_id: i64,
 
-) {
+// ) {
     
-}
+// }
 
 pub async fn get_post_by_id(
     tx: &mut Transaction<'_,sqlx::Postgres>,
@@ -124,10 +124,9 @@ pub async fn create_post(
     id: &i64,
     user_id: i64,
     content: &str,
-    status: String,
     repost_from: Option<i64>,
     is_repost: bool,
-    visibility: &str
+    visibility: PostVisibility
 ) -> Result<PostRow, sqlx::Error>{
     sqlx::query_as::<_,PostRow>(
         r#"
@@ -135,21 +134,19 @@ pub async fn create_post(
         id, 
         user_id, 
         content, 
-        status,
         reposted_from,
         is_repost, 
         created_at, 
         updated_at,
         visibility
         )
-        VALUES ($1, $2, $3, $4, $5, $6,NOW(), NOW(), $7)
+        VALUES ($1, $2, $3, $4, $5,NOW(), NOW(), $6)
         RETURNING *
         "#,
     )
     .bind(id)
     .bind(user_id)
     .bind(content)
-    .bind(status)
     .bind(repost_from)
     .bind(is_repost)
     .bind(visibility)
@@ -202,28 +199,115 @@ pub async fn delete_post(
 
     Ok(())
 }
-
+// * ----------------------------------------------
+//  Attachment
+// * ----------------------------------------------
 pub async fn add_has_attachment(
-    tx: &mut Transaction<'_,sqlx::Postgres>,
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    target_id: i64,
     media_id: i64,
-    user_id: i64,
     target_type: String
 ) -> Result<Vec<HasAttachmentRow>, sqlx::Error> {
-    sqlx::query_as::<_,HasAttachmentRow>(
+    sqlx::query_as::<_, HasAttachmentRow>(
         r#"
-            INSERT INTO media_attachments( media_id,
-            user_id,
-            target_type)
-            VALUES($1, $2,$3)
+            INSERT INTO media_attachments ( 
+                target_id,
+                media_id,
+                target_type
+            )
+            VALUES ($1, $2, $3)
+            RETURNING *
         "#
     )
+    .bind(target_id)
     .bind(media_id)
-    .bind(user_id)
     .bind(target_type)
+    .fetch_all(&mut **tx)
+    .await
+}
+
+
+pub async fn get_post_attachment(
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    post_id: i64
+) -> Result<Vec<MediaDataWithMetadataRow>, sqlx::Error> {
+    sqlx::query_as::<_, MediaDataWithMetadataRow>(
+        r#"
+            SELECT 
+                md.id,
+                md.uploader_id,
+                md.path,
+                md.thumbhash,
+                md.name,
+                md.status,
+                md.created_at,
+                md.updated_at,
+                mdt.file_size,
+                mdt.mime_type,
+                mdt.width,
+                mdt.height,
+                mdt.duration
+                FROM media_attachments ma 
+            JOIN media_data md ON ma.media_id = md.id
+            JOIN media_metadata mdt ON mdt.media_id = md.id
+            WHERE ma.target_id = $1
+            ORDER BY md.id
+        "#
+    )
+    .bind(post_id)
+    .fetch_all(&mut **tx) // This re-borrowing is correct!
+    .await
+}
+
+// * ----------------------------------------------
+//  Interest tags
+// * ----------------------------------------------
+
+pub async fn add_tags_target(
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    target_id: i64,
+    target_type: String,
+    tag_id: i64
+) -> Result<Vec<TagAttachmentRow>, sqlx::Error > {
+    sqlx::query_as::<_, TagAttachmentRow>(
+        r#"
+            INSERT INTO tag_attachments (
+                target_id,
+                target_type,
+                tag_id
+            )
+            VALUES($1, $2, $3)
+            RETURNING *
+        "#
+    )
+    .bind(target_id)
+    .bind(target_type)
+    .bind(tag_id)
     .fetch_all(tx.as_mut())
     .await
 }
 
+pub async fn get_tag_attachments(
+    tx: &mut Transaction<'_, Postgres>,
+    target_id: i64
+) -> Result<Vec<TagAttachmentFull>, sqlx::Error> {
+    sqlx::query_as::<_, TagAttachmentFull> (
+        r#"
+            SELECT
+                ta.target_id,
+                ta.target_type,
+                ta.tag_id,
+                it.tag_name
+            FROM tag_attachments ta
+            JOIN interest_tags it
+                ON it.id = ta.tag_id
+            WHERE ta.target_id = $1
+        "#
+    )
+    .bind(target_id)
+    .fetch_all(tx.as_mut())
+    .await
+}
 // -------------------------------------
 // * Small like patch
 // -------------------------------------
@@ -340,12 +424,4 @@ pub async fn remove_bookmark_post(
     .execute(tx.as_mut())
     .await;
     Ok(())
-}
-
-pub async fn tag_management(
-    tx: &mut Transaction<'_,sqlx::Postgres>,
-    post_id: i64,
-    tag_id: Option<Vec<i64>>
-) {
-    
 }

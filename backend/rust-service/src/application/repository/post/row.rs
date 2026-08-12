@@ -1,18 +1,19 @@
-use crate::application::repository::media::row::MediaDataRow;
+use crate::{api::handlers::post_handler::PostVisibility, application::repository::media::row::MediaDataRow};
 
-#[derive(sqlx::FromRow)]
+#[derive(sqlx::FromRow, Debug)]
 pub struct PostRow {
     // media_posts tb
     pub id: i64,
     pub user_id: i64,
-    pub content: Option<String>,
+    pub content: String,
     pub total_likes: i32,
+    pub total_comments: i32,
     pub reposted_from: Option<i64>,
     pub is_repost: bool,
     pub has_attachment: bool,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
-    pub visibility: String,
+    pub visibility: PostVisibility,
     #[sqlx(skip)]
     pub media_attachment: Option<Vec<MediaDataRow>>
 }
@@ -55,4 +56,21 @@ pub struct CommentRow{
     pub updated_at: chrono::DateTime<chrono::Utc>,
     #[sqlx(skip)]
     pub media_attachment: Option<Vec<MediaDataRow>>
+}
+
+// Tag attachment
+
+#[derive(sqlx::FromRow)]
+pub struct TagAttachmentRow{
+    pub target_id: i64,
+    pub target_type: String,
+    pub tag_id: i64
+}
+
+#[derive(sqlx::FromRow)]
+pub struct TagAttachmentFull{
+    pub target_id: i64,
+    pub target_type: String,
+    pub tag_id: i64,
+    pub tag_name: String
 }
