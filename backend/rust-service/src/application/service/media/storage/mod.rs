@@ -2,14 +2,18 @@ pub mod local;
 pub mod nginx;
 pub mod r2; // nginx storage
 
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use hyper::HeaderMap;
+use tokio::fs;
 
 use async_trait::async_trait;
-use axum::{extract::multipart::Field, http::HeaderMap};
+use uuid::Uuid;
 
+use crate::application::service::media::storage::local::LocalStorage;
 use crate::application::service::{
     errors::MediaServiceError,
-    media::types::media_options::{FileSizeGate, TempUpload, ValidationOptions},
 };
 
 pub enum StorageResponse {
@@ -21,6 +25,8 @@ pub enum StorageResponse {
 
 #[async_trait]
 pub trait MediaStorage: Send + Sync {
+    fn temp_root(&self) -> &str;
+
     async fn save(&self, path: &str, data: &[u8]) -> Result<(), MediaServiceError>;
     async fn delete(&self, path: &str);
     async fn exists(&self, path: &str) -> Result<bool, MediaServiceError>;
@@ -28,8 +34,6 @@ pub trait MediaStorage: Send + Sync {
     async fn read(&self, path: &str, mime_type: &str)
     -> Result<StorageResponse, MediaServiceError>;
 
-    async fn move_file(&self, from: &Path, to: &Path) -> Result<(), MediaServiceError>;
-    async fn copy_file(&self, from: &Path, to: &Path) -> Result<(), MediaServiceError>;
     async fn prepare_directory(&self, path: &Path) -> Result<(), MediaServiceError>;
     async fn move_all_to_directory(&self, from: &Path, to: &Path) -> Result<(), MediaServiceError>;
 
@@ -37,15 +41,6 @@ pub trait MediaStorage: Send + Sync {
     fn full_path(&self, _path: &str) -> Result<PathBuf, MediaServiceError> {
         Err(MediaServiceError::ProcessingFailed)
     }
-
-    /// Saves a file stream to a temporary location, returning the relative path and size of the saved file.
-    async fn save_temp_stream(
-        &self,
-        field: &mut Field<'_>,
-        max_size: usize,
-        validation: Option<&ValidationOptions>,
-        filter_gate: Option<&Vec<FileSizeGate>>,
-    ) -> Result<TempUpload, MediaServiceError>;
 
     async fn save_temp(&self, path: &str, data: &[u8]) -> Result<(), MediaServiceError>;
 
@@ -55,13 +50,56 @@ pub trait MediaStorage: Send + Sync {
     /// Deletes a file from a temporary location.
     async fn delete_temp(&self, path: &str);
 
-    /// Returns the full path of a file in a temporary location.
-    fn temp_full_path(&self, _path: &str) -> Result<PathBuf, MediaServiceError> {
-        Err(MediaServiceError::ProcessingFailed)
+    // * --------------------------------
+    // * local only helpers
+    // * --------------------------------
+    
+    async fn move_file(&self, from: &Path, to: &Path) -> Result<(), MediaServiceError> {
+        if let Some(parent) = to.parent() {
+            fs::create_dir_all(parent).await?;
+        }
+
+        match fs::rename(from, to).await {
+            Ok(()) => Ok(()),
+            Err(err) if err.kind() == ErrorKind::NotFound => Ok(()),
+            Err(err) => Err(err.into()),
+        }
+    }
+    async fn copy_file(&self, from: &Path, to: &Path) -> Result<(), MediaServiceError> {
+        if let Some(parent) = to.parent() {
+            fs::create_dir_all(parent).await?;
+        }
+
+        fs::copy(from, to).await?;
+        Ok(())
     }
 
-    /// Generates a new relative path for a temporary file, using the given prefix.
-    fn new_temp_relative_path(&self, _prefix: &str) -> Result<String, MediaServiceError> {
-        Err(MediaServiceError::ProcessingFailed)
+    // * --------------------------------
+    // * Build Paths
+    // * --------------------------------
+
+    fn temp_full_path(&self, path: &str) -> PathBuf {
+        let mut full = PathBuf::from(&self.temp_root());
+        full.push(path);
+        full
+    }
+
+    fn new_temp_relative_path(&self, prefix: &str) -> String {
+        format!("{}/{}", prefix, Uuid::new_v4())
+    }
+}
+
+pub struct MediaStorageContainer{
+
+    pub storage: Arc<dyn MediaStorage>,
+}
+
+impl Default for MediaStorageContainer {
+    fn default() -> Self {
+        let config = crate::application::config::load();
+        let local_storage = LocalStorage::new(config.media_root, config.media_temp_root);
+        MediaStorageContainer {
+            storage: Arc::new(local_storage),
+        }
     }
 }

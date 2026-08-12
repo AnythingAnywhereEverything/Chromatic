@@ -1,12 +1,11 @@
 use async_trait::async_trait;
-use axum::{extract::multipart::Field, http::HeaderMap};
+use axum::http::HeaderMap;
 use std::path::{Path, PathBuf};
 
 use super::{MediaStorage, local::LocalStorage};
 use crate::application::service::{
     errors::MediaServiceError,
     media::storage::StorageResponse,
-    media::types::media_options::{FileSizeGate, TempUpload, ValidationOptions},
 };
 
 pub struct NginxStorage {
@@ -31,6 +30,9 @@ impl NginxStorage {
 
 #[async_trait]
 impl MediaStorage for NginxStorage {
+    fn temp_root(&self) -> &str {
+        self.local.temp_root()
+    }
     // Reuse Local Logic completely for local writing and house-keeping
     async fn save(&self, path: &str, data: &[u8]) -> Result<(), MediaServiceError> {
         self.local.save(path, data).await
@@ -64,18 +66,6 @@ impl MediaStorage for NginxStorage {
         self.local.prepare_directory(path).await
     }
 
-    async fn save_temp_stream(
-        &self,
-        field: &mut Field<'_>,
-        max_size: usize,
-        validation: Option<&ValidationOptions>,
-        filter_gate: Option<&Vec<FileSizeGate>>,
-    ) -> Result<TempUpload, MediaServiceError> {
-        self.local
-            .save_temp_stream(field, max_size, validation, filter_gate)
-            .await
-    }
-
     async fn read_temp(&self, path: &str) -> Result<Vec<u8>, MediaServiceError> {
         self.local.read_temp(path).await
     }
@@ -86,14 +76,6 @@ impl MediaStorage for NginxStorage {
 
     fn full_path(&self, path: &str) -> Result<PathBuf, MediaServiceError> {
         self.local.full_path(path)
-    }
-
-    fn temp_full_path(&self, path: &str) -> Result<PathBuf, MediaServiceError> {
-        self.local.temp_full_path(path)
-    }
-
-    fn new_temp_relative_path(&self, prefix: &str) -> Result<String, MediaServiceError> {
-        self.local.new_temp_relative_path(prefix)
     }
 
     async fn read(
@@ -107,7 +89,7 @@ impl MediaStorage for NginxStorage {
 
         let mut headers = HeaderMap::new();
 
-        let redirect_path = format!("{}{}", self.internal_redirect_prefix, path);
+        let redirect_path = self.get_nginx_redirect_header(path);
         headers.insert(
             "X-Accel-Redirect",
             axum::http::HeaderValue::from_str(&redirect_path).unwrap(),
