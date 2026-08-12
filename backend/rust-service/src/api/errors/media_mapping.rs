@@ -8,6 +8,13 @@ use crate::{
 impl From<MediaServiceError> for APIError {
     fn from(error: MediaServiceError) -> Self {
         let (status, entry) = match error {
+            MediaServiceError::FileIsEmpty => (
+                StatusCode::BAD_REQUEST,
+                APIErrorEntry::new("File cannot be empty.")
+                    .code(APIErrorCode::MediaFileIsEmpty)
+                    .kind(APIErrorKind::MediaError)
+                    .description("The uploaded file is empty. Please provide a valid file."),
+            ),
             MediaServiceError::MediaMissing => (
                 StatusCode::BAD_REQUEST,
                 APIErrorEntry::new("File is missing.")

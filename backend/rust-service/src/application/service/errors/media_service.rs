@@ -5,6 +5,9 @@ use crate::application::service::errors::SnowflakeServiceError;
 
 #[derive(Debug, Error)]
 pub enum MediaServiceError {
+    #[error("File cannot be empty.")]
+    FileIsEmpty,
+
     #[error("File name count mismatch.")]
     FileNameCountMismatch,
 

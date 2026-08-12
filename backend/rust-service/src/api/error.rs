@@ -55,6 +55,8 @@ pub enum APIErrorCode {
     MediaTooManyFiles,
     MediaUnknownMultipartField,
     MediaInvalidCropScale,
+    MediaFileIsEmpty,
+
     // Post
     TextTooLarge,
     EmptyFile,

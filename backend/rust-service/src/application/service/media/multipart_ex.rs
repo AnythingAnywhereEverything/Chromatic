@@ -104,6 +104,10 @@ impl MultipartExtractor {
                     }
                 }
 
+                if chunk.len() < 1 {
+                    return Err(MediaServiceError::FileIsEmpty);
+                }
+
                 // if file size too small
                 if mime.is_empty() || extension.is_empty() {
                     let (detected_mime, detected_extension) =
