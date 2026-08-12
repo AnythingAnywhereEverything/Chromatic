@@ -150,9 +150,9 @@ pub async fn create_new_post_handler(
         tracing::debug!("Saved media group: {:#?}", all_media);
         for media in all_media {
             // set to complete the media processing
-            media_repo::update::media_status(&mut tx, &media.file_id, &MediaStatus::Completed).await?;
-            tracing::debug!("Media processing completed for media ID: {}", media.file_id);
-            post_repo::post::add_has_attachment(&mut tx, *new_post_id, media.file_id, "user".to_string()).await?;
+            media_repo::update::media_status(&mut tx, &media.get_id(), &MediaStatus::Completed).await?;
+            tracing::debug!("Media processing completed for media ID: {}", media.get_id());
+            post_repo::post::add_has_attachment(&mut tx, *new_post_id, media.get_id(), "user".to_string()).await?;
         }
     }
 
