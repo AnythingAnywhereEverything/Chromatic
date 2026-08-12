@@ -59,7 +59,7 @@ pub struct CreatePostRequest {
     pub media_src: Option<Vec<MultipartFile>>,
     pub repost_from: Option<i64>,
     pub visibility: PostVisibility,
-    pub media_tags: Vec<i64>
+    pub media_tags: Option<Vec<i64>>
 }
 
 impl PostVisibility {
@@ -86,7 +86,7 @@ pub async fn create_new_post_handler(
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
         // None => return Err(AuthServiceError::InvalidCredentials.into()),
-        None => 1234,
+        None => 80693951396319232,
     };
 
     let options = MultipartExtractorOptions {
@@ -159,7 +159,7 @@ pub async fn create_new_post_handler(
     let content = extracted.content;
     let repost_from = extracted.repost_from;
     let visibility = extracted.visibility;
-    let post_tags = extracted.media_tags;
+    let post_tags = extracted.media_tags.unwrap_or_default();
     let is_repost = repost_from.is_some();
     let new_post =
         post_repo::post::create_post(&mut tx, new_post_id, user_id, &content, repost_from, is_repost, visibility).await?;
