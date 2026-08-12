@@ -14,7 +14,11 @@ use crate::{
             media::{self as media_repo, row::MediaStatus},
             user::{self as user_repo},
         }, service::{
-            errors::AuthServiceError, media::{service::MediaService, types::{image_transform::{CropStyle, ResizeStyle}, media_options::{MediaOptions, MediaProcessing, MediaType, MultipartExtractorOptions, MultipartLimits, OnProcessingType, ProcessingOptions, TempUpload, ValidationOptions, ValidationType}}},
+            errors::AuthServiceError, media::{
+                processor::types::{CropStyle, ImageProcessorType, MediaProcessorFFlags, MediaProcessorOptions}, service::MediaService, service_type::MediaServiceOptions, types::{
+                    file::MultipartFile, media_options::{MediaType, MultipartExtractorOptions, ValidationOptions, ValidationType},
+                },
+            },
         }, state::SharedState,
     },
 };
@@ -65,7 +69,7 @@ pub struct UploadAvatarPayload {
     scale: f32,
 
     #[multipart]
-    pub uploaded_avatar: TempUpload,
+    pub uploaded_avatar: MultipartFile,
 }
 
 #[axum::debug_handler]
@@ -82,13 +86,10 @@ pub async fn upload_avatar_handler(
         Some(user) => user.user_id,
         None => return Err(AuthServiceError::InvalidCredentials.into()),
     };
-    
 
     let options = MultipartExtractorOptions {
-        limits: MultipartLimits {
-            max_file_size: 10_000_000, // 10 MB
-            max_files: 5,
-        },
+        max_file_size: Some(10_000_000), // 10 MB
+        max_files: Some(5),
         validation: Some(ValidationOptions {
             validation_type: ValidationType::Whitelisted,
             value: vec![
@@ -101,51 +102,53 @@ pub async fn upload_avatar_handler(
         ..Default::default()
     };
 
-    let extracted = state.multipart_extractor.extract::<UploadAvatarPayload>(multipart, options).await?;
+    let extracted = state
+        .multipart_extractor
+        .extract::<UploadAvatarPayload>(multipart, options)
+        .await?;
 
     tracing::debug!("Extracted payload: {:?}", extracted);
 
-    let options = MediaOptions {
-        folder: format!("avatars/{}", user_id),
-        
-        processing_order: MediaProcessing {
-            options: ProcessingOptions {
-                use_raw_name: false,
-                use_raw_name_with_extension: false,
-                use_hash_as_name: true,
-                use_animated_image_indicator: true,
-                use_thumbhash_generation: true,
+    let new_media_opts = MediaServiceOptions {
+        upload_route: format!("avatars/{}", user_id),
+        uploader_id: user_id,
+        container: None,
+        processor: Some(MediaProcessorOptions {
+            fflags: Some(MediaProcessorFFlags {
+                video_thumbnail: true,
+                video_gpu_accel: true,
+                video_transcode: true,
+                image_thumbhash: true,
                 ..Default::default()
-            },
-            on_processing: Some(vec![
-                OnProcessingType::ImageCrop {
-                    style: CropStyle::Ratio {
-                        ratio: (1, 1),
-                        scale: extracted.scale,
-                    },
-                    position: Some((extracted.position_x, extracted.position_y)),
+            }),
+            image_processors: Some(vec![ImageProcessorType::Crop {
+                style: CropStyle::Ratio {
+                    width: 1,
+                    height: 1,
+                    scale: extracted.scale,
                 },
-                OnProcessingType::ImageResize {
-                    style: ResizeStyle::AbsoluteKeepsRatio {
-                        width: 512,
-                        height: 512,
-                    },
-                    upscale: false,
-                },
-            ]),
-            post_processing: None,
-        },
-        ..Default::default()
+                position: Some((extracted.position_x, extracted.position_y)),
+            }]),
+            video_processors: None,
+            post_processors: None,
+        }),
     };
+
+    let media_service = MediaService::new();
 
     // local test, doing this for now.
     let mut tx = state.db_pool.begin().await?;
-    let uploaded_medias =
-        MediaService::save_media(&state.media_service, user_id, extracted.uploaded_avatar, options).await?;
+    let uploaded_medias = media_service.save_media(
+        &state,
+        extracted.uploaded_avatar,
+        new_media_opts,
+    )
+    .await?;
 
-    user_repo::update::avatar_media_id(&mut tx, user_id, Some(uploaded_medias.file_id)).await?;
+    user_repo::update::avatar_media_id(&mut tx, user_id, Some(uploaded_medias.get_id())).await?;
 
-    media_repo::update::media_status(&mut tx, &uploaded_medias.file_id, &MediaStatus::Completed).await?;
+    media_repo::update::media_status(&mut tx, &uploaded_medias.get_id(), &MediaStatus::Completed)
+        .await?;
 
     let updated_user = user_repo::find::profile_full_by_id(&mut tx, user_id).await?;
 

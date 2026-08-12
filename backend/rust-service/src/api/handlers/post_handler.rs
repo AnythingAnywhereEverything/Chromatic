@@ -7,8 +7,28 @@ use multipart_derive::Multipart;
 use crate::{
     api::{APIError, RequestAuth, dtos::{post_dtos::{PostDTO, TagDTO}, user_dtos::MediaFullDTO}, version}, application::{
         repository::{
-            media::{self as media_repo, row::MediaStatus}, post::{self as post_repo},
-        }, service::{errors::AuthServiceError, media::{service::MediaService, types::{image_transform::ResizeStyle, media_options::{FileSizeGate, MediaOptions, MediaProcessing, MediaType, MultipartExtractorOptions, MultipartLimits, OnProcessingType, PostProcessingType, ProcessingOptions, TempUpload, ValidationOptions, ValidationType}}}}, state::SharedState,
+            media::{self as media_repo, row::MediaStatus},
+            post::{self as post_repo},
+        },
+        service::{
+            errors::AuthServiceError,
+            media::{
+                processor::types::{
+                    ImageProcessorType, MediaProcessorFFlags, MediaProcessorOptions,
+                    PostProcessingType, ResizeStyle, VideoPostProcessorType,
+                },
+                service::MediaService,
+                service_type::MediaServiceOptions,
+                types::{
+                    file::MultipartFile,
+                    media_options::{
+                        FieldTypeFilter, MediaType, MultipartExtractorOptions, ValidationOptions,
+                        ValidationType,
+                    },
+                },
+            },
+        },
+        state::SharedState,
     },
 };
 #[derive(serde::Deserialize, sqlx::Type, Debug)]
@@ -36,7 +56,7 @@ pub enum PostTagsAttachment{
 pub struct CreatePostRequest {
     pub content: String,
     #[multipart]
-    pub media_src: Option<Vec<TempUpload>>,
+    pub media_src: Option<Vec<MultipartFile>>,
     pub repost_from: Option<i64>,
     pub visibility: PostVisibility,
     pub media_tags: Vec<i64>
@@ -70,20 +90,16 @@ pub async fn create_new_post_handler(
     };
 
     let options = MultipartExtractorOptions {
-        limits: MultipartLimits {
-            max_file_size: 512_000_000,
-            max_files: 5,
-        },
+        max_file_size: Some(512_000_000),
+        max_files: Some(5),
         validation: Some(ValidationOptions {
             validation_type: ValidationType::Whitelisted,
             value: vec![MediaType::Image, MediaType::Video],
         }),
-        size_filter_gate: Some(vec![
-            FileSizeGate {
-                media_type: MediaType::Image,
-                max_size: 25_000_000,
-            }
-        ]),
+        filter: Some(vec![FieldTypeFilter {
+            max_file_size: Some(25_000_000),
+            affected_types: Some(vec![MediaType::Image]),
+        }]),
     };
 
     let extracted = state
@@ -94,44 +110,41 @@ pub async fn create_new_post_handler(
 
     let new_post_id = &state.snowflake_generator.generate_id()?;
 
-    let media_options = MediaOptions {
-        folder: format!("posts/{}", new_post_id),
-        size_gate: Some(vec![
-            FileSizeGate{
-                media_type: MediaType::Image,
-                max_size: 25_000_000, // 25 MB
-            },
-        ]),
-        validation: Some(ValidationOptions {
-            validation_type: ValidationType::Whitelisted,
-            value: vec![MediaType::Image, MediaType::Video],
-        }),
-        processing_order: MediaProcessing {
-            options: ProcessingOptions {
-                use_thumbhash_generation: true,
-                use_gpu_acceleration: true,
-                use_video_transcoding: true,
+    let new_media_opts = MediaServiceOptions {
+        upload_route: format!("posts/{}", new_post_id),
+        uploader_id: user_id,
+        container: None,
+        processor: Some(MediaProcessorOptions {
+            fflags: Some(MediaProcessorFFlags {
+                video_thumbnail: true,
+                video_gpu_accel: true,
+                video_transcode: true,
+                image_thumbhash: true,
                 ..Default::default()
-            },
-            on_processing: Some(vec![
-                OnProcessingType::ImageResize { 
-                    style: ResizeStyle::AbsoluteKeepsRatio { width: 1024, height: 1024 },
-                    upscale: false 
-                }
-            ]),
-            post_processing: Some(vec![
-                PostProcessingType::VideoHls { segment_duration: 10 },
-            ]),
-        },
-        ..Default::default()
+            }),
+            image_processors: Some(vec![ImageProcessorType::Resize {
+                style: ResizeStyle::Absolute {
+                    width: 1024,
+                    height: 1024,
+                },
+                upscale: false,
+            }]),
+            video_processors: None,
+            post_processors: Some(PostProcessingType::Video(vec![
+                VideoPostProcessorType::HLS { segment_time: 10 },
+            ])),
+        }),
     };
-    
+
     let mut tx = state.db_pool.begin().await?;
 
-    if let Some(files) = extracted.media_src.as_ref() {
+    let media_service = MediaService::new();
+
+    if let Some(files) = extracted.media_src {
         tracing::debug!("Extracted media_src files: {:#?}", files);
 
-        let all_media = MediaService::save_media_group(&state.media_service, user_id, files.to_vec(), media_options)
+        let all_media = media_service
+            .save_media_group(&state, files, new_media_opts)
             .await?;
 
         tracing::debug!("Saved media group: {:#?}", all_media);
@@ -211,7 +224,7 @@ pub async fn create_new_post_handler(
 // pub async fn update_post_handler(
 
 // ) -> Result<(), APIError> {
-    
+
 // }
 
 pub async fn delete_post_handler(
@@ -222,7 +235,7 @@ pub async fn delete_post_handler(
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
     let mut tx = state.db_pool.begin().await?;
-    
+
     post_repo::post::get_post_by_id(&mut tx, post_id).await?;
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
