@@ -16,7 +16,7 @@ use crate::application::{
         errors::MediaServiceError, media::{
             processor::{
                 image::ImageProcessor, types::{MediaProcessorFFlags, PostProcessingType, VideoPostProcessorType}, video::VideoProcessor,
-            }, service_type::MediaServiceOptions, storage::MediaStorage, types::{file::MultipartFile, media_options::MediaCategory},
+            }, service_type::{Container, MediaServiceOptions}, storage::MediaStorage, types::{file::MultipartFile, media_options::MediaCategory},
         },
     }, state::AppState,
 };
@@ -376,11 +376,14 @@ impl MediaService {
     ) -> Result<JoinHandle<Result<MultipartFile, MediaServiceError>>, MediaServiceError> {
         let file_id = state.snowflake_generator.generate_id()?;
         let has_process = options.processor.is_some();
-        let container_conf = options.container.unwrap_or_default();
+        let container_conf = if let Some(container) = options.container.clone() {
+            container
+        } else {
+            Container::default()
+        };
 
         let mut uploaded_file = uploaded_file;
 
-        uploaded_file.rename(&file_id.to_string())?;
         uploaded_file.set_id(file_id);
 
         // Determine the file name based on the container configuration and processing options
@@ -390,6 +393,8 @@ impl MediaService {
         } else if container_conf.use_raw_names && !has_process {
             let name = uploaded_file.get_name().clone();
             uploaded_file.rename(&name)?;
+        } else {
+            uploaded_file.rename(&file_id.to_string())?;
         }
 
         tracing::debug!(
@@ -661,7 +666,24 @@ impl MediaService {
                     }
                 }
 
-                _ => uploaded_file,
+                _ => {
+                    let name = uploaded_file.get_full_name();
+                    let relative_path = format!("{}/{}", container_path, name);
+
+                    let full_path = storage.temp_full_path(&relative_path);
+
+                    uploaded_file.move_to_path(&full_path, relative_path)?;
+
+                    let dst_rel_path = uploaded_file.build_relative_file_destination();
+
+                    // replace path
+                    uploaded_file.replace(
+                        storage.full_path(&dst_rel_path)?,
+                        dst_rel_path,
+                    ).await?;
+
+                    uploaded_file
+                },
             };
 
             return Ok(processed_file);

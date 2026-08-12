@@ -336,6 +336,31 @@ impl MultipartFile {
         self.path = self.path.with_extension(new_extension);
         Ok(())
     }
+
+    pub fn rename_full(&mut self, new_name_full: &str) -> Result<(), MediaServiceError> {
+        let parts: Vec<&str> = new_name_full.rsplitn(2, '.').collect();
+        let (new_name, new_extension) = if parts.len() == 2 {
+            (parts[1], parts[0])
+        } else {
+            (new_name_full, "")
+        };
+
+        let new_relative_path = self.relative_path.replace(
+            &self.get_full_name(),
+            &format!("{}.{}", new_name, new_extension),
+        );
+
+        std::fs::rename(
+            &self.path,
+            self.path.with_file_name(format!("{}.{}", new_name, new_extension)),
+        )?;
+
+        self.name = new_name.to_string();
+        self.extension = new_extension.to_string();
+        self.relative_path = new_relative_path;
+        self.path = self.path.with_file_name(format!("{}.{}", new_name, new_extension));
+        Ok(())
+    }
 }
 
 // * ---------------------------------

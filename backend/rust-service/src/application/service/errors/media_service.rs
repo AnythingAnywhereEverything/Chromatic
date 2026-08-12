@@ -5,6 +5,9 @@ use crate::application::service::errors::SnowflakeServiceError;
 
 #[derive(Debug, Error)]
 pub enum MediaServiceError {
+    #[error("File name count mismatch.")]
+    FileNameCountMismatch,
+
     #[error("Invalid media type.")]
     InvalidMediaType,
 
