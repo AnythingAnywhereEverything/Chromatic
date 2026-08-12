@@ -9,10 +9,8 @@ use crate::{
         repository::{
             media::{self as media_repo, row::MediaStatus},
             post::{self as post_repo},
-        },
-        service::{
-            errors::AuthServiceError,
-            media::{
+        }, service::{
+            errors::{AuthServiceError, PostServiceError}, media::{
                 processor::types::{
                     ImageProcessorType, MediaProcessorFFlags, MediaProcessorOptions,
                     PostProcessingType, ResizeStyle, VideoPostProcessorType,
@@ -27,8 +25,7 @@ use crate::{
                     },
                 },
             },
-        },
-        state::SharedState,
+        }, state::SharedState,
     },
 };
 #[derive(serde::Deserialize, sqlx::Type, Debug)]
@@ -137,7 +134,12 @@ pub async fn create_new_post_handler(
     };
 
     let mut tx = state.db_pool.begin().await?;
-
+    
+    if extracted.content.len() > 2500 {
+        return Err(PostServiceError::PostTextContentTooLarge.into());
+    }
+    
+    let content = extracted.content;
     let media_service = MediaService::new();
 
     if let Some(files) = extracted.media_src {
@@ -156,7 +158,6 @@ pub async fn create_new_post_handler(
         }
     }
 
-    let content = extracted.content;
     let repost_from = extracted.repost_from;
     let visibility = extracted.visibility;
     let post_tags = extracted.media_tags.unwrap_or_default();

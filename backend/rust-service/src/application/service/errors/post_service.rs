@@ -13,6 +13,12 @@ pub enum PostServiceError {
     #[error("Failed to create post")]
     CreatePostFailed,
 
+    #[error("Text content is too large")]
+    PostTextContentTooLarge,
+
+    #[error("Can not upload empty file")]
+    NoEmptyFile,
+
     #[error("Post not found")]
     InvalidPost,
     

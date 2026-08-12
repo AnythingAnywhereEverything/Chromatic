@@ -55,7 +55,9 @@ pub enum APIErrorCode {
     MediaTooManyFiles,
     MediaUnknownMultipartField,
     MediaInvalidCropScale,
-
+    // Post
+    TextTooLarge,
+    EmptyFile,
     // Session
     SessionError,
 
@@ -105,6 +107,8 @@ pub enum APIErrorKind {
     DatabaseError,
 
     RedisError,
+    
+    PostError,
 
     SnowflakeError,
     
