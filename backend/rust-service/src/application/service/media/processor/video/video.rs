@@ -1,4 +1,4 @@
-use std::{path::Path, process::Stdio, sync::Arc};
+use std::{path::{Path, PathBuf}, process::Stdio, sync::Arc};
 
 use tokio::process::Command;
 
@@ -21,7 +21,23 @@ pub struct Resolution {
     pub side: ResolutionSide,
 }
 
-pub async fn get_available_hardware_accels() -> Result<Vec<String>, MediaServiceError> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HardwareAccel {
+    Auto,
+    Software,
+
+    Cuda,
+    Nvenc,
+    Qsv,
+    V4l2m2m,
+    Vaapi,
+    Vdpau,
+    Opencl,
+    Amf,
+    Videotoolbox,
+}
+
+pub async fn get_available_hardware_accels() -> Result<Vec<HardwareAccel>, MediaServiceError> {
     let output = Command::new("ffmpeg")
         .args(&["-hide_banner", "-hwaccels"])
         .output()
@@ -32,11 +48,25 @@ pub async fn get_available_hardware_accels() -> Result<Vec<String>, MediaService
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let mut lines = stdout.lines();
-    lines.next(); // Skip the first line which is "Hardware acceleration methods:"
-    let available_accels: Vec<String> = lines.map(|line| line.trim().to_string()).collect();
+    let mut accels = Vec::new();
 
-    Ok(available_accels)
+    for line in stdout.lines() {
+        let trimmed_line = line.trim();
+        match trimmed_line {
+            "nvenc" => accels.push(HardwareAccel::Nvenc),
+            "qsv" => accels.push(HardwareAccel::Qsv),
+            "v4l2m2m" => accels.push(HardwareAccel::V4l2m2m),
+            "vaapi" => accels.push(HardwareAccel::Vaapi),
+            "vdpau" => accels.push(HardwareAccel::Vdpau),
+            "cuda" => accels.push(HardwareAccel::Cuda),
+            "opencl" => accels.push(HardwareAccel::Opencl),
+            "amf" => accels.push(HardwareAccel::Amf),
+            "videotoolbox" => accels.push(HardwareAccel::Videotoolbox),
+            _ => {}
+        }
+    }
+
+    Ok(accels)
 }
 
 
@@ -194,10 +224,10 @@ async fn get_viable_resolutions(src_width: i32, src_height: i32) -> Vec<Resoluti
 }
 
 pub async fn strip_metadata(input_path: String, storage: Arc<dyn MediaStorage>) -> Result<(), MediaServiceError> {
-    let temp_source_input = storage.temp_full_path(&input_path)?;
+    let temp_source_input = storage.temp_full_path(&input_path);
 
     // create temp file name for output
-    let temp_output = storage.temp_full_path(&format!("{}_stripped", input_path))?;
+    let temp_output = storage.temp_full_path(&format!("{}_stripped", input_path));
 
     // Use ffmpeg to strip metadata
     let status = Command::new("ffmpeg")
@@ -222,13 +252,11 @@ pub async fn strip_metadata(input_path: String, storage: Arc<dyn MediaStorage>) 
 }
 
 /// Generates a thumbnail from the video at `input_path` and saves it to `output_path`.
-pub async fn generate_video_thumbnail(input_path: &str, codec: &str, second: u32, storage: Arc<dyn MediaStorage>) -> Result<Vec<u8>, MediaServiceError> {
-    let temp_source_input = storage.temp_full_path(&input_path)?;
-    
+pub async fn extract_thumbnail(input_path: &str, codec: &str, second: u32) -> Result<Vec<u8>, MediaServiceError> {    
     // Use ffmpeg to generate thumbnail
     let output = Command::new("ffmpeg")
         .args(&[
-            "-i", &temp_source_input.to_string_lossy(),
+            "-i", input_path,
             "-ss", second.to_string().as_str(),
             "-vframes", "1",
             "-f", "image2pipe",
@@ -254,8 +282,8 @@ pub async fn process_video_trim(
     output_path: String,
     storage: Arc<dyn MediaStorage>,
 ) -> Result<(), MediaServiceError> {
-    let temp_source_input = storage.temp_full_path(&input_path)?;
-    let temp_output = storage.temp_full_path(&output_path)?;
+    let temp_source_input = storage.temp_full_path(&input_path);
+    let temp_output = storage.temp_full_path(&output_path);
 
     // Use ffmpeg to trim the video
     let status = Command::new("ffmpeg")
@@ -281,21 +309,15 @@ pub async fn process_video_trim(
 
 
 pub async fn process_video_hls(
-    segment_duration: u32,
+    segment_duration: f32,
     // job directory path for temporary processing
-    job_dir_path: String,
-    source_path: String,
-    storage: Arc<dyn MediaStorage>,
+    job_dir_path: PathBuf,
+    source_path: PathBuf,
 ) -> Result<(), MediaServiceError> {
-    // get the full path of the input video from temp storage
-    let temp_source_input = storage.temp_full_path(&source_path)?;
-
-    // Create a temporary directory for the HLS job
-    let full_job_dir = storage.temp_full_path(&job_dir_path)?;
-    tokio::fs::create_dir_all(&full_job_dir).await?;
+    tokio::fs::create_dir_all(&job_dir_path).await?;
 
     // Get the original video dimensions to determine viable resolutions for HLS
-    let (width, height) = get_video_dimensions(&temp_source_input).await?;
+    let (width, height) = get_video_dimensions(&source_path).await?;
 
     // mutatable vectors to hold `ffmpeg` filter and map commands, as well as variant information
     let mut filters = Vec::new();
@@ -343,7 +365,7 @@ pub async fn process_video_hls(
     // Prepare the ffmpeg command to generate HLS segments and playlists
     let mut cmd = Command::new("ffmpeg");
     cmd.arg("-i")
-        .arg(&temp_source_input)
+        .arg(&source_path)
         .arg("-filter_complex")
         .arg(&filter_complex);
 
@@ -360,13 +382,13 @@ pub async fn process_video_hls(
         "-hls_playlist_type", "vod",
         "-hls_segment_filename",
     ])
-    .arg(full_job_dir.join("v%v_seg_%03d.ts"))
+    .arg(job_dir_path.join("v%v_seg_%03d.ts"))
     .args([
         "-master_pl_name", "master.m3u8",
         "-var_stream_map",
         &var_map.join(" "),
     ])
-    .arg(full_job_dir.join("v%v.m3u8"));
+    .arg(job_dir_path.join("v%v.m3u8"));
 
     // Execute the ffmpeg command and wait for it to finish
     let output = cmd.output().await?;
