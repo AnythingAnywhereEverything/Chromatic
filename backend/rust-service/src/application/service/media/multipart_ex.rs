@@ -1,9 +1,10 @@
-// src/application/service/media/multipart_ex.rs
-
 use crate::application::service::{
-    errors::MediaServiceError, media::{
-        storage::MediaStorage, types::media_options::{
-            MultipartExtractorOptions, MultipartFieldCardinality, MultipartFieldKind, MultipartSchema, TempUpload,
+    errors::MediaServiceError,
+    media::{
+        storage::MediaStorage,
+        types::media_options::{
+            MultipartExtractorOptions, MultipartFieldCardinality, MultipartFieldKind,
+            MultipartSchema, TempUpload,
         },
     },
 };
@@ -49,7 +50,6 @@ impl MultipartExtractor {
 
         match result {
             Ok(value) => Ok(value),
-
             Err(error) => {
                 self.cleanup_uploads(&uploaded_files).await;
                 Err(error)
@@ -71,7 +71,6 @@ impl MultipartExtractor {
 
         while let Some(mut field) = multipart.next_field().await.map_err(|error| {
             tracing::error!("Multipart field extraction failed: {}", error);
-
             MediaServiceError::MultipartError(error)
         })? {
             let name = field
@@ -79,17 +78,22 @@ impl MultipartExtractor {
                 .ok_or(MediaServiceError::UnableToExtract)?
                 .to_owned();
 
+            tracing::trace!("Name check: {}", name);
+
             let schema = T::multipart_field(&name)
                 .ok_or_else(|| MediaServiceError::UnknownMultipartField(name.clone()))?;
 
             match schema.kind {
                 MultipartFieldKind::File => {
                     if file_count >= options.limits.max_files {
-                        return Err(MediaServiceError::TooManyFiles(options.limits.max_files));
+                        return Err(MediaServiceError::TooManyFiles(
+                            options.limits.max_files,
+                        ));
                     }
 
                     match schema.cardinality {
-                        MultipartFieldCardinality::Single | MultipartFieldCardinality::Optional => {
+                        MultipartFieldCardinality::Single
+                        | MultipartFieldCardinality::Optional => {
                             if values.contains_key(&name) {
                                 return Err(MediaServiceError::DuplicateMultipartField(name));
                             }
@@ -116,12 +120,12 @@ impl MultipartExtractor {
 
                     let upload_value = serde_json::to_value(upload).map_err(|error| {
                         tracing::error!("Failed to serialize TempUpload: {}", error);
-
                         MediaServiceError::InvalidMultipartField(name.clone())
                     })?;
 
                     match schema.cardinality {
-                        MultipartFieldCardinality::Single | MultipartFieldCardinality::Optional => {
+                        MultipartFieldCardinality::Single
+                        | MultipartFieldCardinality::Optional => {
                             values.insert(name, upload_value);
                         }
 
@@ -144,12 +148,19 @@ impl MultipartExtractor {
 
                 MultipartFieldKind::Text => {
                     let value = field.text().await.map_err(|error| {
-                        tracing::error!("Failed to read multipart field '{}': {}", name, error);
-
+                        tracing::error!(
+                            "Failed to read multipart field '{}': {}",
+                            name,
+                            error
+                        );
                         MediaServiceError::UnableToExtract
                     })?;
 
+                    tracing::trace!("Raw multipart value '{}': {}", name, value);
+
                     let value = parse_multipart_value(&value);
+
+                    tracing::trace!("Parsed multipart value '{}': {}", name, value);
 
                     match schema.cardinality {
                         MultipartFieldCardinality::Many
@@ -164,10 +175,20 @@ impl MultipartExtractor {
                                 MediaServiceError::InvalidMultipartField(entry_name)
                             })?;
 
-                            array.push(value);
+                            // * If the multipart value itself is an array, flatten it.
+                            // * This allows Vec<i64> from either repeated fields or `[1, 2, 3]`.
+                            match value {
+                                Value::Array(items) => {
+                                    array.extend(items);
+                                }
+                                value => {
+                                    array.push(value);
+                                }
+                            }
                         }
 
-                        MultipartFieldCardinality::Single | MultipartFieldCardinality::Optional => {
+                        MultipartFieldCardinality::Single
+                        | MultipartFieldCardinality::Optional => {
                             if values.contains_key(&name) {
                                 return Err(MediaServiceError::DuplicateMultipartField(name));
                             }
@@ -181,13 +202,14 @@ impl MultipartExtractor {
 
         serde_json::from_value(Value::Object(values)).map_err(|error| {
             tracing::error!("Multipart payload deserialization failed: {}", error);
-
             MediaServiceError::UnableToExtract
         })
     }
 }
 
 fn parse_multipart_value(value: &str) -> Value {
-    // * Parse JSON primitives first, then treat the value as String.
-    serde_json::from_str(value).unwrap_or_else(|_| Value::String(value.to_owned()))
+    // * JSON arrays/objects/primitives are preserved as their actual JSON types.
+    // * Non-JSON input remains a String.
+    serde_json::from_str(value.trim())
+        .unwrap_or_else(|_| Value::String(value.to_owned()))
 }
