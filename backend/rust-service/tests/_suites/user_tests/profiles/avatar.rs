@@ -1,7 +1,7 @@
 use crate::common::{TestContext, user::create_user};
 use crate::common::media::generate_testimage;
 use axum_test::multipart::{MultipartForm, Part};
-use libvips::VipsImage;
+use rs_vips::VipsImage;
 use sqlx::PgPool;
 
 /// Test updating user profile with a randomly generated image and verifying the avatar image dimensions

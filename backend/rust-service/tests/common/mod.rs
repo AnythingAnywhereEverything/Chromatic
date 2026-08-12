@@ -10,7 +10,7 @@ use chromatic::{
     api::server::create_router,
     application::{app::build_state, config},
 };
-use libvips::VipsApp;
+use rs_vips::Vips;
 use sqlx::PgPool;
 /// * ------------------------
 use std::{fs, path::Path, sync::OnceLock};
@@ -20,16 +20,14 @@ pub struct TestContext {
     pub testing_job_id: String,
 }
 
-static VIPS_APP: OnceLock<VipsApp> = OnceLock::new();
+static VIPS_APP: OnceLock<Vips> = OnceLock::new();
 
 fn init_libvips() {
     VIPS_APP.get_or_init(|| {
-        let app =
-            VipsApp::new("Chromatic Tests", false).expect("Failed to initialize libvips for tests");
+        Vips::init("Chromatic Tests").expect("Failed to initialize libvips for tests");
 
-        app.concurrency_set(2);
-
-        app
+        Vips::concurrency_set(2);
+        Vips
     });
 }
 
