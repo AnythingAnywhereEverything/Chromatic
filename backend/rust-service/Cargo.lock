@@ -353,13 +353,13 @@ dependencies = [
  "hyper-util",
  "infer",
  "jsonwebtoken",
- "libvips",
  "multipart-derive",
  "once_cell",
  "rand 0.9.2",
  "redis",
  "regex",
  "reqwest",
+ "rs-vips",
  "serde",
  "serde_json",
  "serial_test",
@@ -1468,16 +1468,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "libvips"
-version = "2.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29c2daabf7114fd6e626fef46e3ba187d204554cf94d31312424300bd8160d9b"
-dependencies = [
- "num-derive",
- "num-traits",
-]
-
-[[package]]
 name = "linux-raw-sys"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2147,6 +2137,16 @@ dependencies = [
  "libc",
  "untrusted",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "rs-vips"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "52bff86a769bb29a4a68a54ca68dfb8e713aa5e6c6a380d26d6878393007528c"
+dependencies = [
+ "num-derive",
+ "num-traits",
 ]
 
 [[package]]
