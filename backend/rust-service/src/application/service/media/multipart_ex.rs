@@ -107,7 +107,7 @@ impl MultipartExtractor {
                 // if file size too small
                 if mime.is_empty() || extension.is_empty() {
                     let (detected_mime, detected_extension) =
-                        super::utils::get_mime_and_extension(&chunk[..8192])?;
+                        super::utils::get_mime_and_extension(&chunk)?;
 
                     mime = detected_mime;
                     extension = detected_extension;
