@@ -54,6 +54,7 @@ pub enum APIErrorCode {
     MediaTimeout,
     MediaTooManyFiles,
     MediaUnknownMultipartField,
+    MediaInvalidCropScale,
 
     // Session
     SessionError,

@@ -53,6 +53,18 @@ impl From<MediaServiceError> for APIError {
                 .code(APIErrorCode::MediaTooManyFiles)
                 .kind(APIErrorKind::MediaError),
             ),
+            MediaServiceError::InvalidCropScale(e) => (
+                StatusCode::BAD_REQUEST,
+                APIErrorEntry::new(&format!("Invalid crop scale value: {}", e))
+                    .code(APIErrorCode::MediaInvalidCropScale)
+                    .kind(APIErrorKind::MediaError),
+            ),
+            MediaServiceError::UnknownMultipartField(e) => (
+                StatusCode::BAD_REQUEST,
+                APIErrorEntry::new(&format!("Unknown multipart field: {}", e))
+                    .code(APIErrorCode::MediaUnknownMultipartField)
+                    .kind(APIErrorKind::MediaError),
+            ),
             MediaServiceError::FileTooLarge => (
                 StatusCode::PAYLOAD_TOO_LARGE,
                 APIErrorEntry::new("File is too large.")
@@ -63,12 +75,6 @@ impl From<MediaServiceError> for APIError {
                 StatusCode::UNSUPPORTED_MEDIA_TYPE,
                 APIErrorEntry::new("Invalid media type.")
                     .code(APIErrorCode::MediaInvalidFileType)
-                    .kind(APIErrorKind::MediaError),
-            ),
-            MediaServiceError::UnknownMultipartField(e) => (
-                StatusCode::BAD_REQUEST,
-                APIErrorEntry::new(&format!("Unknown multipart field: {}", e))
-                    .code(APIErrorCode::MediaUnknownMultipartField)
                     .kind(APIErrorKind::MediaError),
             ),
             MediaServiceError::TransmissionTooSlow => (

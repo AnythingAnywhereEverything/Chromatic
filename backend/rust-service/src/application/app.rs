@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use crate::{
-    api::server, application::{config, service::{media::{multipart_ex::MultipartExtractor, service::MediaService, storage::{MediaStorage, local::LocalStorage, r2::R2Storage}}, snowflake_service::{SnowflakeGenerator, SnowflakeKind}}, state::AppState}, infrastructure::{database::Database, redis},
+    api::server, application::{config, service::{media::{multipart_ex::MultipartExtractor, storage::{MediaStorage, local::LocalStorage, r2::R2Storage}}, snowflake_service::{SnowflakeGenerator, SnowflakeKind}}, state::AppState}, infrastructure::{database::Database, redis},
 };
 
 pub async fn build_state(config: config::Config, db_pool: Option<sqlx::PgPool>) -> Arc<AppState> {
@@ -44,13 +44,7 @@ pub async fn build_state(config: config::Config, db_pool: Option<sqlx::PgPool>) 
         }
     };
 
-    let media_service = MediaService::new(
-        SnowflakeGenerator::new(config.server_worker_id, SnowflakeKind::Image).expect("Failed to create snowflake generator for media"),
-        storage.clone(),
-        db_pool.clone()
-    );
-
-    let multipart_extractor = MultipartExtractor::new(storage);
+    let multipart_extractor = MultipartExtractor::new(storage.clone());
 
     // Build the application state.
     Arc::new(AppState {
@@ -58,8 +52,8 @@ pub async fn build_state(config: config::Config, db_pool: Option<sqlx::PgPool>) 
         db_pool,
         redis,
         snowflake_generator,
-        media_service,
-        multipart_extractor
+        multipart_extractor,
+        storage,
     })
 }
 
