@@ -136,6 +136,5 @@ async fn test_create_post_fail_on_fake_img(pool: PgPool) {
 
     let json: serde_json::Value = response.json::<serde_json::Value>();
     println!("Json values {:?}", json);
-    // response.assert_status_failure();
-    // ! We check the status before consuming/parsing the body
+    response.assert_status_bad_request();
 }
