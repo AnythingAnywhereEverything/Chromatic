@@ -1,6 +1,6 @@
 use sqlx::{Postgres, Transaction};
 
-use crate::{api::handlers::post_handler::{ PostVisibility}, application::{repository::{media::row::{ MediaDataWithMetadataRow}, post::row::{ HasAttachmentRow, PostById, PostLikesRow, PostRow, TagAttachmentFull, TagAttachmentRow, TotalLikedRow}}, service::errors::PostServiceError}};
+use crate::{api::handlers::post_handler::{ PostVisibility}, application::{repository::{media::row::{ MediaDataWithMetadataRow}, post::row::{ HasAttachmentRow, PostLikesRow, PostRow, TagAttachmentFull, TagAttachmentRow, TotalLikedRow}}, service::errors::PostServiceError}};
 
 // todo: func get YOUR FRIEND post
 // todo: func get feed comment :d
@@ -105,8 +105,8 @@ pub async fn get_feed_public(
 pub async fn get_post_by_id(
     tx: &mut Transaction<'_,sqlx::Postgres>,
     post_id: i64
-) -> Result<PostById, sqlx::Error> {
-    sqlx::query_as::<_, PostById>(
+) -> Result<PostRow, sqlx::Error> {
+    sqlx::query_as::<_, PostRow>(
         r#"
             SELECT *
             FROM media_posts
@@ -118,7 +118,6 @@ pub async fn get_post_by_id(
     .await
 }
 
-// ! THE TAGS column has been chagne, re-new this function
 pub async fn create_post(
     tx: &mut Transaction<'_,sqlx::Postgres>,
     id: &i64,
@@ -154,29 +153,28 @@ pub async fn create_post(
     .await
 }
 
-// ! THE TAGS column has been chagne, re-new this function
 pub async fn update_post(
-    tx: &mut Transaction<'_,sqlx::Postgres>,
-    id:i64,
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    id: i64,
     user_id: i64,
-    content: &str,
-    status: &str,
-    // attechment : Option<String>,
-    media_tags: Vec<String>,
-) -> Result<PostRow, sqlx::Error>{
+    content: String,
+    visibility: PostVisibility,
+) -> Result<PostRow, sqlx::Error> {
     sqlx::query_as::<_, PostRow>(
         r#"
             UPDATE media_posts
-            SET content = $1, status = $2, update_at =NOW(), media_tags = $5
-            WHERE id = $3 AND user_id =$4
+            SET 
+                content = $1, 
+                visibility = $2,
+                updated_at = NOW()
+            WHERE id = $3 AND user_id = $4
             RETURNING *
         "#,
     )
     .bind(content)
-    .bind(status)
+    .bind(visibility)
     .bind(id)
     .bind(user_id)
-    .bind(media_tags)
     .fetch_one(&mut **tx)
     .await
 }
