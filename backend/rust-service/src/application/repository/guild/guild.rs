@@ -111,8 +111,8 @@ pub async fn delete_guild(
 // * Guild Info Thingy                                                  //
 //----------------------------------------------------------------------//
 // todo: get the guild info
-// ? impl with exilir BEAM for loading 👍👍👍
-// ! DON'T fetch everything at once, seperate into piece then sending to front-end
+// ? impl with exilir BEAM for loading 
+// ! DON'T fetch everything at once
 /// * Guild info -> channels -> current channel messages -> guild roles -> members (panigation) -> guild asset
 /// * seperate their roles if role is visible on showing [Front-end]
 /// * member data will fetch on click their profile
@@ -210,9 +210,7 @@ pub async fn get_guild_roles(
 }
 
 // * JOIN users table for some username and avatar, yum yum.
-/// ! 
-/// ! RECHECK again
-/// !s
+/// ! recheck again
 
 pub async fn get_guild_members (
       tx: &mut Transaction<'_, Postgres>,

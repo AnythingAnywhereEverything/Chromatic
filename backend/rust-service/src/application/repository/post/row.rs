@@ -18,10 +18,6 @@ pub struct PostRow {
     pub media_attachment: Option<Vec<MediaDataRow>>
 }
 #[derive(sqlx::FromRow)]
-pub struct PostById{
-    pub id: i64,
-}
-#[derive(sqlx::FromRow)]
 pub struct HasAttachmentRow{
     pub target_id: i64,
     pub media_id: i64,
