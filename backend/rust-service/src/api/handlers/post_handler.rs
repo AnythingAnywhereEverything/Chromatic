@@ -25,7 +25,7 @@ use crate::{
                     },
                 },
             },
-        }, state::SharedState,
+        }, state::{ SharedState},
     },
 };
 #[derive(serde::Deserialize, sqlx::Type, Debug)]
@@ -69,7 +69,6 @@ impl PostVisibility {
     }
 }
 
-// todo; refactor after media service get update
 pub async fn create_new_post_handler(
     State(state): State<SharedState>,
     Path(version): Path<String>,
@@ -222,11 +221,196 @@ pub async fn create_new_post_handler(
         tag: media_tags
     }))
 }
-// pub async fn update_post_handler(
 
-// ) -> Result<(), APIError> {
+// * get current post/folder_path
+// * check if the old image still remain or getting change
+// * create cache for check if old img still in place
+// * check through sqlx search by id or REDIS ? i'm thinking
 
-// }
+// thinking
+/// * cache the old post for compare to new post
+/// * old image id still remain in new or not
+/// * if not set the deleted_at in DB
+/// * New img getting process
+/// * create new cache replace the old post
+// todo: impl to cache later if everything stable
+pub async fn update_post_handler(
+    State(state): State<SharedState>,
+    Path((version, post_id)): Path<(String, i64)>,
+    req_auth: RequestAuth,
+    media_src: Multipart,
+) -> Result<Json<PostDTO>, APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+
+    // ! Temporary testing ID
+    let user_id = match req_auth.user {
+        Some(user) => user.user_id,
+        None => 80693951396319232,
+    };
+
+    let options = MultipartExtractorOptions {
+        max_file_size: Some(512_000_000),
+        max_files: Some(5),
+        validation: Some(ValidationOptions {
+            validation_type: ValidationType::Whitelisted,
+            value: vec![MediaType::Image, MediaType::Video],
+        }),
+        filter: Some(vec![FieldTypeFilter {
+            max_file_size: Some(25_000_000),
+            affected_types: Some(vec![MediaType::Image]),
+        }]),
+    };
+
+    let new_media_opts = MediaServiceOptions {
+        upload_route: format!("posts/{}", post_id),
+        uploader_id: user_id,
+        container: None,
+        processor: Some(MediaProcessorOptions {
+            fflags: Some(MediaProcessorFFlags {
+                video_thumbnail: true,
+                video_gpu_accel: true,
+                video_transcode: true,
+                image_thumbhash: true,
+                ..Default::default()
+            }),
+            image_processors: Some(vec![ImageProcessorType::Resize {
+                style: ResizeStyle::Absolute {
+                    width: 1024,
+                    height: 1024,
+                },
+                upscale: false,
+            }]),
+            video_processors: None,
+            post_processors: Some(PostProcessingType::Video(vec![
+                VideoPostProcessorType::HLS { segment_time: 10 },
+            ])),
+        }),
+    };
+
+    let extracted = state
+        .multipart_extractor
+        .extract::<CreatePostRequest>(media_src, options)
+        .await?;
+
+    tracing::debug!("Extracted payload: {:#?}", extracted);
+
+    let mut tx = state.db_pool.begin().await?;
+
+    let old_post = post_repo::post::get_post_by_id(&mut tx, post_id).await?;
+
+    tracing::trace!("Old post: {:?}", old_post);
+
+    let old_attachments = if old_post.has_attachment {
+        post_repo::post::get_post_attachment(&mut tx, post_id).await?
+    } else {
+        Vec::new()
+    };
+
+    tracing::debug!("Old attachments: {:?}", old_attachments);
+
+
+    // * If post has only image if possible because currently struct force to has content : string
+    let content = if extracted.content != old_post.content {
+        extracted.content
+    } else {
+        old_post.content
+    };
+    let updated_post = post_repo::post::update_post(&mut tx, post_id, user_id, content, extracted.visibility).await?;
+    let media_service = MediaService::new();
+
+    if let Some(files) = extracted.media_src {
+        tracing::debug!("Extracted media_src files: {:#?}", files);
+
+        let all_media = media_service
+            .save_media_group(&state, files, new_media_opts)
+            .await?;
+
+        tracing::debug!("Saved media group: {:#?}", all_media);
+
+        for media in all_media {
+            let media_id = media.get_id();
+
+            // * The media service created the media, so mark it completed
+            // * only after the processing operation has succeeded.
+            media_repo::update::media_status(
+                &mut tx,
+                &media_id,
+                &MediaStatus::Completed,
+            )
+            .await?;
+
+            post_repo::post::add_has_attachment(
+                &mut tx,
+                post_id,
+                media_id,
+                "user".to_string(),
+            )
+            .await?;
+
+            tracing::debug!(
+                "Attached new media {} to post {}",
+                media_id,
+                post_id
+            );
+        }
+    }
+
+    let media_with_post =
+        post_repo::post::get_post_attachment(&mut tx, post_id).await?;
+
+    let media_tags = post_repo::post::get_tag_attachments(&mut tx, post_id)
+        .await?
+        .into_iter()
+        .map(|tag| TagDTO {
+            target_id: tag.target_id.to_string(),
+            tag_name: tag.tag_name,
+            tag_id: tag.tag_id.to_string(),
+        })
+        .collect::<Vec<_>>();
+
+    let media = media_with_post
+        .into_iter()
+        .map(|media| MediaFullDTO {
+            id: media.id.to_string(),
+            path: media.path,
+            name: media.name,
+            thumbhash: media.thumbhash,
+            status: media.status,
+            created_at: media.created_at,
+            file_size: media.file_size,
+            mime_type: media.mime_type,
+            width: media.width,
+            height: media.height,
+            duration: media.duration,
+        })
+        .collect::<Vec<_>>();
+
+    tracing::debug!("Updated post media: {:?}", media);
+
+    tx.commit().await?;
+
+    Ok(Json(PostDTO {
+        id: updated_post.id.to_string(),
+        user_id: updated_post.user_id.to_string(),
+        content: updated_post.content,
+        total_comments: updated_post.total_comments,
+        total_likes: updated_post.total_likes,
+        reposted_from: Some(
+            updated_post
+                .reposted_from
+                .map(|id| id.to_string())
+                .unwrap_or_default(),
+        ),
+        is_repost: updated_post.is_repost,
+        has_attachment: updated_post.has_attachment,
+        created_at: Some(updated_post.created_at.to_rfc3339()),
+        updated_at: Some(updated_post.updated_at.to_rfc3339()),
+        visibility: updated_post.visibility.as_str().to_string(),
+        media,
+        tag: media_tags,
+    }))
+}
 
 pub async fn delete_post_handler(
     State(state): State<SharedState>,
