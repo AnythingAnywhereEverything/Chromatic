@@ -27,3 +27,17 @@ pub struct TagDTO {
     pub tag_name: String,
     pub tag_id: String
 }
+
+#[derive(Debug, Serialize)]
+pub struct CommentDTO {
+    pub id: String,
+    pub post_id: String,
+    pub user_id: String,
+    pub content: String,
+    pub total_likes: i32,
+    pub has_attachment: bool,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
+
+    pub media: Vec<MediaFullDTO>
+}
