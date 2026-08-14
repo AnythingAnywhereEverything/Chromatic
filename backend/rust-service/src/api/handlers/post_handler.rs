@@ -2,6 +2,7 @@ use axum::{
     extract::{Multipart, Path, State},
     Json,
 };
+use hyper::StatusCode;
 use multipart_derive::Multipart;
 
 use crate::{
@@ -45,10 +46,24 @@ pub enum PostVisibility {
 
 #[derive(serde::Deserialize, sqlx::Type, Debug)]
 #[sqlx(rename_all = "lowercase")]
-pub enum PostTagsAttachment{
-    User,
-    Media
+pub enum MediaTypeAttachment{
+    Post,
+    Comment,
+    Message,
+    Community
 }
+
+impl MediaTypeAttachment {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Post => "post",
+            Self::Comment => "comment",
+            Self::Message => "message",
+            Self::Community => "community",
+        }
+    }
+}
+
 #[derive(serde::Deserialize, Debug, Multipart)]
 pub struct CreatePostRequest {
     pub content: String,
@@ -82,7 +97,7 @@ pub async fn create_new_post_handler(
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
         // None => return Err(AuthServiceError::InvalidCredentials.into()),
-        None => 81727418892554240,
+        None => 1234,
     };
 
     let options = MultipartExtractorOptions {
@@ -152,7 +167,7 @@ pub async fn create_new_post_handler(
             // set to complete the media processing
             media_repo::update::media_status(&mut tx, &media.get_id(), &MediaStatus::Completed).await?;
             tracing::debug!("Media processing completed for media ID: {}", media.get_id());
-            post_repo::post::add_has_attachment(&mut tx, *new_post_id, media.get_id(), "user".to_string()).await?;
+            post_repo::post::add_has_attachment(&mut tx, *new_post_id, media.get_id(), MediaTypeAttachment::Post.as_str().to_string()).await?;
         }
     }
 
@@ -234,7 +249,7 @@ pub async fn update_post_handler(
     // ! Temporary testing ID
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
-        None => 81727418892554240,
+        None => 1234,
     };
 
     let options = MultipartExtractorOptions {
@@ -317,11 +332,12 @@ pub async fn update_post_handler(
         tag: media_tags,
     }))
 }
+
 pub async fn delete_post_handler(
     State(state): State<SharedState>,
     Path((version, post_id)): Path<(String, i64)>,
     req_auth: RequestAuth,
-) -> Result<(), APIError> {
+) -> Result<StatusCode, APIError> {
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
     let mut tx = state.db_pool.begin().await?;
@@ -329,11 +345,17 @@ pub async fn delete_post_handler(
     post_repo::post::get_post_by_id(&mut tx, post_id).await?;
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
-        None => return Err(AuthServiceError::InvalidCredentials.into()),
+        // None => return Err(AuthServiceError::InvalidCredentials.into()),
+        None => 1234,
     };
-    // Delete the post
-    post_repo::post::delete_post(&mut tx, post_id, user_id).await?;
 
-    Ok(())
+    let delete = post_repo::post::delete_post(&mut tx, post_id, user_id).await?;
+    tx.commit().await?;
+
+    if delete == 0 {
+        return Err(PostServiceError::CommentNotFoundOrUnauthorized.into());
+    }
+    
+    Ok(StatusCode::NO_CONTENT)
 }
 

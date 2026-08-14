@@ -1,4 +1,4 @@
-use sqlx::Transaction;
+use sqlx::{Transaction};
 use crate::application::repository::post::row::{CommentRow, CreateCommentResult};
 
 // todo : impl the media attachment
@@ -72,21 +72,21 @@ pub async fn get_comment(
             SELECT json_agg(
                 json_build_object(
                     'id', md.id,
-                    'user_id', md.user_id,
-                    'media_url', md.media_url,
-                    'media_preview_url', md.media_preview_url,
-                    'media_category', md.media_category,
-                    'media_status', md.media_status,
+                    'user_id', md.uploader_id,
+                    'media_url', md.path,
+                    'media_preview_url', md.path,
+                    'media_category', md.name,
+                    'media_status', md.status,
                     'created_at', md.created_at
                 )
                 ORDER BY md.id
             ) AS attachments
             FROM media_attachments a
             JOIN media_data md
-                ON md.id = a.target_id
+                ON md.id = a.media_id
             WHERE
-                a.media_id = cm.id
-                AND md.media_status != 'pending'
+                a.target_id = cm.id
+                AND md.status != 'pending'
         ) att ON TRUE
         WHERE
             cm.post_id = $1
@@ -142,9 +142,9 @@ pub async fn get_specific_comment(
 pub async fn delete_comment(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     comment_id: i64,
-    user_id: i64
-) -> Result<(), sqlx::Error> {
-    let _ = sqlx::query(
+    user_id: i64,
+) -> Result<u64, sqlx::Error> {
+    let result = sqlx::query(
         r#"
         DELETE FROM media_comments
         WHERE id = $1 AND user_id = $2
@@ -152,7 +152,8 @@ pub async fn delete_comment(
     )
     .bind(comment_id)
     .bind(user_id)
-    .execute(&mut **tx)
+    .execute(tx.as_mut())
     .await?;
-    Ok(())
+
+    Ok(result.rows_affected())
 }

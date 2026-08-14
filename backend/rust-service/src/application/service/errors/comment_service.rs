@@ -16,8 +16,8 @@ pub enum CommentServiceError{
     #[error("Failed to update comment")]
     UpdateCommentFailed,
 
-    #[error("Failed to delete comment")]
-    DeleteCommentFailed
+    #[error("Comment not found or unauthorized")]
+    CommentNotFoundOrUnauthorized
 }
 
 impl From<sqlx::Error> for CommentServiceError {

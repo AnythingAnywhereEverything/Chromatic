@@ -1,15 +1,15 @@
 use axum::{
     extract::{Multipart, Path, State},
+    http::StatusCode,
     Json,
 };
 use multipart_derive::Multipart;
 
 use crate::{
-    api::{APIError, RequestAuth, dtos::{post_dtos::CommentDTO, user_dtos::MediaFullDTO}, version}, application::{
+    api::{APIError, RequestAuth, dtos::{post_dtos::CommentDTO, user_dtos::MediaFullDTO}, handlers::post_handler::MediaTypeAttachment, version}, application::{
         repository::{
-            media::{self as media_repo, row::MediaStatus},
-            post::{self as post_repo},
-        }, service::media::{
+            media::{self as media_repo, row::MediaStatus}, post::{self as post_repo, comment},
+        }, service::{ errors::CommentServiceError, media::{
                 processor::types::{
                     ImageProcessorType, MediaProcessorFFlags, MediaProcessorOptions,
                     PostProcessingType, ResizeStyle, VideoPostProcessorType,
@@ -23,7 +23,7 @@ use crate::{
                         ValidationType,
                     },
                 },
-            }, state::SharedState,
+            }}, state::SharedState,
     },
 };
 
@@ -32,6 +32,58 @@ pub struct CreateCommentRequest {
     pub content: String,
     #[multipart]
     pub media_src: Option<Vec<MultipartFile>>,
+}
+
+pub async fn get_comment_handler(
+    State(state): State<SharedState>,
+    Path((version, post_id)): Path<(String, i64)>, 
+    req_auth: RequestAuth,
+) -> Result<Json<Vec<CommentDTO>>, APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+    
+    let _user_id = match req_auth.user {
+        Some(user) => user.user_id,
+        None => 81727418892554240,
+    };
+
+    let mut tx = state.db_pool.begin().await?;
+    let all_comment = comment::get_comment(&mut tx, post_id).await?;
+    let mut comment_vec: Vec<CommentDTO> = Vec::new();
+
+    for comment in all_comment.into_iter() {
+        let media_rows = post_repo::post::get_post_attachment(&mut tx, comment.id).await?;
+        let media = media_rows
+            .into_iter()
+            .map(|media| MediaFullDTO {
+                id: media.id.to_string(),
+                path: media.path,
+                name: media.name,
+                thumbhash: media.thumbhash,
+                status: media.status,
+                created_at: media.created_at,
+                file_size: media.file_size,
+                mime_type: media.mime_type,
+                width: media.width,
+                height: media.height,
+                duration: media.duration,
+            })
+            .collect::<Vec<_>>();
+
+        comment_vec.push(CommentDTO {
+            id: comment.id.to_string(),
+            user_id: comment.user_id.to_string(),
+            post_id: comment.post_id.to_string(),
+            content: comment.content,
+            has_attachment: comment.has_attachment,
+            total_likes: comment.total_likes,
+            created_at: Some(comment.created_at.to_rfc3339()),
+            updated_at: Some(comment.updated_at.to_rfc3339()),
+            media,
+        });
+    }
+
+    Ok(Json(comment_vec))
 }
 
 pub async fn create_new_comment_handler(
@@ -120,7 +172,7 @@ pub async fn create_new_comment_handler(
 
         for media in all_media {
             media_repo::update::media_status(&mut tx, &media.get_id(), &MediaStatus::Completed).await?;
-            post_repo::post::add_has_attachment(&mut tx, comment.id, media.get_id(), "user".to_string()).await?;
+            post_repo::post::add_has_attachment(&mut tx, comment.id, media.get_id(), MediaTypeAttachment::Comment.as_str().to_string()).await?;
         }
     }
     let media_with_post = post_repo::post::get_post_attachment(&mut tx, new_comment_id).await?;
@@ -239,4 +291,29 @@ pub async fn update_comment_handler(
         updated_at: Some(updated_comment.updated_at.to_rfc3339()),
         media,
     }))
+}
+
+pub async fn delete_comment_handler(
+    State(state): State<SharedState>,
+    Path((version, comment_id)): Path<(String, i64)>,
+    req_auth: RequestAuth,
+) -> Result<StatusCode, APIError> {
+    let _api_version = version::parse_version(&version)?;
+
+    let user_id = match req_auth.user {
+        Some(user) => user.user_id,
+        // ! hardcoded fallback id might be a security risk in production
+        None => 81727418892554240, 
+    };
+    let mut tx = state.db_pool.begin().await?;
+
+    let deleted = post_repo::comment::delete_comment(&mut tx, comment_id, user_id).await?;
+    tx.commit().await?;
+    
+    if deleted == 0 {   
+        return Err(CommentServiceError::CommentNotFoundOrUnauthorized.into());
+    }
+
+    Ok(StatusCode::NO_CONTENT)
+
 }

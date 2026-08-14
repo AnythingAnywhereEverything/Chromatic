@@ -60,6 +60,9 @@ pub enum APIErrorCode {
     // Post
     TextTooLarge,
     EmptyFile,
+
+    // Comment
+    CommentNotFoundOrUnauthorized,
     // Session
     SessionError,
 
@@ -111,6 +114,8 @@ pub enum APIErrorKind {
     RedisError,
     
     PostError,
+
+    CommentError,
 
     SnowflakeError,
     
