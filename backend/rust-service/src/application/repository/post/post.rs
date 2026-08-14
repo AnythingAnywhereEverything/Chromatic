@@ -21,13 +21,12 @@ use crate::{api::handlers::post_handler::{ PostVisibility}, application::{reposi
 //// ! BUT there's not see post in DB so the post will be always show
 
 pub async fn get_feed_public(
-    tx: &mut Transaction<'_,sqlx::Postgres>,
+    tx: &mut Transaction<'_, sqlx::Postgres>,
     cursor_id: Option<i64>,
 ) -> Result<Vec<PostRow>, sqlx::Error> {
-
-    sqlx::query_as::<_, PostRow> (
+    sqlx::query_as::<_, PostRow>(
         r#"
-           SELECT
+            SELECT
                 m.id,
                 m.user_id,
                 m.content,
@@ -38,33 +37,33 @@ pub async fn get_feed_public(
                 m.has_attachment,
                 m.created_at,
                 m.updated_at,
-
                 COALESCE(att.attachments, '[]'::json) AS attachments,
                 COALESCE(tag.tags, '[]'::json) AS tags
-
             FROM media_posts m
-
             LEFT JOIN LATERAL (
                 SELECT json_agg(
                     json_build_object(
                         'id', md.id,
-                        'user_id', md.user_id,
-                        'media_url', md.media_url,
-                        'media_preview_url', md.media_preview_url,
-                        'media_category', md.media_category,
-                        'media_status', md.media_status,
-                        'created_at', md.created_at
+                        'user_id', md.uploader_id,
+                        'path', md.path,
+                        'created_at', md.created_at,
+                        'thumbhash', md.thumbhash,
+                        'name', md.name,
+                        'updated_at', md.updated_at,
+                        'file_size', mdt.file_size,
+                        'mime_type', mdt.mime_type,
+                        'width', mdt.width,
+                        'height', mdt.height,
+                        'duration', mdt.duration
                     )
                     ORDER BY md.id
                 ) AS attachments
                 FROM media_attachments a
-                JOIN media_data md
-                    ON md.id = a.target_id
-                WHERE
-                    a.media_id = m.id
-                    AND md.media_status != 'pending'
+                JOIN media_data md ON md.id = a.media_id
+                JOIN media_metadata mdt ON mdt.media_id = md.id
+                WHERE a.target_id = m.id
+                AND md.status != 'pending'
             ) att ON TRUE
-
             LEFT JOIN LATERAL (
                 SELECT json_agg(
                     json_build_object(
@@ -74,16 +73,14 @@ pub async fn get_feed_public(
                     ORDER BY it.tags_name
                 ) AS tags
                 FROM media_tags mt
-                JOIN interest_tags it
-                    ON it.id = mt.interest_id
+                JOIN interest_tags it ON it.id = mt.interest_id
                 WHERE mt.media_id = m.id
             ) tag ON TRUE
-
             WHERE
                 m.visibility = 'everyone'
                 AND m.status != 'inactive'
-                AND (:cursor_id IS NULL OR m.id < :cursor_id)
-
+                -- * $1 is the cursor_id
+                AND ($1 IS NULL OR m.id < $1)
             ORDER BY m.id DESC
             LIMIT 15
         "#
@@ -92,6 +89,7 @@ pub async fn get_feed_public(
     .fetch_all(tx.as_mut())
     .await
 }
+
 
 
 // pub async fn get_friend_post(
@@ -185,12 +183,12 @@ pub async fn update_post(
 pub async fn delete_post(
     tx: &mut Transaction<'_,sqlx::Postgres>,
     id:i64,
-    user_id: i64,
-) -> Result<(), sqlx::Error>{
-    sqlx::query(
+    user_id: i64
+) -> Result<u64, sqlx::Error>{
+    let delete = sqlx::query(
         r#"
             DELETE FROM media_posts
-            WHERE id = $1, user = $2
+            WHERE id = $1 AND user_id = $2
         "#,
     )
     .bind(id)
@@ -198,7 +196,7 @@ pub async fn delete_post(
     .execute(&mut **tx)
     .await?;
 
-    Ok(())
+    Ok(delete.rows_affected())
 }
 // * ----------------------------------------------
 // * Attachment

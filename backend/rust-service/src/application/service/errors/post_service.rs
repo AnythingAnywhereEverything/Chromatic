@@ -19,6 +19,9 @@ pub enum PostServiceError {
     #[error("Can not upload empty file")]
     NoEmptyFile,
 
+    #[error("Comment not found or unauthorized")]
+    CommentNotFoundOrUnauthorized,
+
     #[error("Post not found")]
     InvalidPost,
     
