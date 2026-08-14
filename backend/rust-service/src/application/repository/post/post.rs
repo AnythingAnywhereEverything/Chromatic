@@ -119,27 +119,29 @@ pub async fn get_post_by_id(
 }
 
 pub async fn create_post(
-    tx: &mut Transaction<'_,sqlx::Postgres>,
+    tx: &mut Transaction<'_, sqlx::Postgres>,
     id: &i64,
     user_id: i64,
     content: &str,
     repost_from: Option<i64>,
+    has_attachment: bool,
     is_repost: bool,
-    visibility: PostVisibility
-) -> Result<PostRow, sqlx::Error>{
-    sqlx::query_as::<_,PostRow>(
+    visibility: PostVisibility,
+) -> Result<PostRow, sqlx::Error> {
+    sqlx::query_as::<_, PostRow>(
         r#"
         INSERT INTO media_posts (
-        id, 
-        user_id, 
-        content, 
-        reposted_from,
-        is_repost, 
-        created_at, 
-        updated_at,
-        visibility
+            id,
+            user_id,
+            content,
+            reposted_from,
+            is_repost,
+            has_attachment,
+            created_at,
+            updated_at,
+            visibility
         )
-        VALUES ($1, $2, $3, $4, $5,NOW(), NOW(), $6)
+        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), $7)
         RETURNING *
         "#,
     )
@@ -148,6 +150,7 @@ pub async fn create_post(
     .bind(content)
     .bind(repost_from)
     .bind(is_repost)
+    .bind(has_attachment)
     .bind(visibility)
     .fetch_one(&mut **tx)
     .await
@@ -198,7 +201,7 @@ pub async fn delete_post(
     Ok(())
 }
 // * ----------------------------------------------
-//  Attachment
+// * Attachment
 // * ----------------------------------------------
 pub async fn add_has_attachment(
     tx: &mut Transaction<'_, sqlx::Postgres>,
@@ -257,8 +260,25 @@ pub async fn get_post_attachment(
     .await
 }
 
+pub async fn delete_target_attachments(
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    target_id: i64,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        r#"
+            DELETE FROM media_attachments
+            WHERE target_id = $1
+        "#,
+    )
+    .bind(target_id)
+    .execute(&mut **tx)
+    .await?;
+
+    Ok(())
+}
+
 // * ----------------------------------------------
-//  Interest tags
+// * Interest tags
 // * ----------------------------------------------
 
 pub async fn add_tags_target(
@@ -386,6 +406,10 @@ pub async fn like_post(
     .await
 }
 
+// * -----------------------------------------------------
+// * Bookmark
+// * -----------------------------------------------------
+
 pub async fn bookmark_post(
     tx: &mut Transaction<'_,sqlx::Postgres>,
     media_id: i64,
@@ -405,7 +429,6 @@ pub async fn bookmark_post(
     Ok(())
 }
 
-// * Not so Standard
 pub async fn remove_bookmark_post(
     tx: &mut Transaction<'_,sqlx::Postgres>,
     media_id: i64,
@@ -423,3 +446,4 @@ pub async fn remove_bookmark_post(
     .await;
     Ok(())
 }
+

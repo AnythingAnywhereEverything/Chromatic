@@ -73,7 +73,7 @@ pub async fn create_new_post_handler(
     State(state): State<SharedState>,
     Path(version): Path<String>,
     req_auth: RequestAuth,
-    media_src: Multipart,
+    request: Multipart,
 ) -> Result<Json<PostDTO>, APIError> {
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
@@ -82,7 +82,7 @@ pub async fn create_new_post_handler(
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
         // None => return Err(AuthServiceError::InvalidCredentials.into()),
-        None => 80693951396319232,
+        None => 81727418892554240,
     };
 
     let options = MultipartExtractorOptions {
@@ -100,7 +100,7 @@ pub async fn create_new_post_handler(
 
     let extracted = state
         .multipart_extractor
-        .extract::<CreatePostRequest>(media_src, options)
+        .extract::<CreatePostRequest>(request, options)
         .await?;
     tracing::debug!("Extracted payload: {:#?}", extracted);
 
@@ -141,13 +141,12 @@ pub async fn create_new_post_handler(
     let content = extracted.content;
     let media_service = MediaService::new();
 
-    if let Some(files) = extracted.media_src {
+    if let Some(ref files) = extracted.media_src {
         tracing::debug!("Extracted media_src files: {:#?}", files);
 
         let all_media = media_service
-            .save_media_group(&state, files, new_media_opts)
+            .save_media_group(&state, files.to_vec(), new_media_opts)
             .await?;
-
         tracing::debug!("Saved media group: {:#?}", all_media);
         for media in all_media {
             // set to complete the media processing
@@ -162,8 +161,8 @@ pub async fn create_new_post_handler(
     let post_tags = extracted.media_tags.unwrap_or_default();
     let is_repost = repost_from.is_some();
     let new_post =
-        post_repo::post::create_post(&mut tx, new_post_id, user_id, &content, repost_from, is_repost, visibility).await?;
-        tracing::trace!("post content : {:?}", new_post);
+        post_repo::post::create_post(&mut tx, new_post_id, user_id, &content, repost_from, !extracted.media_src.is_none(),is_repost, visibility).await?;
+        tracing::trace!("post content : {:#?}", new_post);
 
     if !post_tags.is_empty() {
         tracing::trace!("Entering add tags stage");
@@ -199,7 +198,7 @@ pub async fn create_new_post_handler(
         duration: media.duration,
     })
     .collect::<Vec<_>>();
-    tracing::warn!("Updated Post after avatar upload: {:?}", media);
+    tracing::warn!("Updated Post after upload: {:#?}", media);
 
     
     tx.commit().await?;
@@ -222,17 +221,6 @@ pub async fn create_new_post_handler(
     }))
 }
 
-// * get current post/folder_path
-// * check if the old image still remain or getting change
-// * create cache for check if old img still in place
-// * check through sqlx search by id or REDIS ? i'm thinking
-
-// thinking
-/// * cache the old post for compare to new post
-/// * old image id still remain in new or not
-/// * if not set the deleted_at in DB
-/// * New img getting process
-/// * create new cache replace the old post
 // todo: impl to cache later if everything stable
 pub async fn update_post_handler(
     State(state): State<SharedState>,
@@ -246,46 +234,14 @@ pub async fn update_post_handler(
     // ! Temporary testing ID
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
-        None => 80693951396319232,
+        None => 81727418892554240,
     };
 
     let options = MultipartExtractorOptions {
-        max_file_size: Some(512_000_000),
-        max_files: Some(5),
-        validation: Some(ValidationOptions {
-            validation_type: ValidationType::Whitelisted,
-            value: vec![MediaType::Image, MediaType::Video],
-        }),
-        filter: Some(vec![FieldTypeFilter {
-            max_file_size: Some(25_000_000),
-            affected_types: Some(vec![MediaType::Image]),
-        }]),
-    };
-
-    let new_media_opts = MediaServiceOptions {
-        upload_route: format!("posts/{}", post_id),
-        uploader_id: user_id,
-        container: None,
-        processor: Some(MediaProcessorOptions {
-            fflags: Some(MediaProcessorFFlags {
-                video_thumbnail: true,
-                video_gpu_accel: true,
-                video_transcode: true,
-                image_thumbhash: true,
-                ..Default::default()
-            }),
-            image_processors: Some(vec![ImageProcessorType::Resize {
-                style: ResizeStyle::Absolute {
-                    width: 1024,
-                    height: 1024,
-                },
-                upscale: false,
-            }]),
-            video_processors: None,
-            post_processors: Some(PostProcessingType::Video(vec![
-                VideoPostProcessorType::HLS { segment_time: 10 },
-            ])),
-        }),
+        max_file_size: None,
+        max_files: None,
+        validation: None,
+        filter: None,
     };
 
     let extracted = state
@@ -301,63 +257,15 @@ pub async fn update_post_handler(
 
     tracing::trace!("Old post: {:?}", old_post);
 
-    let old_attachments = if old_post.has_attachment {
-        post_repo::post::get_post_attachment(&mut tx, post_id).await?
-    } else {
-        Vec::new()
-    };
-
-    tracing::debug!("Old attachments: {:?}", old_attachments);
-
-
-    // * If post has only image if possible because currently struct force to has content : string
     let content = if extracted.content != old_post.content {
         extracted.content
     } else {
         old_post.content
     };
+
     let updated_post = post_repo::post::update_post(&mut tx, post_id, user_id, content, extracted.visibility).await?;
-    let media_service = MediaService::new();
 
-    if let Some(files) = extracted.media_src {
-        tracing::debug!("Extracted media_src files: {:#?}", files);
-
-        let all_media = media_service
-            .save_media_group(&state, files, new_media_opts)
-            .await?;
-
-        tracing::debug!("Saved media group: {:#?}", all_media);
-
-        for media in all_media {
-            let media_id = media.get_id();
-
-            // * The media service created the media, so mark it completed
-            // * only after the processing operation has succeeded.
-            media_repo::update::media_status(
-                &mut tx,
-                &media_id,
-                &MediaStatus::Completed,
-            )
-            .await?;
-
-            post_repo::post::add_has_attachment(
-                &mut tx,
-                post_id,
-                media_id,
-                "user".to_string(),
-            )
-            .await?;
-
-            tracing::debug!(
-                "Attached new media {} to post {}",
-                media_id,
-                post_id
-            );
-        }
-    }
-
-    let media_with_post =
-        post_repo::post::get_post_attachment(&mut tx, post_id).await?;
+    let media_with_post = post_repo::post::get_post_attachment(&mut tx, post_id).await?;
 
     let media_tags = post_repo::post::get_tag_attachments(&mut tx, post_id)
         .await?
@@ -386,8 +294,6 @@ pub async fn update_post_handler(
         })
         .collect::<Vec<_>>();
 
-    tracing::debug!("Updated post media: {:?}", media);
-
     tx.commit().await?;
 
     Ok(Json(PostDTO {
@@ -411,7 +317,6 @@ pub async fn update_post_handler(
         tag: media_tags,
     }))
 }
-
 pub async fn delete_post_handler(
     State(state): State<SharedState>,
     Path((version, post_id)): Path<(String, i64)>,
@@ -431,3 +336,4 @@ pub async fn delete_post_handler(
 
     Ok(())
 }
+
