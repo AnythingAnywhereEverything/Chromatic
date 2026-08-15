@@ -44,6 +44,16 @@ pub enum PostVisibility {
     Private
 }
 
+impl ToString for PostVisibility {
+    fn to_string(&self) -> String {
+        match self {
+            PostVisibility::Everyone => "everyone".to_string(),
+            PostVisibility::Friend => "friend".to_string(),
+            PostVisibility::Private => "private".to_string(),
+        }
+    }
+}
+
 #[derive(serde::Deserialize, sqlx::Type, Debug)]
 #[sqlx(rename_all = "lowercase")]
 pub enum MediaTypeAttachment{
@@ -96,54 +106,8 @@ pub async fn get_feed_post_handler(
     let all_post = post_repo::post::get_feed_public(&mut tx, None).await?;
     tracing::warn!("POST AS JSON BEFORE {:#?}", all_post);
 
-    let mut post_vec: Vec<PostDTO> = Vec::new();
-    
-    for post in all_post.into_iter() {
-        tracing::warn!("POST AS JSON BEFORE {:#?}", post);
-        let media_with_post = post_repo::post::get_post_attachment(&mut tx, post.id).await?;
-        let media_tags = post_repo::post::get_tag_attachments(&mut tx, post.id)
-            .await?
-            .into_iter()
-            .map(|tag| TagDTO {
-                target_id: tag.target_id.to_string(),
-                tag_name: tag.tag_name,
-                tag_id: tag.tag_id.to_string(),
-            })
-            .collect::<Vec<_>>();
+    let post_vec: Vec<PostDTO> = all_post.into_iter().map(|post| post.into()).collect();
 
-        let media = media_with_post
-            .into_iter()
-            .map(|m| MediaFullDTO {
-                id: m.id.to_string(),
-                path: m.path,
-                name: m.name,
-                thumbhash: m.thumbhash,
-                status: m.status,
-                created_at: m.created_at,
-                file_size: m.file_size,
-                mime_type: m.mime_type,
-                width: m.width,
-                height: m.height,
-                duration: m.duration,
-            })
-            .collect::<Vec<_>>();
-
-        post_vec.push(PostDTO {
-            id: post.id.to_string(),
-            user_id: post.user_id.to_string(),
-            content: post.content,
-            total_comments: post.total_comments,
-            total_likes: post.total_likes,
-            reposted_from: post.reposted_from.map(|id| id.to_string()),
-            is_repost: post.is_repost,
-            has_attachment: post.has_attachment,
-            created_at: Some(post.created_at.to_rfc3339()),
-            updated_at: Some(post.updated_at.to_rfc3339()),
-            visibility: post.visibility.as_str().to_string(),
-            media,
-            tag: media_tags,
-        });
-    }
     Ok(Json(post_vec))
 }
 
@@ -267,7 +231,7 @@ pub async fn create_new_post_handler(
         path: media.path,
         name: media.name,
         thumbhash: media.thumbhash,
-        status: media.status,
+        status: media.status.to_string(),
         created_at: media.created_at,
         file_size: media.file_size,
         mime_type: media.mime_type,
@@ -362,7 +326,7 @@ pub async fn update_post_handler(
             path: media.path,
             name: media.name,
             thumbhash: media.thumbhash,
-            status: media.status,
+            status: media.status.to_string(),
             created_at: media.created_at,
             file_size: media.file_size,
             mime_type: media.mime_type,
@@ -455,7 +419,7 @@ pub async fn get_post_handler(
                 path: m.path,
                 name: m.name,
                 thumbhash: m.thumbhash,
-                status: m.status,
+                status: m.status.to_string(),
                 created_at: m.created_at,
                 file_size: m.file_size,
                 mime_type: m.mime_type,
