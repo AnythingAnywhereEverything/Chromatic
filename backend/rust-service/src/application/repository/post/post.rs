@@ -38,7 +38,7 @@ pub async fn get_feed_public(
                 m.created_at,
                 m.updated_at,
                 m.visibility,
-                COALESCE(att.attachments, '[]'::json) AS attachments,
+                COALESCE(att.attachments, '[]'::json) AS media_attachment,
                 COALESCE(tag.tags, '[]'::json) AS tags
             FROM media_posts m
             LEFT JOIN LATERAL (
@@ -65,12 +65,13 @@ pub async fn get_feed_public(
                 JOIN media_data md ON md.id = a.media_id
                 JOIN media_metadata mdt ON mdt.media_id = md.id
                 WHERE a.target_id = m.id
-                AND md.status != 'pending'
+                AND md.status = 'completed'
             ) att ON TRUE
             LEFT JOIN LATERAL (
                 SELECT json_agg(
                     json_build_object(
-                        'target_id', m.id::text,
+                        'target_id', ta.target_id,
+                        'target_type', ta.target_type,
                         'tag_id', it.id::text,
                         'tag_name', it.tag_name
                     )

@@ -18,6 +18,19 @@ pub enum MediaStatus {
     Completed,
 }
 
+impl ToString for MediaStatus {
+    fn to_string(&self) -> String {
+        match self {
+            MediaStatus::Locked => "locked".to_string(),
+            MediaStatus::Processing => "processing".to_string(),
+            MediaStatus::Pending => "pending".to_string(),
+            MediaStatus::Ready => "ready".to_string(),
+            MediaStatus::Failed => "failed".to_string(),
+            MediaStatus::Completed => "completed".to_string(),
+        }
+    }
+}
+
 #[derive(Debug, sqlx::FromRow)]
 pub struct MediaDataRow {
     pub id: i64,
