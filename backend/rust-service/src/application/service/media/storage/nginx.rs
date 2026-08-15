@@ -33,6 +33,11 @@ impl MediaStorage for NginxStorage {
     fn temp_root(&self) -> &str {
         self.local.temp_root()
     }
+
+    async fn upload(&self, from: &str, to: &str) -> Result<(), MediaServiceError> {
+        self.local.upload(from, to).await
+    }
+
     // Reuse Local Logic completely for local writing and house-keeping
     async fn save(&self, path: &str, data: &[u8]) -> Result<(), MediaServiceError> {
         self.local.save(path, data).await
@@ -52,10 +57,6 @@ impl MediaStorage for NginxStorage {
 
     async fn move_file(&self, from: &Path, to: &Path) -> Result<(), MediaServiceError> {
         self.local.move_file(from, to).await
-    }
-
-    async fn move_all_to_directory(&self, from: &Path, to: &Path) -> Result<(), MediaServiceError> {
-        self.local.move_all_to_directory(from, to).await
     }
 
     async fn copy_file(&self, from: &Path, to: &Path) -> Result<(), MediaServiceError> {

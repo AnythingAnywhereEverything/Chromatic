@@ -29,59 +29,7 @@ impl LocalStorage {
         full.push(path);
         full
     }
-}
 
-#[async_trait]
-impl MediaStorage for LocalStorage {
-    fn temp_root(&self) -> &str {
-        &self.temp_root
-    }
-
-    async fn save(&self, path: &str, data: &[u8]) -> Result<(), MediaServiceError> {
-        let full = self.build_full_path(path);
-
-        if let Some(parent) = full.parent() {
-            fs::create_dir_all(parent).await?;
-        }
-
-        fs::write(full, data).await?;
-        Ok(())
-    }
-
-    async fn save_temp(&self, path: &str, data: &[u8]) -> Result<(), MediaServiceError> {
-        let full = self.build_temp_full_path(path);
-
-        if let Some(parent) = full.parent() {
-            fs::create_dir_all(parent).await?;
-        }
-
-        fs::write(full, data).await?;
-        Ok(())
-    }
-
-    async fn delete(&self, path: &str) {
-        let full = self.build_full_path(path);
-        let _ = fs::remove_file(full).await;
-    }
-
-    async fn read(
-        &self,
-        path: &str,
-        _mime_type: &str,
-    ) -> Result<StorageResponse, MediaServiceError> {
-        let full = self.build_full_path(path);
-        let data = fs::read(full).await?;
-        Ok(StorageResponse::Bytes(data))
-    }
-
-    async fn exists(&self, path: &str) -> Result<bool, MediaServiceError> {
-        let full = self.build_full_path(path);
-        Ok(full.exists())
-    }
-
-    // This function allows moving all files from one directory to another, creating the destination directory if it doesn't exist. It only moves files and ignores subdirectories.
-    // warning: this method is slower than moving a whole directory, but it safer
-    // due to it will just insert the file to the target destination and not replace the directory, which is safer for production use cases
     async fn move_all_to_directory(&self, from: &Path, to: &Path) -> Result<(), MediaServiceError> {
         if !to.exists() {
             fs::create_dir_all(to).await?;
@@ -112,6 +60,98 @@ impl MediaStorage for LocalStorage {
 
         Ok(())
     }
+}
+
+#[async_trait]
+impl MediaStorage for LocalStorage {
+    fn temp_root(&self) -> &str {
+        &self.temp_root
+    }
+
+    async fn save(&self, path: &str, data: &[u8]) -> Result<(), MediaServiceError> {
+        let full = self.build_full_path(path);
+
+        if let Some(parent) = full.parent() {
+            fs::create_dir_all(parent).await?;
+        }
+
+        fs::write(full, data).await?;
+        Ok(())
+    }
+
+    async fn save_temp(&self, path: &str, data: &[u8]) -> Result<(), MediaServiceError> {
+        let full = self.build_temp_full_path(path);
+
+        if let Some(parent) = full.parent() {
+            fs::create_dir_all(parent).await?;
+        }
+
+        fs::write(full, data).await?;
+        Ok(())
+    }
+
+    async fn upload(&self, from: &str, dst: &str) -> Result<(), MediaServiceError> {
+        let temp_full = self.build_temp_full_path(from);
+        let full = self.build_full_path(dst);
+
+        // Ensure the destination directory exists
+        if let Some(parent) = full.parent() {
+            fs::create_dir_all(parent).await?;
+        }
+
+        if temp_full.is_dir() && full.is_file() {
+            return Err(MediaServiceError::UploadFailed(
+                "Cannot move a directory to a file path.".to_string(),
+            ));
+        } else if temp_full.is_file() && full.is_dir() {
+            return Err(MediaServiceError::UploadFailed(
+                "Cannot move a file to a directory path.".to_string(),
+            ));
+        }
+
+        // check if destination directory exists, 
+        // if not create it and rename directly.
+        // if it exists, move all files one by one 
+        // from source to destination directory
+        if full.is_dir() {
+            if !full.exists() {
+                fs::create_dir_all(&full).await?;
+                fs::rename(temp_full, full).await?;
+                return Ok(());
+            } else {
+                self.move_all_to_directory(&temp_full, &full).await?;
+                return Ok(());
+            }
+        }
+
+        fs::rename(temp_full, full).await?;
+        Ok(())
+    }
+
+    async fn delete(&self, path: &str) {
+        let full = self.build_full_path(path);
+        let _ = fs::remove_file(full).await;
+    }
+
+    async fn read(
+        &self,
+        path: &str,
+        _mime_type: &str,
+    ) -> Result<StorageResponse, MediaServiceError> {
+        let full = self.build_full_path(path);
+        let data = fs::read(full).await?;
+        Ok(StorageResponse::Bytes(data))
+    }
+
+    async fn exists(&self, path: &str) -> Result<bool, MediaServiceError> {
+        let full = self.build_full_path(path);
+        Ok(full.exists())
+    }
+
+    // This function allows moving all files from one directory to another, creating the destination directory if it doesn't exist. It only moves files and ignores subdirectories.
+    // warning: this method is slower than moving a whole directory, but it safer
+    // due to it will just insert the file to the target destination and not replace the directory, which is safer for production use cases
+    
 
     // create directory of the exact path if it doesn't exist, otherwise do nothing
     async fn prepare_directory(&self, path: &Path) -> Result<(), MediaServiceError> {
