@@ -31,29 +31,37 @@ pub trait MediaStorage: Send + Sync {
     async fn delete(&self, path: &str);
     async fn exists(&self, path: &str) -> Result<bool, MediaServiceError>;
 
+    /// Moves a directory to another directory
+    /// This allows upload container controls on each upload group.
+    /// ## Parameters
+    /// - `from`: The source path of the directory.
+    /// - `to`: The destination path where the directory should be moved.
+    /// ## Returns
+    /// - `Result<(), MediaServiceError>`
+    async fn upload(&self, from: &str, to: &str) -> Result<(), MediaServiceError>;
+
     async fn read(&self, path: &str, mime_type: &str)
     -> Result<StorageResponse, MediaServiceError>;
 
     async fn prepare_directory(&self, path: &Path) -> Result<(), MediaServiceError>;
-    async fn move_all_to_directory(&self, from: &Path, to: &Path) -> Result<(), MediaServiceError>;
 
+    
     // * local-processing helpers, unsupported on non-local storage for now
     fn full_path(&self, _path: &str) -> Result<PathBuf, MediaServiceError> {
         Err(MediaServiceError::ProcessingFailed)
     }
-
+    
     async fn save_temp(&self, path: &str, data: &[u8]) -> Result<(), MediaServiceError>;
-
+    
     /// Reads a file from a temporary location, returning the file bytes.
     async fn read_temp(&self, path: &str) -> Result<Vec<u8>, MediaServiceError>;
-
+    
     /// Deletes a file from a temporary location.
     async fn delete_temp(&self, path: &str);
-
+    
     // * --------------------------------
     // * local only helpers
     // * --------------------------------
-    
     async fn move_file(&self, from: &Path, to: &Path) -> Result<(), MediaServiceError> {
         if let Some(parent) = to.parent() {
             fs::create_dir_all(parent).await?;

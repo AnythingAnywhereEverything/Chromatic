@@ -21,6 +21,10 @@ impl MediaStorage for R2Storage {
         "/tmp"
     }
 
+    async fn upload(&self, _from: &str, _to: &str) -> Result<(), MediaServiceError> {
+        todo!()
+    }
+
     async fn save(&self, _path: &str, _data: &[u8]) -> Result<(), MediaServiceError> {
         todo!()
     }
@@ -46,14 +50,6 @@ impl MediaStorage for R2Storage {
     }
 
     async fn move_file(&self, _from: &Path, _to: &Path) -> Result<(), MediaServiceError> {
-        todo!()
-    }
-
-    async fn move_all_to_directory(
-        &self,
-        _from: &Path,
-        _to: &Path,
-    ) -> Result<(), MediaServiceError> {
         todo!()
     }
 

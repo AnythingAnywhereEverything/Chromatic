@@ -71,15 +71,10 @@ impl MediaService {
             }
         };
 
-        let upload_job_full_path = state.storage.temp_full_path(&upload_job);
-        let final_destination_full_path = state
-            .storage
-            .full_path(&processed_media.get_destination())?;
-
         // move file within storage to final destination
         state
             .storage
-            .move_all_to_directory(&upload_job_full_path, &final_destination_full_path)
+            .upload(&upload_job, &processed_media.get_destination())
             .await?;
 
         let mut tx = state.db_pool.begin().await?;
@@ -321,16 +316,12 @@ impl MediaService {
                 file.get_id()
             );
 
-            let job_dir = storage.temp_full_path(&job_dir_relative);
-
             // remove source video after processing
             storage.delete_temp(&source_relative).await;
 
-            let destination = storage.full_path(&file.get_destination())?;
-
             // move everything from job_dir to final output path
             storage
-                .move_all_to_directory(&job_dir, &destination)
+                .upload(&job_dir_relative, &file.get_destination())
                 .await?;
 
             storage.delete_temp(&job_dir_relative).await;

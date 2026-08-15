@@ -5,6 +5,9 @@ use crate::application::service::errors::SnowflakeServiceError;
 
 #[derive(Debug, Error)]
 pub enum MediaServiceError {
+    #[error("Upload failed: {0}")]
+    UploadFailed(String),
+
     #[error("File cannot be empty.")]
     FileIsEmpty,
 
