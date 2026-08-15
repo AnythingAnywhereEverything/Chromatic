@@ -1,9 +1,9 @@
 use axum::{
-    extract::{Multipart, Path, State},
-    Json,
+    Json, extract::{Multipart, Path, Query, State},
 };
 use hyper::StatusCode;
 use multipart_derive::Multipart;
+use tracing::warn;
 
 use crate::{
     api::{APIError, RequestAuth, dtos::{post_dtos::{PostDTO, TagDTO}, user_dtos::MediaFullDTO}, version}, application::{
@@ -11,7 +11,7 @@ use crate::{
             media::{self as media_repo, row::MediaStatus},
             post::{self as post_repo},
         }, service::{
-            errors::{AuthServiceError, PostServiceError}, media::{
+            errors::PostServiceError, media::{
                 processor::types::{
                     ImageProcessorType, MediaProcessorFFlags, MediaProcessorOptions,
                     PostProcessingType, ResizeStyle, VideoPostProcessorType,
@@ -84,6 +84,69 @@ impl PostVisibility {
     }
 }
 
+// ! This might cause slow server
+pub async fn get_feed_post_handler(
+    State(state): State<SharedState>,
+    Path(version): Path<String>,
+) -> Result<Json<Vec<PostDTO>>, APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+
+    let mut tx = state.db_pool.begin().await?;
+    let all_post = post_repo::post::get_feed_public(&mut tx, None).await?;
+    tracing::warn!("POST AS JSON BEFORE {:#?}", all_post);
+
+    let mut post_vec: Vec<PostDTO> = Vec::new();
+    
+    for post in all_post.into_iter() {
+        tracing::warn!("POST AS JSON BEFORE {:#?}", post);
+        let media_with_post = post_repo::post::get_post_attachment(&mut tx, post.id).await?;
+        let media_tags = post_repo::post::get_tag_attachments(&mut tx, post.id)
+            .await?
+            .into_iter()
+            .map(|tag| TagDTO {
+                target_id: tag.target_id.to_string(),
+                tag_name: tag.tag_name,
+                tag_id: tag.tag_id.to_string(),
+            })
+            .collect::<Vec<_>>();
+
+        let media = media_with_post
+            .into_iter()
+            .map(|m| MediaFullDTO {
+                id: m.id.to_string(),
+                path: m.path,
+                name: m.name,
+                thumbhash: m.thumbhash,
+                status: m.status,
+                created_at: m.created_at,
+                file_size: m.file_size,
+                mime_type: m.mime_type,
+                width: m.width,
+                height: m.height,
+                duration: m.duration,
+            })
+            .collect::<Vec<_>>();
+
+        post_vec.push(PostDTO {
+            id: post.id.to_string(),
+            user_id: post.user_id.to_string(),
+            content: post.content,
+            total_comments: post.total_comments,
+            total_likes: post.total_likes,
+            reposted_from: post.reposted_from.map(|id| id.to_string()),
+            is_repost: post.is_repost,
+            has_attachment: post.has_attachment,
+            created_at: Some(post.created_at.to_rfc3339()),
+            updated_at: Some(post.updated_at.to_rfc3339()),
+            visibility: post.visibility.as_str().to_string(),
+            media,
+            tag: media_tags,
+        });
+    }
+    Ok(Json(post_vec))
+}
+
 pub async fn create_new_post_handler(
     State(state): State<SharedState>,
     Path(version): Path<String>,
@@ -97,7 +160,7 @@ pub async fn create_new_post_handler(
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
         // None => return Err(AuthServiceError::InvalidCredentials.into()),
-        None => 1234,
+        None => 81727418892554240,
     };
 
     let options = MultipartExtractorOptions {
@@ -357,5 +420,67 @@ pub async fn delete_post_handler(
     }
     
     Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn get_post_handler(
+    State(state): State<SharedState>,
+    Path((version, post_id)): Path<(String, i64)>,
+) -> Result<Json<Vec<PostDTO>>, APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+
+    let mut tx = state.db_pool.begin().await?;
+    let all_post = post_repo::post::get_feed_public(&mut tx, None).await?;
+    tracing::warn!("POST AS JSON BEFORE {:#?}", all_post);
+
+    let mut post_vec: Vec<PostDTO> = Vec::new();
+    
+    for post in all_post.into_iter() {
+        tracing::warn!("POST AS JSON BEFORE {:#?}", post);
+        let media_with_post = post_repo::post::get_post_attachment(&mut tx, post.id).await?;
+        let media_tags = post_repo::post::get_tag_attachments(&mut tx, post.id)
+            .await?
+            .into_iter()
+            .map(|tag| TagDTO {
+                target_id: tag.target_id.to_string(),
+                tag_name: tag.tag_name,
+                tag_id: tag.tag_id.to_string(),
+            })
+            .collect::<Vec<_>>();
+
+        let media = media_with_post
+            .into_iter()
+            .map(|m| MediaFullDTO {
+                id: m.id.to_string(),
+                path: m.path,
+                name: m.name,
+                thumbhash: m.thumbhash,
+                status: m.status,
+                created_at: m.created_at,
+                file_size: m.file_size,
+                mime_type: m.mime_type,
+                width: m.width,
+                height: m.height,
+                duration: m.duration,
+            })
+            .collect::<Vec<_>>();
+
+        post_vec.push(PostDTO {
+            id: post.id.to_string(),
+            user_id: post.user_id.to_string(),
+            content: post.content,
+            total_comments: post.total_comments,
+            total_likes: post.total_likes,
+            reposted_from: post.reposted_from.map(|id| id.to_string()),
+            is_repost: post.is_repost,
+            has_attachment: post.has_attachment,
+            created_at: Some(post.created_at.to_rfc3339()),
+            updated_at: Some(post.updated_at.to_rfc3339()),
+            visibility: post.visibility.as_str().to_string(),
+            media,
+            tag: media_tags,
+        });
+    }
+    Ok(Json(post_vec))
 }
 

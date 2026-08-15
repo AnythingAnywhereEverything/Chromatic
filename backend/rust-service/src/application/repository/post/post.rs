@@ -37,19 +37,22 @@ pub async fn get_feed_public(
                 m.has_attachment,
                 m.created_at,
                 m.updated_at,
+                m.visibility,
                 COALESCE(att.attachments, '[]'::json) AS attachments,
                 COALESCE(tag.tags, '[]'::json) AS tags
             FROM media_posts m
             LEFT JOIN LATERAL (
                 SELECT json_agg(
                     json_build_object(
-                        'id', md.id,
+                        'id', md.id::text,
                         'user_id', md.uploader_id,
                         'path', md.path,
                         'created_at', md.created_at,
                         'thumbhash', md.thumbhash,
                         'name', md.name,
                         'updated_at', md.updated_at,
+                        -- * status added, MediaFullDTO needs it
+                        'status', md.status,
                         'file_size', mdt.file_size,
                         'mime_type', mdt.mime_type,
                         'width', mdt.width,
@@ -67,19 +70,19 @@ pub async fn get_feed_public(
             LEFT JOIN LATERAL (
                 SELECT json_agg(
                     json_build_object(
-                        'id', it.id,
-                        'name', it.tags_name
+                        'target_id', m.id::text,
+                        'tag_id', it.id::text,
+                        'tag_name', it.tag_name
                     )
-                    ORDER BY it.tags_name
+                    ORDER BY it.tag_name
                 ) AS tags
-                FROM media_tags mt
-                JOIN interest_tags it ON it.id = mt.interest_id
-                WHERE mt.media_id = m.id
+                FROM tag_attachments ta
+                JOIN interest_tags it ON it.id = ta.tag_id
+                WHERE ta.target_id = m.id
             ) tag ON TRUE
             WHERE
                 m.visibility = 'everyone'
                 AND m.status != 'inactive'
-                -- * $1 is the cursor_id
                 AND ($1 IS NULL OR m.id < $1)
             ORDER BY m.id DESC
             LIMIT 15
@@ -333,20 +336,20 @@ pub async fn get_tag_attachments(
 pub async fn get_info_like_person(
     tx: &mut Transaction<'_,sqlx::Postgres>,
     post_id: i64,
-    cursor_id: i64
+    cursor_ts: Option<i64>
 ) -> Result<Vec<PostLikesRow>, sqlx::Error> {
     sqlx::query_as(
         r#"
             SELECT *
             FROM media_likes
-            WHERE medis_post_id = $1
-              AND ($2 IS NULL OR id < $2)
-            ORDER BY id DESC
+            WHERE media_id = $1
+              AND ($2 IS NULL OR created_at < to_timestamp($2))
+            ORDER BY created_at DESC
             LIMIT 20
         "#
     )
     .bind(post_id)
-    .bind(cursor_id)
+    .bind(cursor_ts)
     .fetch_all(tx.as_mut())
     .await
 }
@@ -435,7 +438,7 @@ pub async fn remove_bookmark_post(
     let _ = sqlx::query(
         r#"
             DELETE FROM media_bookmarks
-            WHERE media_id = $1 AND user_id = $2
+            WHERE post_id = $1 AND user_id = $2
         "#
     )
     .bind(media_id)
