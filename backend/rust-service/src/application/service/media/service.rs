@@ -212,7 +212,9 @@ impl MediaService {
                     )
                     .await?;
                     media::update::media_status(&mut tx, &media.get_id(), &status).await?;
-            };
+            } else {
+                media::update::media_status(&mut tx, &media.get_id(), &MediaStatus::Ready).await?;
+            }
         }
 
         tx.commit().await?;

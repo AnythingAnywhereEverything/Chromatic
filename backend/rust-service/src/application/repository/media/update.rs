@@ -27,7 +27,10 @@ pub async fn media_status(
         WHERE id = $2
           AND CASE status
               WHEN 'pending'::media_status THEN
-                  $1::media_status = 'processing'::media_status
+                  $1::media_status IN (
+                      'processing'::media_status,
+                      'ready'::media_status
+                  )
 
               WHEN 'processing'::media_status THEN
                   $1::media_status IN (
