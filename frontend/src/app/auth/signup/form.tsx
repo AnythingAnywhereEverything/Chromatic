@@ -2,27 +2,15 @@
 
 import { register } from "@/api/auth";
 import { useUser } from "@/hooks/useUser";
+import field from "@styles/ui/chromatic/field.module.scss";
 import style from "@styles/layouts/authLayout.module.scss";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
-import {
-    Button,
-    Field,
-    FieldDescription,
-    FieldError,
-    FieldGroup,
-    FieldLabel,
-    FieldSeparator,
-    FieldSet,
-    Icon,
-    Input,
-    InputGroup,
-    InputGroupAddon,
-    InputGroupInput,
-} from "@components/ui/chromaticUI";
+import { FieldError, FieldSeparator } from "@components/ui/chromaticUI";
 import { Form } from "@base-ui/react";
 import Link from "next/link";
-import GoogleAuthButton from "@components/ui/GoogleLoginBtn";
+import GoogleAuthButton from "@components/ui/google/GoogleLoginBtn";
+import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 
 const SignUpForm = () => {
     const [revealPassword, setRevealPassword] = useState(false);
@@ -62,7 +50,10 @@ const SignUpForm = () => {
         }));
 
         if (errors[name as keyof Errors]) {
-            setErrors((prev) => ({ ...prev, [name]: undefined }));
+            setErrors((prev) => ({
+                ...prev,
+                [name]: undefined,
+            }));
         }
     };
 
@@ -89,19 +80,22 @@ const SignUpForm = () => {
             nextErrors.password = "Password must be at least 8 characters.";
         }
 
-        if (values.confirmPassword !== values.password) {
+        if (!values.confirmPassword) {
+            nextErrors.confirmPassword = "Please confirm your password.";
+        } else if (values.confirmPassword !== values.password) {
             nextErrors.confirmPassword = "Passwords do not match.";
         }
 
         setErrors(nextErrors);
+
         return Object.keys(nextErrors).length === 0;
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         if (!validate()) return;
-        console.log(values);
+
         register(values)
             .then((response) => {
                 console.log(response);
@@ -114,127 +108,178 @@ const SignUpForm = () => {
 
     return (
         <div className={style.form}>
-            <FieldSet>
+            <section className={field.fieldSet}>
                 <h2>Sign Up</h2>
-                <Field>
-                    <GoogleAuthButton />
-                </Field>
-                <Form action={"#"} onSubmit={handleSubmit}>
-                    <FieldGroup>
-                        <FieldSeparator>or</FieldSeparator>
 
-                        <Field data-invalid={!!errors.username}>
-                            <FieldLabel htmlFor="username">Username</FieldLabel>
-                            <Input
-                                aria-invalid={!!errors.username}
-                                required
-                                name="username"
-                                id="username"
-                                placeholder="webapp_user"
-                                value={values.username}
-                                onChange={handleChange}
-                            />
+                <GoogleAuthButton />
+
+                <FieldSeparator>or</FieldSeparator>
+
+                <Form action={"#"} onSubmit={handleSubmit}>
+                    <section className={field.fieldGroup}>
+                        <section>
+                            <label htmlFor="username">Username</label>
+
+                            <div
+                                style={{
+                                    marginTop: "calc(var(--spacing) * 2)",
+                                }}
+                                className={style["wrapper"]}
+                            >
+                                <input
+                                    className={style["inputField"]}
+                                    aria-invalid={errors.username ? "true" : "false"}
+                                    required
+                                    name="username"
+                                    id="username"
+                                    placeholder="webapp_user"
+                                    value={values.username}
+                                    onChange={handleChange}
+                                />
+                            </div>
+
                             {errors.username && (
                                 <FieldError>{errors.username}</FieldError>
                             )}
-                        </Field>
+                        </section>
 
-                        <Field data-invalid={!!errors.email}>
-                            <FieldLabel htmlFor="email">Email</FieldLabel>
-                            <Input
-                                aria-invalid={!!errors.email}
-                                required
-                                type="email"
-                                name="email"
-                                id="email"
-                                placeholder="example@gmail.com"
-                                value={values.email}
-                                onChange={handleChange}
-                            />
+                        <section>
+                            <label htmlFor="email">Email</label>
+
+                            <div
+                                style={{
+                                    marginTop: "calc(var(--spacing) * 2)",
+                                }}
+                                className={style["wrapper"]}
+                            >
+                                <input
+                                    className={style["inputField"]}
+                                    aria-invalid={errors.email ? "true" : "false"}
+                                    required
+                                    type="email"
+                                    name="email"
+                                    id="email"
+                                    placeholder="example@gmail.com"
+                                    value={values.email}
+                                    onChange={handleChange}
+                                />
+                            </div>
+
                             {errors.email && (
                                 <FieldError>{errors.email}</FieldError>
                             )}
-                        </Field>
+                        </section>
 
-                        <Field data-invalid={!!errors.password}>
-                            <FieldLabel htmlFor="password">Password</FieldLabel>
-                            <InputGroup aria-invalid={!!errors.password}>
-                                <InputGroupAddon align="inline-end">
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon-xs"
-                                        onClick={() =>
-                                            setRevealPassword((v) => !v)
-                                        }
-                                    >
-                                        <Icon
-                                            value={revealPassword ? "" : ""}
-                                        />
-                                    </Button>
-                                </InputGroupAddon>
-                                <InputGroupInput
+                        <section>
+                            <label htmlFor="password">Password</label>
+
+                            <div
+                                style={{
+                                    marginTop: "calc(var(--spacing) * 2)",
+                                }}
+                                className={style["wrapper"]}
+                            >
+                                <input
+                                    className={style["inputField"]}
+                                    aria-invalid={
+                                        errors.password ? "true" : "false"
+                                    }
+                                    autoComplete="new-password"
                                     required
                                     type={revealPassword ? "text" : "password"}
                                     name="password"
                                     id="password"
+                                    placeholder="• • • • • • • •"
                                     value={values.password}
                                     onChange={handleChange}
-                                    placeholder="• • • • • • • •"
                                 />
-                            </InputGroup>
+
+                                <button
+                                    className={style["password-toggle"]}
+                                    type="button"
+                                    onClick={() =>
+                                        setRevealPassword((prev) => !prev)
+                                    }
+                                >
+                                    {revealPassword ? (
+                                        <FaRegEyeSlash />
+                                    ) : (
+                                        <FaRegEye />
+                                    )}
+                                </button>
+                            </div>
+
                             {errors.password && (
                                 <FieldError>{errors.password}</FieldError>
                             )}
-                        </Field>
+                        </section>
 
-                        <Field data-invalid={!!errors.confirmPassword}>
-                            <FieldLabel htmlFor="confirmPassword">
+                        <section>
+                            <label htmlFor="confirmPassword">
                                 Confirm Password
-                            </FieldLabel>
-                            <InputGroup aria-invalid={!!errors.confirmPassword}>
-                                <InputGroupAddon align="inline-end">
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon-xs"
-                                        onClick={() =>
-                                            setRevealConfirm((v) => !v)
-                                        }
-                                    >
-                                        <Icon
-                                            value={revealConfirm ? "" : ""}
-                                        />
-                                    </Button>
-                                </InputGroupAddon>
-                                <InputGroupInput
+                            </label>
+
+                            <div
+                                style={{
+                                    marginTop: "calc(var(--spacing) * 2)",
+                                }}
+                                className={style["wrapper"]}
+                            >
+                                <input
+                                    className={style["inputField"]}
+                                    aria-invalid={
+                                        errors.confirmPassword
+                                            ? "true"
+                                            : "false"
+                                    }
+                                    autoComplete="new-password"
                                     required
                                     type={revealConfirm ? "text" : "password"}
                                     name="confirmPassword"
                                     id="confirmPassword"
+                                    placeholder="• • • • • • • •"
                                     value={values.confirmPassword}
                                     onChange={handleChange}
-                                    placeholder="• • • • • • • •"
                                 />
-                            </InputGroup>
+
+                                <button
+                                    className={style["password-toggle"]}
+                                    type="button"
+                                    onClick={() =>
+                                        setRevealConfirm((prev) => !prev)
+                                    }
+                                >
+                                    {revealConfirm ? (
+                                        <FaRegEyeSlash />
+                                    ) : (
+                                        <FaRegEye />
+                                    )}
+                                </button>
+                            </div>
+
                             {errors.confirmPassword && (
                                 <FieldError>
                                     {errors.confirmPassword}
                                 </FieldError>
                             )}
-                        </Field>
+                        </section>
 
-                        <Field>
-                            <Button type="submit">Sign Up</Button>
-                        </Field>
+                        <section className={style["btn-field"]}>
+                            <button
+                                className={style["submit"]}
+                                type="submit"
+                            >
+                                Sign Up
+                            </button>
+                        </section>
 
-                        <FieldDescription>
+                        <p className={field["fieldDescription"]}>
                             Already have an account?{" "}
                             <Link href={"/auth/signin"}>Sign In.</Link>
-                        </FieldDescription>
-                    </FieldGroup>
+                        </p>
+                    </section>
                 </Form>
-            </FieldSet>
+            </section>
         </div>
     );
 };

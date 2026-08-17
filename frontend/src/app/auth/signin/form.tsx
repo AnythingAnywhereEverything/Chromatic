@@ -2,33 +2,28 @@
 
 import { useEffect, useState } from "react";
 import style from "@styles/layouts/authLayout.module.scss";
+import field from "@styles/ui/chromatic/field.module.scss";
 import { NextPageWithLayout } from "@/types/global";
 import {
-    Field,
-    FieldLabel,
-    FieldDescription,
-    FieldGroup,
-    FieldSet,
-    Input,
-    InputGroup,
-    InputGroupAddon,
-    Button,
-    InputGroupInput,
-    Icon,
     FieldError,
     FieldSeparator,
 } from "@components/ui/chromaticUI";
 import Link from "next/link";
 import Form from "next/form";
 import { useRouter } from "next/navigation";
-import GoogleAuthButton from "@components/ui/GoogleLoginBtn";
+import GoogleAuthButton from "@components/ui/google/GoogleLoginBtn";
 import { useUser } from "@/hooks/useUser";
 import { useAuthService } from "@/hooks/useAuthService";
+import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 
 const SignInForm: NextPageWithLayout = () => {
     const [reveal, setReveal] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const handleReveal = () => {
+        setReveal((prev) => !prev);
+    };
+    
     const { data, isLoading } = useUser();
     const router = useRouter();
 
@@ -66,38 +61,35 @@ const SignInForm: NextPageWithLayout = () => {
 
     return (
         <div className={style.form}>
-            <FieldSet>
+            <section className={`${field.fieldSet}`}>
                 <h2>Sign In</h2>
                 <GoogleAuthButton />
                 <FieldSeparator>or</FieldSeparator>
                 <Form action={"#"} onSubmit={handleSubmit}>
-                    <FieldGroup>
-                        <Field>
-                            <FieldLabel htmlFor="username">
-                                Username or Email
-                            </FieldLabel>
-                            <Input
-                                aria-invalid={error ? "true" : "false"}
-                                required
-                                name="username"
-                                id="username"
-                                placeholder="example@gmail.com"
-                            />
-                        </Field>
-                        <Field>
-                            <FieldLabel htmlFor="password">Password</FieldLabel>
-                            <InputGroup>
-                                <InputGroupAddon align="inline-end">
-                                    <Button
-                                        type="button"
-                                        variant={"ghost"}
-                                        size={"icon-xs"}
-                                        onClick={() => setReveal(!reveal)}
-                                    >
-                                        <Icon value={reveal ? "" : ""} />
-                                    </Button>
-                                </InputGroupAddon>
-                                <InputGroupInput
+                    <section className={`${field.fieldGroup}`}>
+                        <section>
+                            <label 
+                             htmlFor="username">Username or Email</label>
+                            <div
+                            style={{marginTop: "calc(var(--spacing) * 2)"}} 
+                            className={style["wrapper"]}>
+                                <input
+                                    className={style["inputField"]}
+                                    aria-invalid={error ? "true" : "false"}
+                                    required
+                                    name="username"
+                                    id="username"
+                                    placeholder="example@gmail.com"
+                                />
+                                </div>
+                        </section>
+                        <section>
+                            <label htmlFor="password">Password</label>
+                                <div 
+                                style={{marginTop: "calc(var(--spacing) * 2)"}} 
+                                className={style["wrapper"]}>
+                                <input
+                                    className={style["inputField"]}
                                     aria-invalid={error ? "true" : "false"}
                                     autoComplete="password"
                                     required
@@ -106,22 +98,30 @@ const SignInForm: NextPageWithLayout = () => {
                                     id="password"
                                     placeholder="• • • • • • • •"
                                 />
-                            </InputGroup>
-                        </Field>
-                        <Field>
-                            <Button type="submit">Sign In</Button>
+
+                                <button
+                                    className={style["password-toggle"]}
+                                    type="button"
+                                    onClick={handleReveal}
+                                >
+                                    {reveal ? <FaRegEyeSlash /> : <FaRegEye />}
+                                </button>
+                            </div>
+                        </section>
+                        <section className={style["btn-field"]}>
+                            <button className={style["submit"]} type="submit">Sign In</button>
                             {error && <FieldError>{error}</FieldError>}
-                            <FieldDescription>
+                            <p className={field["fieldDescription"]}>
                                 <Link href={"#"}>Forgot password?</Link>
-                            </FieldDescription>
-                        </Field>
-                        <FieldDescription>
+                            </p>
+                        </section>
+                        <p className={field["fieldDescription"]}>
                             Dont have an account yet?{" "}
                             <Link href={"/auth/signup"}>Sign Up.</Link>
-                        </FieldDescription>
-                    </FieldGroup>
+                        </p>
+                    </section>
                 </Form>
-            </FieldSet>
+            </section>
         </div>
     );
 };
