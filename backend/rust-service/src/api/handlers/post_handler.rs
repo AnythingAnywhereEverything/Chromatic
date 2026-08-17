@@ -6,7 +6,7 @@ use multipart_derive::Multipart;
 use tracing::warn;
 
 use crate::{
-    api::{APIError, RequestAuth, dtos::{post_dtos::{PostDTO, TagDTO}, user_dtos::MediaFullDTO}, version}, application::{
+    api::{APIError, RequestAuth, dtos::{post_dtos::{LikeDTO, PostDTO, TagDTO}, user_dtos::MediaFullDTO}, version}, application::{
         repository::{
             media::{self as media_repo, row::MediaStatus},
             post::{self as post_repo},
@@ -26,7 +26,7 @@ use crate::{
                     },
                 },
             },
-        }, state::{ SharedState},
+        }, state::SharedState,
     },
 };
 #[derive(serde::Deserialize, sqlx::Type, Debug)]
@@ -82,6 +82,11 @@ pub struct CreatePostRequest {
     pub repost_from: Option<i64>,
     pub visibility: PostVisibility,
     pub media_tags: Option<Vec<i64>>
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct LikeRequest {
+    pub is_like: bool,
 }
 
 impl PostVisibility {
@@ -448,3 +453,36 @@ pub async fn get_post_handler(
     Ok(Json(post_vec))
 }
 
+
+
+pub async fn liked_handler(
+    State(state): State<SharedState>,
+    Path((version, target_id)): Path<(String, i64)>,
+    req_auth: RequestAuth,
+    Json(req): Json<LikeRequest>,
+) -> Result<Json<LikeDTO>, APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+
+    let user_id = match req_auth.user {
+        Some(user) => user.user_id,
+        // None => return Err(AuthServiceError::InvalidCredentials.into()),
+        None => 81727418892554240,
+    };
+
+    let mut tx = state.db_pool.begin().await?;
+    tracing::info!(user_id, target_id, req.is_like, "liking post");
+    let total_liked = post_repo::post::like_post_repo(
+        &mut tx,
+        user_id,
+        target_id,
+        req.is_like,
+    ).await?;
+
+    tx.commit().await?;
+
+    Ok(Json(LikeDTO {
+        id: total_liked.id.to_string(),
+        total_liked: total_liked.total_likes
+    }))
+}

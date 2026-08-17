@@ -1,6 +1,6 @@
 use sqlx::{Postgres, Transaction};
 
-use crate::{api::handlers::post_handler::{ PostVisibility}, application::{repository::{media::row::{ MediaDataWithMetadataRow}, post::row::{ HasAttachmentRow, PostLikesRow, PostRow, TagAttachmentFull, TagAttachmentRow, TotalLikedRow}}, service::errors::PostServiceError}};
+use crate::{api::handlers::post_handler::PostVisibility, application::{repository::{media::row::MediaDataWithMetadataRow, post::row::{ HasAttachmentRow, PostLikesRow, PostRow, TagAttachmentFull, TagAttachmentRow, TotalLikesRow}}, service::errors::PostServiceError}};
 
 // todo: func get YOUR FRIEND post
 // todo: func get feed comment :d
@@ -355,46 +355,42 @@ pub async fn get_info_like_person(
     .await
 }
 
-/*
-    ?  considering between create temp table for CTE with as or 
-    ?  seperate the function between INSERT : total += 1 AND DELETE : total +=1
-*/ 
-pub async fn like_post(
+pub async fn like_post_repo(
     tx: &mut Transaction<'_,sqlx::Postgres>,
     user_id:i64,
     target_id: i64,
     is_like: bool
- ) -> Result<TotalLikedRow, sqlx::Error>{
+ ) -> Result<TotalLikesRow, sqlx::Error>{
 
-    sqlx::query_as::<_, TotalLikedRow>(
+    sqlx::query_as::<_, TotalLikesRow>(
         r#"
             WITH previous AS (
-                SELECT is_like
+                SELECT is_liked
                 FROM media_likes
                 WHERE user_id = $1
-                  AND media_id = $2
+                  AND media_post_id = $2
             ),
             upsert AS (
                 INSERT INTO media_likes (
                     user_id,
-                    media_id,
+                    media_post_id,
                     created_at,
                     updated_at,
-                    is_like
+                    is_liked
                 )
                 VALUES ($1, $2, NOW(), NOW(), $3)
-                ON CONFLICT (user_id, media_id) DO UPDATE
+                ON CONFLICT (user_id, media_post_id) DO UPDATE
                 SET
-                    is_like = EXCLUDED.is_like,
+                    is_liked = EXCLUDED.is_liked,
                     updated_at = NOW()
-                RETURNING is_like
+                RETURNING is_liked
             )
             UPDATE media_posts
             SET total_likes = total_likes +
                 CASE
-                    WHEN (SELECT is_like FROM previous) IS NULL AND $3 = TRUE THEN 1
-                    WHEN (SELECT is_like FROM previous) = FALSE AND $3 = TRUE THEN 1
-                    WHEN (SELECT is_like FROM previous) = TRUE AND $3 = FALSE THEN -1
+                    WHEN (SELECT is_liked FROM previous) IS NULL AND $3 = TRUE THEN 1
+                    WHEN (SELECT is_liked FROM previous) = FALSE AND $3 = TRUE THEN 1
+                    WHEN (SELECT is_liked FROM previous) = TRUE AND $3 = FALSE THEN -1
                     ELSE 0
                 END
             WHERE id = $2

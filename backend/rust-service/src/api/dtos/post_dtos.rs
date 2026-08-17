@@ -77,3 +77,9 @@ pub struct CommentDTO {
 
     pub media: Vec<MediaFullDTO>
 }
+
+#[derive(Debug, Serialize)]
+pub struct LikeDTO {
+    pub id: String,
+    pub total_liked: i32
+}

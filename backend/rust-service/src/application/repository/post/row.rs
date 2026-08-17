@@ -49,9 +49,9 @@ pub struct HasAttachmentRow{
 }
 
 #[derive(sqlx::FromRow)]
-pub struct TotalLikedRow{
+pub struct TotalLikesRow{
     pub id: i64,
-    pub total_liked: i32
+    pub total_likes: i32
 }
 
 #[derive(sqlx::FromRow)]
