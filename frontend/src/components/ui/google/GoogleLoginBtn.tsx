@@ -1,11 +1,11 @@
  'use client';
 
 import { useGoogleLogin } from "@react-oauth/google";
-import { Button, Icon } from "./chromaticUI";
+import { Button, Icon } from "../chromaticUI";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { setCacheUserId, setToken } from "@/handler/token_handler";
-
+import style from "@styles/ui/chromatic/button.module.scss"
 import { IoLogoGoogle } from "react-icons/io5";
 
 export default function GoogleAuthButton() {
@@ -40,9 +40,16 @@ export default function GoogleAuthButton() {
   });
 
   return (
-    <Button variant={"outline"} onClick={() => login()}>
+    <button className={`
+      ${style.baseButton} 
+      ${style.outlineVariant} 
+      ${style.defaultSize} 
+      ${style.fullwidth}
+      ${style.center}
+      `}  
+    onClick={() => login()}>
       <IoLogoGoogle style={{ marginRight: "0.5rem" }} />
       Continue with Google
-    </Button>
+    </button>
   );
 }
