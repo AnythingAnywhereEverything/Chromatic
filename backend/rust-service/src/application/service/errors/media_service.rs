@@ -5,6 +5,12 @@ use crate::application::service::errors::SnowflakeServiceError;
 
 #[derive(Debug, Error)]
 pub enum MediaServiceError {
+    #[error("Invalid file path.")]
+    InvalidFilePath,
+
+    #[error("Unsupported format: {0}")]
+    UnsupportedFormat(String),
+
     #[error("Upload failed: {0}")]
     UploadFailed(String),
 
