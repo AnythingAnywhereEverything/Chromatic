@@ -3,7 +3,7 @@ pub mod processor;
 pub mod multipart_ex;
 
 // use within the media module
-mod utils;
+pub mod utils;
 pub mod types;
 
 pub mod service;
