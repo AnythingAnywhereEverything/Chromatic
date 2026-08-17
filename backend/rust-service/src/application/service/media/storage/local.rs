@@ -1,10 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
-use tokio::fs;
+use tokio::fs::{self, File};
 
-use crate::application::service::errors::MediaServiceError;
-use crate::application::service::media::storage::StorageResponse;
+use crate::application::service::{errors::MediaServiceError, media::storage::safe_pathing};
 
 use super::MediaStorage;
 
@@ -79,17 +78,6 @@ impl MediaStorage for LocalStorage {
         Ok(())
     }
 
-    async fn save_temp(&self, path: &str, data: &[u8]) -> Result<(), MediaServiceError> {
-        let full = self.build_temp_full_path(path);
-
-        if let Some(parent) = full.parent() {
-            fs::create_dir_all(parent).await?;
-        }
-
-        fs::write(full, data).await?;
-        Ok(())
-    }
-
     async fn upload(&self, from: &str, dst: &str) -> Result<(), MediaServiceError> {
         let temp_full = self.build_temp_full_path(from);
         let full = self.build_full_path(dst);
@@ -136,11 +124,12 @@ impl MediaStorage for LocalStorage {
     async fn read(
         &self,
         path: &str,
-        _mime_type: &str,
-    ) -> Result<StorageResponse, MediaServiceError> {
+    ) -> Result<File, MediaServiceError> {
+        safe_pathing(path)?;
+
         let full = self.build_full_path(path);
-        let data = fs::read(full).await?;
-        Ok(StorageResponse::Bytes(data))
+        let file = fs::File::open(&full).await.map_err(|_| MediaServiceError::MediaMissing)?;
+        Ok(file)
     }
 
     async fn exists(&self, path: &str) -> Result<bool, MediaServiceError> {
@@ -159,12 +148,6 @@ impl MediaStorage for LocalStorage {
             fs::create_dir_all(path).await?;
         }
         Ok(())
-    }
-
-    async fn read_temp(&self, path: &str) -> Result<Vec<u8>, MediaServiceError> {
-        let full = self.build_temp_full_path(path);
-        let data = fs::read(full).await?;
-        Ok(data)
     }
 
     async fn delete_temp(&self, path: &str) {

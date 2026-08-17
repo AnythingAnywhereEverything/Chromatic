@@ -1,11 +1,10 @@
 use async_trait::async_trait;
-use axum::http::HeaderMap;
+use tokio::fs::File;
 use std::path::{Path, PathBuf};
 
 use super::{MediaStorage, local::LocalStorage};
 use crate::application::service::{
     errors::MediaServiceError,
-    media::storage::StorageResponse,
 };
 
 pub struct NginxStorage {
@@ -43,10 +42,6 @@ impl MediaStorage for NginxStorage {
         self.local.save(path, data).await
     }
 
-    async fn save_temp(&self, path: &str, data: &[u8]) -> Result<(), MediaServiceError> {
-        self.local.save_temp(path, data).await
-    }
-
     async fn delete(&self, path: &str) {
         self.local.delete(path).await;
     }
@@ -67,10 +62,6 @@ impl MediaStorage for NginxStorage {
         self.local.prepare_directory(path).await
     }
 
-    async fn read_temp(&self, path: &str) -> Result<Vec<u8>, MediaServiceError> {
-        self.local.read_temp(path).await
-    }
-
     async fn delete_temp(&self, path: &str) {
         self.local.delete_temp(path).await;
     }
@@ -82,27 +73,7 @@ impl MediaStorage for NginxStorage {
     async fn read(
         &self,
         path: &str,
-        mime_type: &str,
-    ) -> Result<StorageResponse, MediaServiceError> {
-        if !self.local.exists(path).await.unwrap_or(false) {
-            return Err(MediaServiceError::MediaMissing);
-        }
-
-        let mut headers = HeaderMap::new();
-
-        let redirect_path = self.get_nginx_redirect_header(path);
-        headers.insert(
-            "X-Accel-Redirect",
-            axum::http::HeaderValue::from_str(&redirect_path).unwrap(),
-        );
-
-        headers.insert(
-            "Content-Type",
-            axum::http::HeaderValue::from_str(mime_type).unwrap(),
-        );
-
-        // No bytes are returned, as the actual file is served by Nginx via the X-Accel-Redirect header.
-        // Accel-Redirect is a mechanism in Nginx that allows internal redirection to a different location, often used for serving files securely.
-        Ok(StorageResponse::Headers(headers))
+    ) -> Result<File, MediaServiceError> {
+        self.local.read(path).await
     }
 }

@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use async_trait::async_trait;
 
 use crate::application::service::errors::MediaServiceError;
-use crate::application::service::media::storage::StorageResponse;
+use tokio::fs::File;
 
 use super::MediaStorage;
 
@@ -29,10 +29,6 @@ impl MediaStorage for R2Storage {
         todo!()
     }
 
-    async fn save_temp(&self, _path: &str, _data: &[u8]) -> Result<(), MediaServiceError> {
-        todo!()
-    }
-
     async fn delete(&self, _path: &str) {
         todo!()
     }
@@ -40,8 +36,7 @@ impl MediaStorage for R2Storage {
     async fn read(
         &self,
         _path: &str,
-        _mime_type: &str,
-    ) -> Result<StorageResponse, MediaServiceError> {
+    ) -> Result<File, MediaServiceError> {
         todo!()
     }
 
@@ -59,10 +54,6 @@ impl MediaStorage for R2Storage {
 
     async fn prepare_directory(&self, _path: &Path) -> Result<(), MediaServiceError> {
         todo!()
-    }
-
-    async fn read_temp(&self, _path: &str) -> Result<Vec<u8>, MediaServiceError> {
-        Err(MediaServiceError::ProcessingFailed)
     }
 
     async fn delete_temp(&self, _path: &str) {}

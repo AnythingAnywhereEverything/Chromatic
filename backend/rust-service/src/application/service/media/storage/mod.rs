@@ -6,7 +6,7 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use hyper::HeaderMap;
-use tokio::fs;
+use tokio::fs::{self, File};
 
 use async_trait::async_trait;
 use uuid::Uuid;
@@ -17,10 +17,34 @@ use crate::application::service::{
 };
 
 pub enum StorageResponse {
-    /// Used by LocalStorage when Rust must read and stream the file bytes directly.
-    Bytes(Vec<u8>),
+    File(File),
+
     /// Used by Nginx (X-Accel-Redirect) or Cloud CNDs (302 Redirect URLs).
     Headers(HeaderMap),
+}
+
+/// Check if the given path is safe and does not contain any directory traversal sequences.
+/// Though it could contain travel inner sequesnces, it should not be able to escape the root directory of the storage.
+/// # Errors
+/// Returns `MediaServiceError::InvalidFilePath` if the path is unsafe.
+/// # Examples
+/// ```
+/// # use chromatic::application::service::errors::MediaServiceError;
+/// # use chromatic::application::service::media::storage::safe_pathing;
+/// let result = safe_pathing("../etc/passwd");
+/// assert!(matches!(result, Err(MediaServiceError::InvalidFilePath)));
+/// 
+/// let result = safe_pathing("valid/path/to/file.txt");
+/// assert!(result.is_ok());
+/// 
+/// let result = safe_pathing("invalid\\path\\to\\file.txt");
+/// assert!(matches!(result, Err(MediaServiceError::InvalidFilePath)));
+/// ```
+pub fn safe_pathing(path: &str) -> Result<(), MediaServiceError> {
+    if path.contains("..") || path.contains('\\') || path.starts_with('/') {
+        return Err(MediaServiceError::InvalidFilePath);
+    }
+    Ok(())
 }
 
 #[async_trait]
@@ -30,7 +54,6 @@ pub trait MediaStorage: Send + Sync {
     async fn save(&self, path: &str, data: &[u8]) -> Result<(), MediaServiceError>;
     async fn delete(&self, path: &str);
     async fn exists(&self, path: &str) -> Result<bool, MediaServiceError>;
-
     /// Moves a directory to another directory
     /// This allows upload container controls on each upload group.
     /// ## Parameters
@@ -40,8 +63,7 @@ pub trait MediaStorage: Send + Sync {
     /// - `Result<(), MediaServiceError>`
     async fn upload(&self, from: &str, to: &str) -> Result<(), MediaServiceError>;
 
-    async fn read(&self, path: &str, mime_type: &str)
-    -> Result<StorageResponse, MediaServiceError>;
+    async fn read(&self, path: &str) -> Result<File, MediaServiceError>;
 
     async fn prepare_directory(&self, path: &Path) -> Result<(), MediaServiceError>;
 
@@ -50,11 +72,6 @@ pub trait MediaStorage: Send + Sync {
     fn full_path(&self, _path: &str) -> Result<PathBuf, MediaServiceError> {
         Err(MediaServiceError::ProcessingFailed)
     }
-    
-    async fn save_temp(&self, path: &str, data: &[u8]) -> Result<(), MediaServiceError>;
-    
-    /// Reads a file from a temporary location, returning the file bytes.
-    async fn read_temp(&self, path: &str) -> Result<Vec<u8>, MediaServiceError>;
     
     /// Deletes a file from a temporary location.
     async fn delete_temp(&self, path: &str);
