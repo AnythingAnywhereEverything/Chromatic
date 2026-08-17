@@ -212,8 +212,9 @@ const TestPage = () => {
                 onChange={(value) => setTestStatus(value)}
                 />
             </section>
-            <section>
-              <Post 
+            {/* Testing purpose */}
+            <section style={{width: "640px"}}>
+              <Post
                 id={""}
                 ownerId={""}
                 ownerName={""}
