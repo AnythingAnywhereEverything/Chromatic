@@ -10,6 +10,7 @@ type TagsProps = {
 }
 const CreateCommunityBtn:React.FC = () => {
     const [name, setName] = useState("");
+    const [description, setDescription] = useState("");
     const [tag, setTag] = useState<TagsProps[]>([]);
     return (
         <Dialog >
@@ -29,8 +30,32 @@ const CreateCommunityBtn:React.FC = () => {
                             audience tags
                         </span>
                         <div className={style["tag-selection"]}>
-
+                            
                         </div>
+                        <div className={style["community-name"]}>
+                            <h3>Community Name</h3>
+                            <input 
+                            type="text"
+                            value={name}
+                            placeholder="Community name"
+                            onChange={(e) => setName(e.target.value)}
+                            />
+                        </div>
+
+                        <div className={style["community-name"]}>
+                            <h3>Description</h3>
+                            <input 
+                            type="text"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder="Description"
+                            />
+                        </div>
+
+                        <button 
+                        className={style["create-btn"]}>
+                            Create your community
+                        </button>
                     </section>
                 </DialogDescription>
             </DialogContent>

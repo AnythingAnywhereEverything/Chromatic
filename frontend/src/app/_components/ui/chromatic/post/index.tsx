@@ -92,13 +92,15 @@ const Post:React.FC<PostProps> = ({
 
             <div className={style["bottom-container"]}>
                 <section className={style["interaction"]}>
-                    <div>
-                        <button type="button">
+                    <div style={{userSelect: "none"}}>
+                        <button type="button"
+                        style={{cursor:"pointer"}}
+                        >
                             <LuThumbsUp/>
                         </button>
                         {like}
                     </div>
-                    <div>
+                    <div style={{userSelect: "none",cursor:"pointer"}}>
                         <GoComment/>
                         {comment?.length || 0}
                     </div>
