@@ -9,7 +9,7 @@ use crate::{
 pub fn routes() -> Router<SharedState> {
     Router::new()
     // * first page will send NULL
-    .route("/", get(get_feed_post_handler))
+    .route("/feed", get(get_feed_post_handler))
         
         .route("/new", post(create_new_post_handler))
         

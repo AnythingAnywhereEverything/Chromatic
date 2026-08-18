@@ -6,7 +6,7 @@ export interface MediaReponse{
     media: mediaPostProps[];
 }
 
-interface mediaPostProps  {
+export interface mediaPostProps  {
     id: string
     user_id: string
     content: string
@@ -38,12 +38,8 @@ interface mediaPostAttechment  {
 const LIMIT = 15;
 
 export const getUserFeed = async(
-):Promise<MediaReponse> => {
-    const token = getToken();
-    if (!token) throw new Error("No token found");
-
-    const user = getUser();
-    const res = await fetchWithAuth(`/api/cdn/posts/`);
+):Promise<mediaPostProps[]> => {
+    const res = await fetchWithAuth(`/api/v2/posts/feed`);
     if (!res.ok) throw new Error("Failed to get post data")
     const data = await res.json();
 
