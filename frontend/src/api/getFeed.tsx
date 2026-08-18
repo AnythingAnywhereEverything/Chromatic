@@ -19,27 +19,31 @@ interface mediaPostProps  {
     created_at:string
     updated_at:string
     media_tags:string[]
-
-    media_attachment?: mediaPostAttechment[]
+    media_attachment: mediaPostAttechment[]
 }
 
 interface mediaPostAttechment  {
     id:string // * media from media_data
-    user_id:string
-    media_url:string
-    media_preview_url:string
+    uploader_id:string
+    name:string
+    path:string
+    status: string
+    thumbhash: string
+    lock_has: string
+    create_at: string
+    updated_at: string
+    lock_expiration: string
 }
 
 const LIMIT = 15;
 
 export const getUserFeed = async(
-    pageParam: number,
 ):Promise<MediaReponse> => {
     const token = getToken();
     if (!token) throw new Error("No token found");
 
     const user = getUser();
-    const res = await fetchWithAuth(`/api/v2/getfeed?page=${pageParam}&limit=${LIMIT}`);
+    const res = await fetchWithAuth(`/api/cdn/posts/`);
     if (!res.ok) throw new Error("Failed to get post data")
     const data = await res.json();
 
