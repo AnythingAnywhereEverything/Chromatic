@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect, useRef, useState } from "react";
 import style from "./style.module.scss"
 import { LuThumbsUp } from "react-icons/lu";
