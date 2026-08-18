@@ -15,7 +15,7 @@ use crate::{
             user::{self as user_repo},
         }, service::{
             errors::AuthServiceError, media::{
-                processor::types::{CropStyle, ImageProcessorType, MediaProcessorFFlags, MediaProcessorOptions}, service::MediaService, service_type::MediaServiceOptions, types::{
+                processor::types::{CropStyle, ImageProcessorType, MediaProcessorFFlags, MediaProcessorOptions}, service::MediaService, service_type::{ContainerConfig, MediaServiceOptions}, types::{
                     file::MultipartFile, media_options::{MediaType, MultipartExtractorOptions, ValidationOptions, ValidationType},
                 },
             },
@@ -112,7 +112,11 @@ pub async fn upload_avatar_handler(
     let new_media_opts = MediaServiceOptions {
         upload_route: format!("avatars/{}", user_id),
         uploader_id: user_id,
-        container: None,
+        container: Some(ContainerConfig {
+            use_hash_names: true,
+            use_animated_image_indicator: true,
+            ..Default::default()
+        }),
         processor: Some(MediaProcessorOptions {
             fflags: Some(MediaProcessorFFlags {
                 video_thumbnail: true,

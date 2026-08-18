@@ -5,12 +5,12 @@ use crate::application::service::media::processor::types::MediaProcessorOptions;
 pub struct MediaServiceOptions {
     pub upload_route: String,
     pub uploader_id: i64,
-    pub container: Option<Container>,
+    pub container: Option<ContainerConfig>,
     pub processor: Option<MediaProcessorOptions>,
 }
 
 #[derive(Clone, Debug)]
-pub struct Container {
+pub struct ContainerConfig {
     pub generate_thumbhash: bool,
     pub no_processing: bool,
     pub use_file_id_sub_container: bool,
@@ -24,7 +24,7 @@ pub struct Container {
     pub use_animated_image_indicator: bool,
 }
 
-impl Default for Container {
+impl Default for ContainerConfig {
     fn default() -> Self {
         Self {
             generate_thumbhash: true,
