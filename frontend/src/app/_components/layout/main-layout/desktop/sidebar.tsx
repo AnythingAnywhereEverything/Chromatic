@@ -15,11 +15,14 @@ import { HiOutlineUserGroup, HiMiniUserGroup } from "react-icons/hi2";
 import { FaBell, FaRegBell } from "react-icons/fa6";
 import { usePathname } from "next/navigation"; // pages router
 import Link from "next/link";
+import { useUser } from "@/hooks/useUser";
+import { ChromaImage } from "@/app/_components/ui/chromatic/chromaImage";
 // OR usePathname if app router
 
 const SidebarNavigator: React.FC = () => {
     const pathname = usePathname();
     const firstPathSegment = pathname.split("/")[1];
+ // Custom hook to get user data
 
     const handleMouseEnter = (event: React.MouseEvent<HTMLDivElement>) => {
         const item = event.currentTarget;
@@ -89,38 +92,38 @@ const SidebarNavigator: React.FC = () => {
             </div>
 
             <div className={style["sidebar-footer"]}>
-                <SidebarProfile
-                    username="username"
-                    profileImageUrl="https://placehold.co/40"
-                    label="Profile"
-                />
+                <SidebarProfile/>
             </div>
         </nav>
     );
 };
 
-function SidebarProfile({
-    username,
-    profileImageUrl,
-    label
-}: {
-    username: string;
-    profileImageUrl: string;
-    label: string;
-}) {
+function SidebarProfile() {
+
+    const user = useUser();
+
+    if (!user || !user.data) {
+        return null;
+    }
+    const { id: userId, username, avatar, avatar_thumbhash } = user.data;
+
+    // construct the avatar URL using the userId and avatar hash
+    const avatarUrl = `/cdn/avatars/${userId}/${avatar}`
+
     return (
         <div className={style["sidebar-profile"]}>
             <Link href={`/${username}`} className={style["profile-link"]}>
                 <div className={style["profile-container"]}>
-                    <img
-                        src={profileImageUrl}
+                    <ChromaImage
+                        src={avatarUrl}
                         alt={`${username}'s profile`}
                         className={style["profile-image"]}
                         width={40}
                         height={40}
+                        thumbhash={avatar_thumbhash || undefined}
                     />
                 </div>
-                <span className={style["label"]}>{label}</span>
+                <span className={style["label"]}>Profile</span>
             </Link>
         </div>
     );

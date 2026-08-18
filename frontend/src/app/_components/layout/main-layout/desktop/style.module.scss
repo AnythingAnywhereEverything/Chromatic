@@ -135,8 +135,8 @@
     }
 
     .profile-image {
-        width: calc(var(--spacing) * 8);
-        height: calc(var(--spacing) * 8);
+        width: calc(var(--spacing) * 10) !important;
+        height: calc(var(--spacing) * 10) !important;
         border-radius: 50%;
     }
 }

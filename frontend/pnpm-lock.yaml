@@ -110,6 +110,9 @@ importers:
       sass:
         specifier: ^1.101.0
         version: 1.101.0
+      thumbhash:
+        specifier: ^0.1.1
+        version: 0.1.1
       ua-parser-js:
         specifier: ^2.0.7
         version: 2.0.10
@@ -2302,6 +2305,9 @@ packages:
 
   text-table@0.2.0:
     resolution: {integrity: sha512-N+8UisAXDGk8PFXP4HAzVR9nbfmVJ3zYLAWiTIoqC5v5isinhr+r5uaO8+7r3BMfuNIufIsA7RdpVgacC2cSpw==}
+
+  thumbhash@0.1.1:
+    resolution: {integrity: sha512-kH5pKeIIBPQXAOni2AiY/Cu/NKdkFREdpH+TLdM0g6WA7RriCv0kPLgP731ady67MhTAqrVG/4mnEeibVuCJcg==}
 
   to-regex-range@5.0.1:
     resolution: {integrity: sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==}
@@ -4700,6 +4706,8 @@ snapshots:
   tabbable@6.4.0: {}
 
   text-table@0.2.0: {}
+
+  thumbhash@0.1.1: {}
 
   to-regex-range@5.0.1:
     dependencies:

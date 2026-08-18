@@ -4,7 +4,11 @@ interface UserResponse {
   id: string;
   username: string;
   display_name: string;
-  profile_picture_url: string;
+  avatar: string | null;
+  avatar_thumbhash: string | null;
+  banner: string | null;
+  banner_thumbhash: string | null;
+  bio: string | null;
   email: string;
   email_verified:boolean;
   active: boolean;
@@ -29,6 +33,7 @@ export async function getUser(): Promise<UserResponse> {
   const res = await fetchWithAuth(`/api/v2/users/me`); // proxied to backend via nginx
   if (!res.ok) throw new Error("Failed to get user data");
   const data = await res.json();
+  console.log("User data:", data);
   return data;
 }
 

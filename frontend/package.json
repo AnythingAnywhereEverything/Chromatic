@@ -38,6 +38,7 @@
     "react-markdown": "^10.1.0",
     "react-scripts": "^0.0.0",
     "sass": "^1.101.0",
+    "thumbhash": "^0.1.1",
     "ua-parser-js": "^2.0.7",
     "web-vitals": "^2.1.4"
   },
