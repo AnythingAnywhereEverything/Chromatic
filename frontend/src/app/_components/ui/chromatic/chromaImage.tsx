@@ -48,15 +48,17 @@ export function ChromaImage({
         [thumbhash]
     );
 
+    const final_src = process.env.NEXT_PUBLIC_CDN_URL ? `${process.env.NEXT_PUBLIC_CDN_URL}${src}` : src;
+
     const imageUrl = useMemo(() => {
-        const url = new URL(src, window.location.origin);
+        const url = new URL(final_src, window.location.origin);
 
         url.searchParams.set("width", String(width));
         url.searchParams.set("height", String(height));
         url.searchParams.set("format", format);
 
         return url.toString();
-    }, [src, width, height, format]);
+    }, [final_src, width, height, format]);
 
     return (
         <div
