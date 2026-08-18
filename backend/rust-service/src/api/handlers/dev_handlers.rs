@@ -126,7 +126,5 @@ pub async fn get_specific_post(
 
     let mut tx = state.db_pool.begin().await?;
     let post: PostDTO = post_repo::post::get_post_by_id(&mut tx, post_id).await?.into();
-
-    tx.commit();
     Ok(Json(post))
 }

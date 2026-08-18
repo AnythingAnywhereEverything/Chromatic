@@ -6,7 +6,7 @@ pub struct UserRow {
 }
 
 #[derive(Debug, sqlx::FromRow)]
-pub struct UserProfileFullRow {
+pub struct UserProfileMinimalRow {
     pub id: i64,
     pub email: String,
     pub username: Option<String>,
@@ -18,6 +18,25 @@ pub struct UserProfileFullRow {
     pub banner_thumbhash: Option<String>, // thumbhash
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
 }
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct UserProfileFullRow {
+    pub id: i64,
+    pub email: String,
+    pub username: Option<String>,
+    pub display_name: Option<String>,
+    pub bio: Option<String>,
+    pub is_follower: Option<bool>, // if both users are following each other then both are friends
+    pub is_following: Option<bool>,
+    pub followers_count: i32,
+    pub following_count: i32,
+    pub avatar: Option<String>, // hash name
+    pub avatar_thumbhash: Option<String>, // thumbhash
+    pub banner: Option<String>, // hash name
+    pub banner_thumbhash: Option<String>, // thumbhash
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
 // * target_type is enum for User / Guild
 
 #[derive(Debug, sqlx::FromRow)]

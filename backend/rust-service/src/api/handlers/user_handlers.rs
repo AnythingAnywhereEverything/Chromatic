@@ -7,7 +7,7 @@ use multipart_derive::Multipart;
 use crate::{
     api::{
         APIError, RequestAuth,
-        dtos::user_dtos::UserDTO,
+        dtos::user_dtos::{UserDTO, PublicUserProfileDTO},
         version,
     }, application::{
         repository::{
@@ -22,6 +22,28 @@ use crate::{
         }, state::SharedState,
     },
 };
+
+/// Get user profile by username
+/// * This is public endpoint, no authentication required
+pub async fn get_user_profile_handler(
+    State(state): State<SharedState>,
+    Path((version, username)): Path<(String, String)>,
+    req_auth: RequestAuth,
+)-> Result<Json<PublicUserProfileDTO>, APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+
+    let user_id = match req_auth.user {
+        Some(user) => Some(user.user_id),
+        None => None,
+    };
+
+    let mut tx = state.db_pool.begin().await?;
+
+    let user = user_repo::find::profile_full_by_username(&mut tx, &username, user_id).await?;
+
+    Ok(Json(user.into()))
+}
 
 pub async fn get_current_user_handler(
     State(state): State<SharedState>,
@@ -38,7 +60,7 @@ pub async fn get_current_user_handler(
         None => return Err(AuthServiceError::InvalidCredentials.into()), // temporary use logout failed error, will create a new error type for this case later
     };
 
-    let user = user_repo::find::profile_with_minimal_media_by_id(&mut tx, user_id).await?;
+    let user = user_repo::find::profile_with_minimal_by_id(&mut tx, user_id).await?;
 
     Ok(Json(user.into()))
 }
@@ -138,7 +160,7 @@ pub async fn upload_avatar_handler(
     tx.commit().await?;
 
     let mut tx = state.db_pool.begin().await?;
-    let updated_user = user_repo::find::profile_with_minimal_media_by_id(&mut tx, user_id).await?;
+    let updated_user = user_repo::find::profile_with_minimal_by_id(&mut tx, user_id).await?;
     tx.commit().await?;
 
 
