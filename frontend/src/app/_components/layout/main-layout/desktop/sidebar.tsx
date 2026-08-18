@@ -108,11 +108,11 @@ function SidebarProfile() {
     const { id: userId, username, avatar, avatar_thumbhash } = user.data;
 
     // construct the avatar URL using the userId and avatar hash
-    const avatarUrl = `/cdn/avatars/${userId}/${avatar}`
+    const avatarUrl = `avatars/${userId}/${avatar}`
 
     return (
         <div className={style["sidebar-profile"]}>
-            <Link href={`/${username}`} className={style["profile-link"]}>
+            <Link href={`/u/${username}`} className={style["profile-link"]}>
                 <div className={style["profile-container"]}>
                     <ChromaImage
                         src={avatarUrl}

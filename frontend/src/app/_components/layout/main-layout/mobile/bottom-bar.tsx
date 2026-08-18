@@ -1,17 +1,25 @@
 "use client";
 
-import { IoHome, IoCompass, IoHomeOutline, IoCompassOutline, IoChatboxEllipses, IoChatboxEllipsesOutline } from "react-icons/io5";
+import {
+    IoHome,
+    IoCompass,
+    IoHomeOutline,
+    IoCompassOutline,
+    IoChatboxEllipses,
+    IoChatboxEllipsesOutline,
+} from "react-icons/io5";
 import Link from "next/link";
 import { FaPlus } from "react-icons/fa6";
 import { HiMiniUserGroup, HiOutlineUserGroup } from "react-icons/hi2";
 import style from "./style.module.scss";
 import { usePathname } from "next/navigation";
+import { ChromaImage } from "@/app/_components/ui/chromatic/chromaImage";
+import { useUser } from "@/hooks/useUser";
 
 export default function BottomBar() {
     const pathname = usePathname();
 
-    const firstPathSegment =
-        pathname.split("/").filter(Boolean)[0] || "";
+    const firstPathSegment = pathname.split("/").filter(Boolean)[0] || "";
 
     const username = "username";
 
@@ -47,10 +55,7 @@ export default function BottomBar() {
                 iconEnabled={<IoChatboxEllipses />}
                 active={firstPathSegment === "messages"}
             />
-            <BottomBarProfile
-                username={username}
-                profileImageUrl="https://placehold.co/40"
-            />
+            <BottomBarProfile />
         </div>
     );
 }
@@ -60,16 +65,28 @@ function getFirstPathSegment(pathname: string): string {
     return segments.length > 0 ? segments[0] : "";
 }
 
-interface BottomBarProfileProps {
-    username: string;
-    profileImageUrl: string;
-}
+function BottomBarProfile() {
+    const user = useUser();
 
-function BottomBarProfile({ username, profileImageUrl }: BottomBarProfileProps) {
+    if (!user || !user.data) {
+        return null;
+    }
+    const { id: userId, username, avatar, avatar_thumbhash } = user.data;
+
+    // construct the avatar URL using the userId and avatar hash
+    const avatarUrl = `avatars/${userId}/${avatar}`;
+
     return (
-        <a href={`/${username}`} className={style["profile-link"]}>
-            <img src={profileImageUrl} alt={`${username}'s profile`} className={style["profile-image"]} width={40} height={40} />
-        </a>
+        <Link href={`/u/${username}`} className={style["profile-link"]}>
+            <ChromaImage
+                src={avatarUrl}
+                alt={`${username}'s profile`}
+                thumbhash={avatar_thumbhash || undefined}
+                className={style["profile-image"]}
+                width={32}
+                height={32}
+            />
+        </Link>
     );
 }
 
@@ -80,9 +97,12 @@ interface BottomBarButtonsProps {
     active: boolean;
 }
 
-function BottomBarButtons(
-    { href, icon, iconEnabled, active }: BottomBarButtonsProps
-) {
+function BottomBarButtons({
+    href,
+    icon,
+    iconEnabled,
+    active,
+}: BottomBarButtonsProps) {
     return (
         <Link href={href} className={style["item"]}>
             {active ? iconEnabled : icon}
