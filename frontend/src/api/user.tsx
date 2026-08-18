@@ -26,10 +26,9 @@ export async function getUser(): Promise<UserResponse> {
   const userId = getCacheUserId();
   if (!token) throw new Error("No token found");
 
-  const res = await fetchWithAuth(`/api/v2/users/${userId}`); // proxied to backend via nginx
+  const res = await fetchWithAuth(`/api/v2/users/me`); // proxied to backend via nginx
   if (!res.ok) throw new Error("Failed to get user data");
   const data = await res.json();
-
   return data;
 }
 
