@@ -23,6 +23,7 @@ pub struct FileParameters {
     height: Option<i32>,
     width: Option<i32>,
     format: Option<String>,
+    retain_aspect_ratio: Option<bool>,
 }
 
 fn check_format(format: &str) -> Result<bool, MediaServiceError> {
@@ -31,10 +32,6 @@ fn check_format(format: &str) -> Result<bool, MediaServiceError> {
         _ => Err(MediaServiceError::UnsupportedFormat(format.to_string())),
     }
 }
-
-
-
-
 
 #[axum::debug_handler]
 pub async fn get_files_handler(
@@ -48,9 +45,6 @@ pub async fn get_files_handler(
         version,
         params
     );
-
-
-
     let format = params.format.as_deref().unwrap_or("webp");
 
     check_format(format)?;

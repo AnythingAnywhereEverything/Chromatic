@@ -12,8 +12,10 @@ pub struct UserProfileFullRow {
     pub username: Option<String>,
     pub display_name: Option<String>,
     pub bio: Option<String>,
-    pub avatar_media_id: Option<i64>,
-    pub banner_media_id: Option<i64>,
+    pub avatar: Option<String>, // hash name
+    pub avatar_thumbhash: Option<String>, // thumbhash
+    pub banner: Option<String>, // hash name
+    pub banner_thumbhash: Option<String>, // thumbhash
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 // * target_type is enum for User / Guild

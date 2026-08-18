@@ -7,7 +7,7 @@ use multipart_derive::Multipart;
 use crate::{
     api::{
         APIError, RequestAuth,
-        dtos::user_dtos::{MediaFullDTO, UserDTO},
+        dtos::user_dtos::UserDTO,
         version,
     }, application::{
         repository::{
@@ -38,28 +38,9 @@ pub async fn get_current_user_handler(
         None => return Err(AuthServiceError::InvalidCredentials.into()), // temporary use logout failed error, will create a new error type for this case later
     };
 
-    let user = user_repo::find::profile_full_by_id(&mut tx, user_id).await?;
+    let user = user_repo::find::profile_with_minimal_media_by_id(&mut tx, user_id).await?;
 
-    let avatar_media = match user.avatar_media_id {
-        Some(media_id) => Some(media_repo::get::media_full_data(&mut tx, &media_id).await?),
-        None => None,
-    };
-
-    let banner_media = match user.banner_media_id {
-        Some(media_id) => Some(media_repo::get::media_full_data(&mut tx, &media_id).await?),
-        None => None,
-    };
-
-    Ok(Json(UserDTO {
-        id: user.id.to_string(),
-        email: user.email,
-        username: user.username,
-        display_name: user.display_name,
-        bio: user.bio,
-        avatar_media_id: avatar_media.map(MediaFullDTO::from),
-        banner_media_id: banner_media.map(MediaFullDTO::from),
-        created_at: user.created_at.map(|dt| dt.to_rfc3339()),
-    }))
+    Ok(Json(user.into()))
 }
 
 #[derive(serde::Deserialize, Debug, Multipart)]
@@ -154,32 +135,12 @@ pub async fn upload_avatar_handler(
     media_repo::update::media_status(&mut tx, &uploaded_medias.get_id(), &MediaStatus::Completed)
         .await?;
 
-    let updated_user = user_repo::find::profile_full_by_id(&mut tx, user_id).await?;
-
-    tracing::warn!("Updated user after avatar upload: {:?}", updated_user);
-    // get the media urls for the avatar and banner
-    let avatar_media = match updated_user.avatar_media_id {
-        Some(media_id) => Some(media_repo::get::media_full_data(&mut tx, &media_id).await?),
-        None => None,
-    };
-
-    tracing::warn!("Avatar media after upload: {:?}", avatar_media);
-
-    let banner_media = match updated_user.banner_media_id {
-        Some(media_id) => Some(media_repo::get::media_full_data(&mut tx, &media_id).await?),
-        None => None,
-    };
-
     tx.commit().await?;
 
-    Ok(Json(UserDTO {
-        id: updated_user.id.to_string(),
-        email: updated_user.email,
-        username: updated_user.username,
-        display_name: updated_user.display_name,
-        bio: updated_user.bio,
-        avatar_media_id: avatar_media.map(MediaFullDTO::from),
-        banner_media_id: banner_media.map(MediaFullDTO::from),
-        created_at: updated_user.created_at.map(|dt| dt.to_rfc3339()),
-    }))
+    let mut tx = state.db_pool.begin().await?;
+    let updated_user = user_repo::find::profile_with_minimal_media_by_id(&mut tx, user_id).await?;
+    tx.commit().await?;
+
+
+    Ok(Json(updated_user.into()))
 }

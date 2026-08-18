@@ -1,6 +1,6 @@
 use serde::{Serialize};
 
-use crate::application::{repository::media::row::{MediaDataWithMetadataRow, MediaStatus}};
+use crate::application::repository::{media::row::{MediaDataWithMetadataRow}, user::row::UserProfileFullRow};
 
 #[derive(Debug, Serialize)]
 pub struct UserDTO {
@@ -9,9 +9,28 @@ pub struct UserDTO {
     pub username: Option<String>,
     pub display_name: Option<String>,
     pub bio: Option<String>,
-    pub avatar_media_id: Option<MediaFullDTO>,
-    pub banner_media_id: Option<MediaFullDTO>,
+    pub avatar: Option<String>, // hash name
+    pub avatar_thumbhash: Option<String>, // thumbhash
+    pub banner: Option<String>, // hash name
+    pub banner_thumbhash: Option<String>, // thumbhash
     pub created_at: Option<String>,
+}
+
+impl Into<UserDTO> for UserProfileFullRow {
+    fn into(self) -> UserDTO {
+        UserDTO {
+            id: self.id.to_string(),
+            email: self.email,
+            username: self.username,
+            display_name: self.display_name,
+            bio: self.bio,
+            avatar: self.avatar,
+            avatar_thumbhash: self.avatar_thumbhash,
+            banner: self.banner,
+            banner_thumbhash: self.banner_thumbhash,
+            created_at: self.created_at.map(|dt| dt.to_rfc3339()),
+        }
+    }
 }
 
 // pub struct PublicUserProfileDTO {
