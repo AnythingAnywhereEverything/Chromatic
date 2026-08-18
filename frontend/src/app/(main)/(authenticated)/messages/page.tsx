@@ -3,12 +3,8 @@ export const metadata = {
     description: "This is the messages page",
 };
 
-export default function MessagePage({
-    children,
-}: {
-    children: React.ReactNode;
-}) {
+export default function MessagePage(){
     // Strictly import and use the components hete
     // due to it being a SSR page, and not a client component. This is to avoid hydration errors.
-    return <div>{children}</div>;
+    return <div>Message</div>;
 }
