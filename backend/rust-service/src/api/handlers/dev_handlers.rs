@@ -1,6 +1,6 @@
 use crate::{
-    api::{APIError, version}, application::{
-        repository::media::{self as media_repo, row::MediaStatus}, service::media::{
+    api::{APIError, RequestAuth, dtos::post_dtos::PostDTO, version}, application::{
+        repository::{media::{self as media_repo, row::MediaStatus}, post::{self as post_repo}}, service::media::{
             processor::types::{
                 CropStyle, ImageProcessorType, MediaProcessorFFlags, MediaProcessorOptions, PostProcessingType, ResizeStyle, VideoPostProcessorType,
             }, service::MediaService, service_type::MediaServiceOptions, types::{
@@ -13,7 +13,7 @@ use crate::{
         }, state::SharedState,
     },
 };
-use axum::extract::{Multipart, Path, State};
+use axum::{Json, extract::{Multipart, Path, State}};
 use multipart_derive::Multipart;
 
 #[derive(serde::Deserialize, Debug, Multipart)]
@@ -108,4 +108,25 @@ pub async fn files_upload_handler(
 
     tx.commit().await?;
     Ok(())
+}
+
+pub async fn get_specific_post(
+    State(state): State<SharedState>,
+    Path((version, post_id)): Path<(String, i64)>,
+    req_auth: RequestAuth,    
+) -> Result <Json<PostDTO>, APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+
+    let _user_id = match req_auth.user {
+        Some(user) => user.user_id,
+        // None => return Err(AuthServiceError::InvalidCredentials.into()),
+        None => 81727418892554240,
+    };
+
+    let mut tx = state.db_pool.begin().await?;
+    let post: PostDTO = post_repo::post::get_post_by_id(&mut tx, post_id).await?.into();
+
+    tx.commit();
+    Ok(Json(post))
 }

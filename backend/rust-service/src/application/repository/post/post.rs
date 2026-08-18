@@ -105,14 +105,69 @@ pub async fn get_feed_public(
 // }
 
 pub async fn get_post_by_id(
-    tx: &mut Transaction<'_,sqlx::Postgres>,
-    post_id: i64
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    post_id: i64,
 ) -> Result<PostRow, sqlx::Error> {
     sqlx::query_as::<_, PostRow>(
         r#"
-            SELECT *
-            FROM media_posts
-            WHERE id = $1
+            SELECT
+                m.id,
+                m.user_id,
+                m.content,
+                m.total_comments,
+                m.total_likes,
+                m.reposted_from,
+                m.is_repost,
+                m.has_attachment,
+                m.created_at,
+                m.updated_at,
+                m.visibility,
+                COALESCE(att.attachments, '[]'::json) AS media_attachment,
+                COALESCE(tag.tags, '[]'::json) AS tags
+            FROM media_posts m
+            LEFT JOIN LATERAL (
+                SELECT json_agg(
+                    json_build_object(
+                        'id', md.id::text,
+                        'user_id', md.uploader_id,
+                        'path', md.path,
+                        'created_at', md.created_at,
+                        'thumbhash', md.thumbhash,
+                        'name', md.name,
+                        'updated_at', md.updated_at,
+                        'status', md.status,
+                        'file_size', mdt.file_size,
+                        'mime_type', mdt.mime_type,
+                        'width', mdt.width,
+                        'height', mdt.height,
+                        'duration', mdt.duration
+                    )
+                    ORDER BY md.id
+                ) AS attachments
+                FROM media_attachments a
+                JOIN media_data md ON md.id = a.media_id
+                JOIN media_metadata mdt ON mdt.media_id = md.id
+                WHERE a.target_id = m.id
+                AND md.status = 'completed'
+            ) att ON TRUE
+            LEFT JOIN LATERAL (
+                SELECT json_agg(
+                    json_build_object(
+                        'target_id', ta.target_id,
+                        'target_type', ta.target_type,
+                        'tag_id', it.id,
+                        'tag_name', it.tag_name
+                    )
+                    ORDER BY it.tag_name
+                ) AS tags
+                FROM tag_attachments ta
+                JOIN interest_tags it ON it.id = ta.tag_id
+                WHERE ta.target_id = m.id
+            ) tag ON TRUE
+            WHERE
+                m.id = $1
+                AND m.visibility = 'everyone'
+                AND m.status != 'inactive'
         "#
     )
     .bind(post_id)
@@ -144,7 +199,20 @@ pub async fn create_post(
             visibility
         )
         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), $7)
-        RETURNING *
+        RETURNING
+            id,
+            user_id,
+            content,
+            total_likes,
+            total_comments,
+            reposted_from,
+            is_repost,
+            has_attachment,
+            created_at,
+            updated_at,
+            visibility,
+            '[]'::json AS media_attachment,
+            '[]'::json AS tags
         "#,
     )
     .bind(id)
@@ -288,7 +356,7 @@ pub async fn add_tags_target(
     target_id: i64,
     target_type: String,
     tag_id: i64
-) -> Result<Vec<TagAttachmentRow>, sqlx::Error > {
+) -> Result<TagAttachmentRow, sqlx::Error > {
     sqlx::query_as::<_, TagAttachmentRow>(
         r#"
             INSERT INTO tag_attachments (
@@ -303,7 +371,7 @@ pub async fn add_tags_target(
     .bind(target_id)
     .bind(target_type)
     .bind(tag_id)
-    .fetch_all(tx.as_mut())
+    .fetch_one(tx.as_mut())
     .await
 }
 
@@ -327,6 +395,25 @@ pub async fn get_tag_attachments(
     .bind(target_id)
     .fetch_all(tx.as_mut())
     .await
+}
+
+pub async fn delete_tag_attachment(
+    tx: &mut Transaction<'_, Postgres>,
+    tag_id: i64,
+    post_id: i64
+) -> Result<u64, sqlx::Error> {
+    let row = sqlx::query(
+        r#"
+            DELETE FROM tag_attachments
+            WHERE target_id = $1 AND post_id = $2
+        "#
+    )
+    .bind(tag_id)
+    .bind(post_id)
+    .execute(tx.as_mut())
+    .await?;
+
+    Ok(row.rows_affected())
 }
 // -------------------------------------
 // * Small like patch

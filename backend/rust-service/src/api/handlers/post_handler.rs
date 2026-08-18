@@ -11,7 +11,7 @@ use crate::{
             media::{self as media_repo, row::MediaStatus},
             post::{self as post_repo},
         }, service::{
-            errors::PostServiceError, media::{
+            errors::{AuthServiceError, PostServiceError}, media::{
                 processor::types::{
                     ImageProcessorType, MediaProcessorFFlags, MediaProcessorOptions,
                     PostProcessingType, ResizeStyle, VideoPostProcessorType,
@@ -128,8 +128,8 @@ pub async fn create_new_post_handler(
     // ! Temporary testing ID
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
-        // None => return Err(AuthServiceError::InvalidCredentials.into()),
-        None => 81727418892554240,
+        None => return Err(AuthServiceError::InvalidCredentials.into()),
+        // None => 81727418892554240,
     };
 
     let options = MultipartExtractorOptions {
@@ -203,72 +203,30 @@ pub async fn create_new_post_handler(
         }
     }
 
-    let repost_from = extracted.repost_from;
-    let visibility = extracted.visibility;
     let post_tags = extracted.media_tags.unwrap_or_default();
-    let is_repost = repost_from.is_some();
-    let new_post =
-        post_repo::post::create_post(&mut tx, new_post_id, user_id, &content, repost_from, !extracted.media_src.is_none(),is_repost, visibility).await?;
-        tracing::trace!("post content : {:#?}", new_post);
+
+    let _new_post =
+            post_repo::post::create_post(&mut tx, new_post_id, 
+            user_id, &content, 
+            extracted.repost_from, !extracted.media_src.is_none(),
+            extracted.repost_from.is_some(), extracted.visibility).await?;
 
     if !post_tags.is_empty() {
         tracing::trace!("Entering add tags stage");
         for tag in post_tags {
-            post_repo::post::add_tags_target(&mut tx, *new_post_id, "media".to_string(), tag ).await?;
+            tracing::trace!("Tags ID : {}", tag);
+            post_repo::post::add_tags_target(&mut tx, *new_post_id, "post".to_string(), tag ).await?;
         }
     }
-
-    let media_with_post = post_repo::post::get_post_attachment(&mut tx, new_post.id).await?;
-    let media_tags = 
-    post_repo::post::get_tag_attachments(&mut tx, new_post.id).await?
-    .into_iter()
-    .map(|tag| TagDTO {
-        target_id: tag.target_id.to_string(),
-        tag_name: tag.tag_name,
-        // tag.tag_id may be a Vec<i64>; convert to a comma-separated string
-        tag_id: tag.tag_id.to_string()
-    })
-    .collect::<Vec<_>>();
-
-    let media = media_with_post.into_iter()
-    .map(|media| MediaFullDTO {
-        id: media.id.to_string(),
-        path: media.path,
-        name: media.name,
-        thumbhash: media.thumbhash,
-        status: media.status.to_string(),
-        created_at: media.created_at,
-        file_size: media.file_size,
-        mime_type: media.mime_type,
-        width: media.width,
-        height: media.height,
-        duration: media.duration,
-    })
-    .collect::<Vec<_>>();
-    tracing::warn!("Updated Post after upload: {:#?}", media);
-
+    let post: PostDTO = post_repo::post::get_post_by_id(&mut tx, *new_post_id).await?.into();
+    tracing::trace!("Json Data {:#?}", post);
     
     tx.commit().await?;
-    Ok(Json(PostDTO{
-        id: new_post.id.to_string(),
-        user_id: new_post.user_id.to_string(),
-        content: new_post.content,
-        total_comments: new_post.total_comments,
-        total_likes: new_post.total_likes,
-        reposted_from: Some(new_post.reposted_from
-            .map(|id| id.to_string())
-            .unwrap_or_default()),
-        is_repost: new_post.is_repost,
-        has_attachment: new_post.has_attachment,
-        created_at: Some(new_post.created_at.to_rfc3339()),
-        updated_at: Some(new_post.updated_at.to_rfc3339()),
-        visibility: new_post.visibility.as_str().to_string(),
-        media,
-        tag: media_tags
-    }))
+    Ok(Json(post))
 }
 
 // todo: impl to cache later if everything stable
+// * test create null update to has tags
 pub async fn update_post_handler(
     State(state): State<SharedState>,
     Path((version, post_id)): Path<(String, i64)>,
@@ -281,7 +239,7 @@ pub async fn update_post_handler(
     // ! Temporary testing ID
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
-        None => 1234,
+        None => 81727418892554240,
     };
 
     let options = MultipartExtractorOptions {
@@ -301,6 +259,12 @@ pub async fn update_post_handler(
     let mut tx = state.db_pool.begin().await?;
 
     let old_post = post_repo::post::get_post_by_id(&mut tx, post_id).await?;
+    let old_tags = post_repo::post::get_tag_attachments(&mut tx, post_id).await?;
+
+    let tag_id = state.snowflake_generator.generate_id();
+    if let Some(new_tags) = extracted.media_tags {
+        
+    }
 
     tracing::trace!("Old post: {:?}", old_post);
 
@@ -310,59 +274,12 @@ pub async fn update_post_handler(
         old_post.content
     };
 
-    let updated_post = post_repo::post::update_post(&mut tx, post_id, user_id, content, extracted.visibility).await?;
-
-    let media_with_post = post_repo::post::get_post_attachment(&mut tx, post_id).await?;
-
-    let media_tags = post_repo::post::get_tag_attachments(&mut tx, post_id)
-        .await?
-        .into_iter()
-        .map(|tag| TagDTO {
-            target_id: tag.target_id.to_string(),
-            tag_name: tag.tag_name,
-            tag_id: tag.tag_id.to_string(),
-        })
-        .collect::<Vec<_>>();
-
-    let media = media_with_post
-        .into_iter()
-        .map(|media| MediaFullDTO {
-            id: media.id.to_string(),
-            path: media.path,
-            name: media.name,
-            thumbhash: media.thumbhash,
-            status: media.status.to_string(),
-            created_at: media.created_at,
-            file_size: media.file_size,
-            mime_type: media.mime_type,
-            width: media.width,
-            height: media.height,
-            duration: media.duration,
-        })
-        .collect::<Vec<_>>();
-
+    let _ = post_repo::post::update_post(&mut tx, post_id, user_id, content, extracted.visibility).await?;
+    let post: PostDTO = post_repo::post::get_post_by_id(&mut tx, post_id).await?.into();
+    tracing::trace!("Updated post {:#?}", post);
     tx.commit().await?;
 
-    Ok(Json(PostDTO {
-        id: updated_post.id.to_string(),
-        user_id: updated_post.user_id.to_string(),
-        content: updated_post.content,
-        total_comments: updated_post.total_comments,
-        total_likes: updated_post.total_likes,
-        reposted_from: Some(
-            updated_post
-                .reposted_from
-                .map(|id| id.to_string())
-                .unwrap_or_default(),
-        ),
-        is_repost: updated_post.is_repost,
-        has_attachment: updated_post.has_attachment,
-        created_at: Some(updated_post.created_at.to_rfc3339()),
-        updated_at: Some(updated_post.updated_at.to_rfc3339()),
-        visibility: updated_post.visibility.as_str().to_string(),
-        media,
-        tag: media_tags,
-    }))
+    Ok(Json(post))
 }
 
 pub async fn delete_post_handler(
@@ -377,8 +294,8 @@ pub async fn delete_post_handler(
     post_repo::post::get_post_by_id(&mut tx, post_id).await?;
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
-        // None => return Err(AuthServiceError::InvalidCredentials.into()),
-        None => 1234,
+        None => return Err(AuthServiceError::InvalidCredentials.into()),
+        // None => 1234,
     };
 
     let delete = post_repo::post::delete_post(&mut tx, post_id, user_id).await?;
@@ -466,8 +383,8 @@ pub async fn liked_handler(
 
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
-        // None => return Err(AuthServiceError::InvalidCredentials.into()),
-        None => 81727418892554240,
+        None => return Err(AuthServiceError::InvalidCredentials.into()),
+        // None => 81727418892554240,
     };
 
     let mut tx = state.db_pool.begin().await?;
