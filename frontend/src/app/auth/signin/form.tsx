@@ -11,7 +11,6 @@ import {
 import Link from "next/link";
 import Form from "next/form";
 import { useRouter } from "next/navigation";
-import GoogleAuthButton from "@components/ui/google/GoogleLoginBtn";
 import { useUser } from "@/hooks/useUser";
 import { useAuthService } from "@/hooks/useAuthService";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
@@ -63,7 +62,6 @@ const SignInForm: NextPageWithLayout = () => {
         <div className={style.form}>
             <section className={`${field.fieldSet}`}>
                 <h2>Sign In</h2>
-                <GoogleAuthButton />
                 <FieldSeparator>or</FieldSeparator>
                 <Form action={"#"} onSubmit={handleSubmit}>
                     <section className={`${field.fieldGroup}`}>
