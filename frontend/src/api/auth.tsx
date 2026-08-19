@@ -1,6 +1,6 @@
 //authenticcation api call
 
-import { getToken } from "@/handler/token_handler";
+import { fetchWithAuth, getToken } from "@/handler/token_handler";
 import { useRouter } from "next/router";
 
 interface RegisterResponse {
@@ -24,7 +24,7 @@ interface LoginResponse {
 }
 
 export async function login(data: LoginData): Promise<LoginResponse> {
-    const res = await fetch("/api/v2/auth/login", {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}v2/auth/login`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -37,7 +37,7 @@ export async function login(data: LoginData): Promise<LoginResponse> {
 }
 
 export async function register(data: RegisterData): Promise<RegisterResponse> {
-    const res = await fetch("/api/v2/auth/register", {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}v2/auth/register`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -50,13 +50,7 @@ export async function register(data: RegisterData): Promise<RegisterResponse> {
 }
 
 export async function logout(router: ReturnType<typeof useRouter>) {
-    const res = await fetch("/api/v2/auth/logout", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "token": `${getToken()}`,
-        },
-    });
+    const res = await fetchWithAuth("v2/auth/logout");
 
     if (!res.ok) throw new Error("Logout failed");
 

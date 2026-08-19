@@ -26,11 +26,7 @@ interface PasswordData{
   confirm_password: string;
 }
 export async function getUser(): Promise<UserResponse> {
-  const token = getToken();
-  const userId = getCacheUserId();
-  if (!token) throw new Error("No token found");
-
-  const res = await fetchWithAuth(`/api/v2/users/me`); // proxied to backend via nginx
+  const res = await fetchWithAuth(`v2/users/me`); // proxied to backend via nginx
   if (!res.ok) throw new Error("Failed to get user data");
   const data = await res.json();
   console.log("User data:", data);
@@ -38,11 +34,9 @@ export async function getUser(): Promise<UserResponse> {
 }
 
 export const updateDisplayName = async (display_name: string) => {
-  const token = getToken();
   const userId = getCacheUserId();
-  if (!token) throw new Error("No token found");
 
-  const res = await fetchWithAuth(`/api/v2/users/${userId}/display_name`, {
+  const res = await fetchWithAuth(`v2/users/${userId}/display_name`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -55,11 +49,9 @@ export const updateDisplayName = async (display_name: string) => {
 };
 
 export const updateUsername = async (username: string) => {
-  const token = getToken();
   const userId = getCacheUserId();
-  if (!token) throw new Error("No token found");
 
-  const res = await fetchWithAuth(`/api/v2/users/${userId}/username`, {
+  const res = await fetchWithAuth(`v2/users/${userId}/username`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -79,14 +71,12 @@ export const updateUsername = async (username: string) => {
 };
 
 export const updateProfilePicture = async (file: File) => {
-  const token = getToken();
   const userId = getCacheUserId();
-  if (!token) throw new Error("No token found");
 
   const formData = new FormData();
   formData.append("file", file); // key must match backend field name
 
-  const res = await fetchWithAuth(`/api/v2/users/${userId}/profile_image`, {
+  const res = await fetchWithAuth(`v2/users/${userId}/profile_image`, {
     method: "PATCH",
     body: formData,
   });
@@ -102,10 +92,7 @@ export const updateProfilePicture = async (file: File) => {
 };
 
 export const requestMailVerification = async () => {
-  const token = getToken();
-  if (!token) throw new Error("No token found");
-
-  const res = await fetchWithAuth(`/api/v2/auth/email`, {
+  const res = await fetchWithAuth(`v2/auth/email`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -124,7 +111,7 @@ export const requestMailVerification = async () => {
 }
 
 export const verifyEmail = async (email_token:string) => {
-  const res = await fetch(`/api/v2/auth/email`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}v2/auth/email`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -137,7 +124,7 @@ export const verifyEmail = async (email_token:string) => {
 
 export const getSessions = async (): Promise<SessionResponse[]> =>{
   const user_id = getCacheUserId();
-  const res = await fetchWithAuth( `/api/v2/users/${user_id}/session`, {
+  const res = await fetchWithAuth( `v2/users/${user_id}/session`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -149,7 +136,7 @@ export const getSessions = async (): Promise<SessionResponse[]> =>{
 
 export const deleteSelectSession = async (session_id : string) => {
   const user_id = getCacheUserId();
-  const res = await fetchWithAuth(`/api/v2/users/${user_id}/session`,{
+  const res = await fetchWithAuth(`v2/users/${user_id}/session`,{
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
@@ -161,7 +148,7 @@ export const deleteSelectSession = async (session_id : string) => {
 
 export const updatePassword = async (data: PasswordData) => {
     const user_id = getCacheUserId();
-    const res = await fetchWithAuth( `/api/v2/users/${user_id}/password`, {
+    const res = await fetchWithAuth( `v2/users/${user_id}/password`, {
         method: "PATCH",
         headers: {
             "Content-Type": "application/json",

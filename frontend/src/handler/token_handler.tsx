@@ -62,7 +62,7 @@ export function fetchWithAuth(url: string, options: RequestInit = {}): Promise<R
     const headers = new Headers(options.headers || {});
     headers.set("token", `${token}`);
 
-    return fetch(url, { ...options, headers });
+    return fetch(`${process.env.NEXT_PUBLIC_API_URL}${url}`, { ...options, headers });
 }
 
 export function fetchWithOptionAuth(url: string, options: RequestInit = {}): Promise<Response> {

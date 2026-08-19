@@ -39,7 +39,7 @@ const LIMIT = 15;
 
 export const getUserFeed = async(
 ):Promise<mediaPostProps[]> => {
-    const res = await fetchWithAuth(`/api/v2/posts/feed`);
+    const res = await fetchWithAuth(`v2/posts/feed`);
     if (!res.ok) throw new Error("Failed to get post data")
     const data = await res.json();
 
