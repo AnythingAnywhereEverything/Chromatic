@@ -2,13 +2,14 @@ use crate::{
     api::APIError, application::{
         service::{
             errors::MediaServiceError, media::{
-                processor::video::video::extract_thumbnail, types::media_options::MediaCategory, utils::{categorize, get_mime_and_extension},
+                processor::{image::ImageProcessor, types::{CropStyle, ImageProcessorType, MediaProcessorOptions, ResizeStyle}, video::video::extract_thumbnail}, types::media_options::MediaCategory, utils::{categorize, get_mime_and_extension},
             },
         }, state::SharedState,
     },
 };
 use axum::extract::{Path, Query, State};
 use axum::{body::Body, response::Response};
+use hyper::HeaderMap;
 use rs_vips::{
     VipsImage,
     enums::{Interesting, Size},
@@ -23,7 +24,6 @@ pub struct FileParameters {
     height: Option<i32>,
     width: Option<i32>,
     format: Option<String>,
-    retain_aspect_ratio: Option<bool>,
 }
 
 fn check_format(format: &str) -> Result<bool, MediaServiceError> {
@@ -38,6 +38,7 @@ pub async fn get_files_handler(
     State(state): State<SharedState>,
     Path((version, file)): Path<(String, String)>,
     Query(params): Query<FileParameters>,
+    _headers: HeaderMap, // for future usage, e.g., for Range Request for large video files that aren't HLS
 ) -> Result<Response, APIError> {
     tracing::debug!(
         "Received request for file: {}, version: {}, params: {:?}",
@@ -45,9 +46,10 @@ pub async fn get_files_handler(
         version,
         params
     );
-    let format = params.format.as_deref().unwrap_or("webp");
 
-    check_format(format)?;
+    if let Some(format) = &params.format {
+        check_format(format)?;
+    }
 
     let storage = &state.storage;
     let mut target_file = storage.read(&file).await?;
@@ -57,10 +59,7 @@ pub async fn get_files_handler(
         .await
         .map_err(|_| MediaServiceError::InternalServer)?;
 
-    tracing::debug!(
-        "Successfully read file: {} bytes",
-        metadata.len()
-    );
+    tracing::debug!("Successfully read file: {} bytes", metadata.len());
 
     let detect_byte = {
         let mut buf = [0u8; 512];
@@ -77,33 +76,115 @@ pub async fn get_files_handler(
 
     let media_type = get_mime_and_extension(&detect_byte)?;
     let mime = media_type.0;
+    let extension = media_type.1;
     let category = categorize(&mime);
 
-    if category == MediaCategory::Image
-        && (params.width.is_some() || params.height.is_some())
-    {
+    if category == MediaCategory::Image && (params.width.is_some() || params.height.is_some()) {
         let path = state
             .storage
             .full_path(&file)
             .map_err(|_| MediaServiceError::InternalServer)?;
 
-        let image = VipsImage::new_from_file(&path)
-            .map_err(MediaServiceError::LibvipsError)?;
+        let image = {
+            if mime == "image/gif" || mime == "image/webp" {
+                let opts = VOption::new().set("n", -1);
+                VipsImage::new_from_file_with_opts(&path, opts)
+                    .map_err(|e| MediaServiceError::LibvipsError(e))?
+            } else {
+                VipsImage::new_from_file(&path).map_err(|e| MediaServiceError::LibvipsError(e))?
+            }
+        };
 
-        let width = params.width.unwrap_or(image.get_width());
-        let height = params.height.unwrap_or(image.get_height());
+        let is_animated = image.get_n_pages() > 1;
+        tracing::debug!(
+            "Image is animated: {}, width: {}, height: {}",
+            is_animated,
+            image.get_width(),
+            image.get_height()
+        );
+        
+        drop(image);
+        
+        if is_animated && !params.format.is_some() {
+            let opts = VOption::new().set("n", -1);
+            let image = VipsImage::new_from_file_with_opts(&path, opts)
+                .map_err(|e| MediaServiceError::LibvipsError(e))?;
 
-        let response = make_static_thumbnail(image, width, height, format)?;
+            let mut processor = ImageProcessor::new();
 
-        return Ok(response);
+            let options = MediaProcessorOptions {
+                image_processors: Some(vec![
+                    ImageProcessorType::Crop {
+                        style: CropStyle::Ratio {
+                            width: params.width.unwrap_or(image.get_width()) as u32,
+                            height: params.height.unwrap_or(image.get_height()) as u32,
+                            scale: 1.0,
+                        },
+                        position: Some((0.5, 0.5))
+                    },
+                    ImageProcessorType::Resize {
+                        style: ResizeStyle::Absolute {
+                            width: params.width.unwrap_or(image.get_width()),
+                            height: params.height.unwrap_or(image.get_height()),
+                        },
+                        upscale: false,
+                    }
+                ]),
+                ..Default::default()
+            };
 
-    } else if category == MediaCategory::Video && (params.width.is_some() || params.height.is_some()) {
+            tracing::debug!("Processing image with options: {:?}", options);
+    
+            let image = ImageProcessor::transform(
+                &mut processor,
+                image,
+                options.image_processors,
+                is_animated,
+            )?;
+
+            let response = VipsImage::write_to_buffer(&image, &format!(".{}", params.format.as_deref().unwrap_or(&extension)))
+                .map_err(MediaServiceError::LibvipsError)?;
+
+            let content_type = match params.format.as_deref().unwrap_or(&extension).to_lowercase().as_str() {
+                "jpg" | "jpeg" => "image/jpeg",
+                "png" => "image/png",
+                "webp" => "image/webp",
+                _ => mime.as_str(),
+            };
+
+            return Ok(Response::builder()
+                // type of the file, e.g., image/jpeg, image/png, etc.
+                .header("Content-Type", content_type)
+                // length of the file in bytes
+                .header("Content-Length", response.len())
+                // cache control headers with a long max-age about 1 week and immutable to indicate that the file won't change
+                .header("Cache-Control", "public, max-age=604800, immutable")
+                .body(Body::from(response))
+                .map_err(|_| MediaServiceError::InternalServer)?)
+        } else {
+            let opts = VOption::new();
+            let image = VipsImage::new_from_file_with_opts(&path, opts)
+                .map_err(|e| MediaServiceError::LibvipsError(e))?;
+
+            let width = params.width.unwrap_or(image.get_width());
+            let height = params.height.unwrap_or(image.get_height());
+
+            let response = make_static_thumbnail(image, width, height, params.format.as_deref().unwrap_or(&extension))?;
+            return Ok(response);
+        }
+
+
+    } else if category == MediaCategory::Video
+        && (params.width.is_some() || params.height.is_some())
+    {
         // get thumbnail for video
         let input_path = state
             .storage
             .full_path(&file)
             .map_err(|_| MediaServiceError::InternalServer)?;
-        let video_thumbnail = extract_thumbnail(&input_path.to_string_lossy(), format, 1).await.map_err(|_| MediaServiceError::InternalServer)?;
+        let video_thumbnail = extract_thumbnail(&input_path.to_string_lossy(), params.format.as_deref().unwrap_or("webp"), 1)
+            .await
+            .map_err(|_| MediaServiceError::InternalServer)?;
 
         let image = VipsImage::new_from_buffer(&video_thumbnail, "")
             .map_err(MediaServiceError::LibvipsError)?;
@@ -111,7 +192,7 @@ pub async fn get_files_handler(
         let width = params.width.unwrap_or(image.get_width());
         let height = params.height.unwrap_or(image.get_height());
 
-        let response = make_static_thumbnail(image, width, height, format)?;
+        let response = make_static_thumbnail(image, width, height, params.format.as_deref().unwrap_or("webp"))?;
 
         return Ok(response);
     }
@@ -133,7 +214,6 @@ fn make_static_thumbnail(
     height: i32,
     format: &str,
 ) -> Result<Response<Body>, MediaServiceError> {
-
     let thumbnail = image
         .thumbnail_image_with_opts(
             width,
