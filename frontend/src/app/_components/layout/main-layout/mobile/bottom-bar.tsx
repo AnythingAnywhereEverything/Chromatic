@@ -15,6 +15,7 @@ import style from "./style.module.scss";
 import { usePathname } from "next/navigation";
 import { ChromaImage } from "@/app/_components/ui/chromatic/chromaImage";
 import { useUser } from "@/hooks/useUser";
+import { UserIdAvatar } from "@/app/_components/ui/chromatic/initialAvatar";
 
 export default function BottomBar() {
     const pathname = usePathname();
@@ -78,14 +79,18 @@ function BottomBarProfile() {
 
     return (
         <Link href={`/u/${username}`} className={style["profile-link"]}>
-            <ChromaImage
-                src={avatarUrl}
-                alt={`${username}'s profile`}
-                thumbhash={avatar_thumbhash || undefined}
-                className={style["profile-image"]}
-                width={32}
-                height={32}
-            />
+            {avatar ? (
+                <ChromaImage
+                    src={avatarUrl}
+                    alt={`${username}'s profile`}
+                    thumbhash={avatar_thumbhash || undefined}
+                    className={style["profile-image"]}
+                    width={32}
+                    height={32}
+                />
+            ) : (
+                <UserIdAvatar userId={userId} name={username} size={32} />
+            )}
         </Link>
     );
 }

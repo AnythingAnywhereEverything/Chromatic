@@ -17,6 +17,7 @@ import { usePathname } from "next/navigation"; // pages router
 import Link from "next/link";
 import { useUser } from "@/hooks/useUser";
 import { ChromaImage } from "@/app/_components/ui/chromatic/chromaImage";
+import { UserIdAvatar } from "@/app/_components/ui/chromatic/initialAvatar";
 // OR usePathname if app router
 
 const SidebarNavigator: React.FC = () => {
@@ -114,14 +115,24 @@ function SidebarProfile() {
         <div className={style["sidebar-profile"]}>
             <Link href={`/u/${username}`} className={style["profile-link"]}>
                 <div className={style["profile-container"]}>
-                    <ChromaImage
-                        src={avatarUrl}
-                        alt={`${username}'s profile`}
-                        className={style["profile-image"]}
-                        width={40}
-                        height={40}
-                        thumbhash={avatar_thumbhash || undefined}
-                    />
+                    {
+                        avatar ? (
+                            <ChromaImage
+                                src={avatarUrl}
+                                alt={`${username}'s profile`}
+                                className={style["profile-image"]}
+                                width={40}
+                                height={40}
+                                thumbhash={avatar_thumbhash || undefined}
+                            />
+                        ) : (
+                            <UserIdAvatar
+                                userId={userId}
+                                name={username}
+                                size={40}
+                            />
+                        )
+                    }
                 </div>
                 <span className={style["label"]}>Profile</span>
             </Link>
