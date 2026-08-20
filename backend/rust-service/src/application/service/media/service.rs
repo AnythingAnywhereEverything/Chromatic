@@ -583,6 +583,7 @@ impl MediaService {
                         uploaded_file
                     } else {
                         // TODO: implement fast video processing here
+                        uploaded_file.get_extra_meta()?;
 
                         let video_post_processes = process_options
                             .post_processors

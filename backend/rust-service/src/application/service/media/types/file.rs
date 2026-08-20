@@ -103,15 +103,21 @@ impl MultipartFile {
         }
     }
 
-    pub fn get_extra_meta(&self) -> Result<MultipartMeta, MediaServiceError> {
+    pub fn get_extra_meta(&mut self) -> Result<MultipartMeta, MediaServiceError> {
+        if let Some(meta) = &self.meta_data {
+            return Ok(meta.clone());
+        }
+
         match self.category {
             MediaCategory::Image =>  {
                 let image = VipsImage::new_from_file(self.path.to_string_lossy().to_string())?;
-                return Ok(MultipartMeta {
+                
+                self.meta_data = Some(MultipartMeta {
                     width: Some(image.get_width()),
                     height: Some(image.get_height()),
                     duration: None,
-                })
+                });
+                return Ok(self.meta_data.clone().unwrap());
             }
             MediaCategory::Video => {
                 let output = std::process::Command::new("ffprobe")
@@ -136,22 +142,33 @@ impl MultipartFile {
                 let height = lines.next().and_then(|h| h.parse::<i32>().ok());
                 let duration = lines.next().and_then(|d| d.parse::<f32>().ok());
 
-                return Ok(MultipartMeta {
+                self.meta_data = Some(MultipartMeta {
                     width,
                     height,
                     duration,
                 });
+                return Ok(self.meta_data.clone().unwrap());
             }
-            _ => return Ok(MultipartMeta {
-                width: None,
-                height: None,
-                duration: None,
-            }),
+            _ => {
+                Ok(MultipartMeta {
+                    width: None,
+                    height: None,
+                    duration: None,
+                })
+            }
         }
     }
 
     pub fn get_relative_destination(&self) -> String {
-        format!("{}/{}", self.destination, self.get_full_name())
+        // check if destination ended with slash,
+        // ended with slash mean hls, not ended with slash mean direct file path
+        // instead of add name, add t_{name}.png for thumbnail
+
+        if self.destination.ends_with('/') {
+            format!("{}t_{}.png", self.destination, self.get_name())
+        } else {
+            format!("{}/{}", self.destination, self.get_full_name())
+        }
     }
 
     pub fn is_existing(&self, storage: &Arc<dyn MediaStorage>) -> bool {
