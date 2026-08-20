@@ -61,7 +61,7 @@ impl MediaService {
             .await?;
 
         // try catch the result of the thread
-        let processed_media = match thread {
+        let mut processed_media = match thread {
             Ok(media) => media,
             Err(e) => {
                 storage.delete_temp(&upload_job).await;
@@ -105,19 +105,24 @@ impl MediaService {
             thumbhash: processed_media.get_thumbhash().cloned(),
             ..Default::default()
         };
-        media::create::media_data(&mut tx, &media_data_row).await?;
 
-        let meta = processed_media.get_extra_meta()?;
-
-        let media_metadata_row = media::row::MediaMetadataRow {
-            media_id: processed_media.get_id(),
-            file_size: processed_media.get_size() as i64,
-            mime_type: processed_media.get_mime().to_string(),
-            width: meta.width,
-            height: meta.height,
-            duration: meta.duration,
-        };
-        media::create::media_metadata(&mut tx, &media_metadata_row).await?;
+        if let Some(existing_media_id) = media::create::media_data_check_existing(&mut tx, &media_data_row).await? {
+            processed_media.set_id(existing_media_id);
+        } else {
+            media::create::media_data(&mut tx, &media_data_row).await?;
+    
+            let meta = processed_media.get_extra_meta()?;
+    
+            let media_metadata_row = media::row::MediaMetadataRow {
+                media_id: processed_media.get_id(),
+                file_size: processed_media.get_size() as i64,
+                mime_type: processed_media.get_mime().to_string(),
+                width: meta.width,
+                height: meta.height,
+                duration: meta.duration,
+            };
+            media::create::media_metadata(&mut tx, &media_metadata_row).await?;
+        }
 
         tx.commit().await?;
 
@@ -166,7 +171,7 @@ impl MediaService {
 
         let mut final_medias = Vec::new();
         // save to database
-        for media in &saved_medias {
+        for mut media in saved_medias.clone() {
             let media_data_row = MediaDataRow {
                 id: media.get_id(),
                 uploader_id: options.uploader_id,
@@ -176,20 +181,24 @@ impl MediaService {
                 thumbhash: media.get_thumbhash().cloned(),
                 ..Default::default()
             };
-            media::create::media_data(&mut tx, &media_data_row).await?;
 
+            if let Some(existing_media_id) = media::create::media_data_check_existing(&mut tx, &media_data_row).await? {
+                media.set_id(existing_media_id);
+            } else {
+                media::create::media_data(&mut tx, &media_data_row).await?;
+                let meta = media.get_extra_meta()?;
+    
+                let media_metadata_row = media::row::MediaMetadataRow {
+                    media_id: media.get_id(),
+                    file_size: media.get_size() as i64,
+                    mime_type: media.get_mime().to_string(),
+                    width: meta.width,
+                    height: meta.height,
+                    duration: meta.duration,
+                };
+                media::create::media_metadata(&mut tx, &media_metadata_row).await?;
+            }
             // not move yet
-            let meta = media.get_extra_meta()?;
-
-            let media_metadata_row = media::row::MediaMetadataRow {
-                media_id: media.get_id(),
-                file_size: media.get_size() as i64,
-                mime_type: media.get_mime().to_string(),
-                width: meta.width,
-                height: meta.height,
-                duration: meta.duration,
-            };
-            media::create::media_metadata(&mut tx, &media_metadata_row).await?;
             final_medias.push(media.clone());
         }
 

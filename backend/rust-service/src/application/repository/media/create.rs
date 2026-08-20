@@ -1,9 +1,28 @@
 use sqlx::Transaction;
 
 use crate::application::repository::{
-    RepositoryResult,
-    media::row::{MediaDataRow, MediaMetadataRow},
+    RepositoryResult, media::row::{MediaDataRow, MediaMetadataRow},
 };
+
+/// Check if it have the same path and uploader_id and not deleted, if so, we will update the existing record instead of inserting a new one.
+/// if so, we reuse the existing record and return the uploaded media id, otherwise we insert a new record and return the new media id.
+pub async fn media_data_check_existing(
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    media_data: &MediaDataRow,
+) -> RepositoryResult<Option<i64>> {
+    let existing_media_id: Option<i64> = sqlx::query_scalar(
+        r#"
+        SELECT id FROM media_data
+        WHERE path = $1 AND uploader_id = $2 AND deleted_at IS NULL
+        "#,
+    )
+    .bind(&media_data.path)
+    .bind(media_data.uploader_id)
+    .fetch_optional(tx.as_mut())
+    .await?;
+    Ok(existing_media_id)
+}
+
 
 pub async fn media_data(
     tx: &mut Transaction<'_, sqlx::Postgres>,
