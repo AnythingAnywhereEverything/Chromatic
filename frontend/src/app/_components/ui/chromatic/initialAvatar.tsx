@@ -12,11 +12,13 @@ const getInitials = (name: string) => {
 export const UserIdAvatar = ({
     userId,
     name,
+    className,
     size = 48,
 }: {
     userId: string;
     name: string;
     size?: number;
+    className?: string;
 }) => {
     const initials = getInitials(name);
     const backgroundColor = getIdColor(userId);
@@ -37,7 +39,7 @@ export const UserIdAvatar = ({
     };
 
     return (
-        <div style={avatarStyle} aria-label={name || `User ${userId}`}>
+        <div className={className} style={avatarStyle} aria-label={name || `User ${userId}`}>
             {initials}
         </div>
     );

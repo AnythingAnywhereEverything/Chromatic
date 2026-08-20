@@ -1,6 +1,6 @@
-import { fetchWithOptionAuth } from "@/handler/token_handler";
+import { fetchWithAuth, fetchWithOptionAuth } from "@/handler/token_handler";
 
-interface PublicUserProfileResponse {
+export interface PublicUserProfileResponse {
   id: string;
   username: string;
   display_name: string;
@@ -25,6 +25,18 @@ export async function getPublicUserProfile(username: string): Promise<PublicUser
       "Content-Type": "application/json",
     },
   });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data;
+}
+
+export async function patchUserAvatar(formData: FormData): Promise<PublicUserProfileResponse | null> {
+
+  const res = await fetchWithAuth(`v2/users/me/avatar`, {
+    method: "PATCH",
+    body: formData,
+  });
+
   if (!res.ok) return null;
   const data = await res.json();
   return data;

@@ -30,7 +30,7 @@ export default function AuthenticatedLayout({
     // }
 
     return (
-        <main>
+        <main style={{ display: "flex", flexDirection: "column", width: "100%" }}>
             {children}
         </main>
     );
