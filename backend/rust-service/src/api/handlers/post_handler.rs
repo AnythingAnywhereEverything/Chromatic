@@ -115,8 +115,11 @@ pub async fn get_feed_post_handler(
     let all_post = post_repo::post::get_feed_public(&mut tx, None, user_id).await?;
     tracing::warn!("POST AS JSON BEFORE {:#?}", all_post);
 
-    let post_vec: Vec<PostDTO> = all_post.into_iter().map(|post| post.into()).collect();
-
+    let mut post_vec: Vec<PostDTO> = all_post.into_iter().map(|post| post.into()).collect();
+    
+    for post in &mut post_vec {
+        post.current_user_id = user_id.map(|id| id.to_string());
+    }
     Ok(Json(post_vec))
 }
 
@@ -221,8 +224,9 @@ pub async fn create_new_post_handler(
             post_repo::post::add_tags_target(&mut tx, *new_post_id, "post".to_string(), tag ).await?;
         }
     }
-    let post: PostDTO = post_repo::post::get_post_by_id(&mut tx, *new_post_id, user_id).await?.into();
+    let mut post: PostDTO = post_repo::post::get_post_by_id(&mut tx, *new_post_id, user_id).await?.into();
     
+    post.current_user_id = Some(user_id.to_string());
     tx.commit().await?;
     Ok(Json(post))
 }

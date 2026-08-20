@@ -1,9 +1,10 @@
 use serde::Serialize;
+use sqlx::prelude::FromRow;
 
 use crate::{api::dtos::user_dtos::MediaFullDTO, application::repository::post::row::PostRow};
 
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize,FromRow)]
 pub struct PostDTO {
     pub id:String,
     pub user_id: String,
@@ -21,6 +22,8 @@ pub struct PostDTO {
     pub media: Vec<MediaFullDTO>,
     pub tag: Vec<TagDTO>,
     pub is_liked: bool,
+    #[sqlx(skip)]
+    pub current_user_id: Option<String>, // Will default to None
 }
 
 impl Into<PostDTO> for PostRow {
@@ -56,7 +59,8 @@ impl Into<PostDTO> for PostRow {
                 tag_name: tag.tag_name,
                 tag_id: tag.tag_id.to_string()
             }).collect(),
-            is_liked: self.is_liked
+            is_liked: self.is_liked,
+            current_user_id : None
         }
     }
 }
