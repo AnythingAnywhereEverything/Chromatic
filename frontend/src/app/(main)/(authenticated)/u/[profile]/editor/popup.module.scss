@@ -1,0 +1,230 @@
+
+.file-input {
+    display: none;
+}
+
+.close-button {
+    top: calc(var(--spacing) * 2);
+    right: calc(var(--spacing) * 2);
+    background-color: var(--background);
+    border: none;
+    color: var(--foreground);
+    cursor: pointer;
+    transition: color 0.3s ease;
+    font-size: var(--text-large);
+    width: calc(var(--spacing) * 7);
+    height: calc(var(--spacing) * 7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: calc(var(--spacing) * 1.5);
+    
+    svg {
+        width: calc(var(--spacing) * 4);
+        height: calc(var(--spacing) * 4);
+    }
+    
+    &:hover {
+        color: var(--foreground);
+    }
+}
+
+// ---------------------
+// * EDITOR POPUP STYLES 
+// ---------------------
+
+.editor-header {
+    width: 100%;
+    margin-bottom: calc(var(--spacing) * 2);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: calc(var(--spacing) * 7);
+    h2 {
+        margin: 0;
+        font-size: var(--text-large);
+        font-weight: bold;
+        color: var(--text-neutral);
+    }
+    p {
+        margin: 0;
+        font-size: var(--text-small);
+        color: var(--text-muted);
+    }
+}
+
+.upload-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--input);
+    width: 100%;
+    height: 160px;
+    color: var(--primary-foreground);
+    border: none;
+    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 4);
+    border-radius: calc(var(--spacing) * 1.5);
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    font-size: var(--text-small);
+
+    svg {
+        width: calc(var(--spacing) * 6);
+        height: calc(var(--spacing) * 6);
+    }
+
+    &:hover {
+        background-color: color-mix(in oklab, var(--input) 90%, black);
+    }
+}
+
+.upload-instructions {
+    margin-top: calc(var(--spacing) * 2);
+    width: 100%;
+    text-align: left;
+    font-size: var(--text-small);
+    color: var(--text-muted);
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: grid;
+    place-items: center;
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    transition: opacity 200ms ease;
+    pointer-events: all;
+    .content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: calc(var(--spacing) * 2);
+        padding: calc(var(--spacing) * 4);
+        background-color: var(--popover);
+        border-radius: calc(var(--spacing) * 2);
+        width: 100%;
+        max-width: 30vw;
+        min-width: 400px;
+
+        border: 1px solid var(--border);
+        scale: 0.8;
+        transition: scale 200ms ease;
+    }
+
+    &[data-status="open"] {
+        opacity: 1;
+        .content {
+            scale: 1;
+        }
+    }
+}
+
+
+
+
+.cropper-header {
+    width: 100%;
+    padding-bottom: calc(var(--spacing) * 2);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: calc(var(--spacing) * 7);
+    h2 {
+        margin: 0;
+        font-size: var(--text-large);
+        font-weight: bold;
+        color: var(--foreground);
+    }
+    p {
+        margin: 0;
+        font-size: var(--text-small);
+        color: var(--input);
+    }
+}
+
+
+.cropper-content {
+    width: 100%;
+    position: relative;
+    border-radius: calc(var(--spacing) * 1.5);
+    overflow: hidden;
+}
+
+.cropper-wrapper {
+    width: 100%;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    gap: 20px;
+}
+
+.cropper {
+    position: relative;
+
+    width: 100%;
+    max-width: 640px;
+    aspect-ratio: 16 / 9;
+
+    overflow: hidden;
+
+    background: var(--muted);
+
+    touch-action: none;
+    overscroll-behavior: contain;
+
+    user-select: none;
+    cursor: grab;
+}
+
+.cropper:active {
+    cursor: grabbing;
+}
+
+.cropper-image {
+    position: absolute;
+    max-width: none;
+    max-height: none;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    user-select: none;
+}
+
+.cropper-overlay {
+    position: absolute;
+    inset: 0;
+
+    pointer-events: none;
+}
+
+.cropper-selection {
+    position: absolute;
+
+    width: 50%;
+    aspect-ratio: 1 / 1;
+
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.58);
+
+    pointer-events: none;
+}
+
+.cropper-controls {
+    width: 70%;
+    max-width: 120px;
+}
+
+.cropper-controls input {
+    width: 100%;
+}
