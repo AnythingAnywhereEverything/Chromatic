@@ -2,8 +2,7 @@ use std::sync::Arc;
 
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use rs_vips::{
-    VipsImage,
-    voption::{Setter, VOption},
+    VipsImage, enums::Size, voption::{Setter, VOption},
 };
 use sqlx::{Pool, Postgres};
 use tokio::task::JoinHandle;
@@ -487,8 +486,6 @@ impl MediaService {
 
                         let opts = VOption::new().set("strip", true);
 
-                        
-
                         uploaded_file.set_extension("webp".to_string());
                         let name = uploaded_file.get_full_name();
                         let relative_path = format!("{}/{}", container_path, name);
@@ -534,7 +531,11 @@ impl MediaService {
 
                             // thumbnail image 512 x 512
                             uploaded_file.set_extension("png".to_string());
-                            let thumbnail = image.thumbnail_image(512)?;
+                            let thumbnail = image.thumbnail_image_with_opts(
+                                512,
+                                VOption::new()
+                                    .set("size", Size::Down as i32)
+                            )?;
                             let relative_path = format!("{}/{}", container_path, uploaded_file.get_full_name());
                             let full_path = storage.temp_full_path(&relative_path).to_string_lossy().to_string();
                             thumbnail.write_to_file_with_opts(

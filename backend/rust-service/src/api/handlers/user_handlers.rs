@@ -6,16 +6,14 @@ use multipart_derive::Multipart;
 
 use crate::{
     api::{
-        APIError, RequestAuth,
-        dtos::user_dtos::{UserDTO, PublicUserProfileDTO},
-        version,
+        APIError, RequestAuth, dtos::user_dtos::{PublicUserProfileDTO, UserDTO}, version,
     }, application::{
         repository::{
             media::{self as media_repo, row::MediaStatus},
             user::{self as user_repo},
         }, service::{
             errors::AuthServiceError, media::{
-                processor::types::{CropStyle, ImageProcessorType, MediaProcessorFFlags, MediaProcessorOptions}, service::MediaService, service_type::{ContainerConfig, MediaServiceOptions}, types::{
+                processor::types::{CropStyle, ImageProcessorType, MediaProcessorFFlags, MediaProcessorOptions, ResizeStyle}, service::MediaService, service_type::{ContainerConfig, MediaServiceOptions}, types::{
                     file::MultipartFile, media_options::{MediaType, MultipartExtractorOptions, ValidationOptions, ValidationType},
                 },
             },
@@ -128,14 +126,23 @@ pub async fn upload_avatar_handler(
                 image_thumbhash: true,
                 ..Default::default()
             }),
-            image_processors: Some(vec![ImageProcessorType::Crop {
-                style: CropStyle::Ratio {
-                    width: 1,
-                    height: 1,
-                    scale: extracted.scale,
+            image_processors: Some(vec![
+                ImageProcessorType::Crop {
+                    style: CropStyle::Ratio {
+                        width: 1,
+                        height: 1,
+                        scale: extracted.scale,
+                    },
+                    position: Some((extracted.position_x, extracted.position_y)),
                 },
-                position: Some((extracted.position_x, extracted.position_y)),
-            }]),
+                ImageProcessorType::Resize {
+                    style: ResizeStyle::Absolute {
+                        width: 512,
+                        height: 512,
+                    },
+                    upscale: false,
+                },
+            ]),
             video_processors: None,
             post_processors: None,
         }),
