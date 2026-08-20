@@ -2,8 +2,6 @@ use sqlx::{Postgres, Transaction};
 
 use crate::application::repository::guild::row::GuildRolesRow;
 
-
-
 pub async fn create_guild_role(
     tx: &mut Transaction<'_, Postgres>,
     id: i64,
