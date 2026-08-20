@@ -96,23 +96,28 @@ function ProfileBanner({ params }: { params: { profile: string } }) {
     const [profile, setProfile] = useState<PublicUserProfileResponse | null>(
         null,
     );
+    const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
+
     useEffect(() => {
         const fetchProfile = async () => {
             const profileOf = params.profile;
-
-            let response = await getPublicUserProfile(profileOf);
+            const response = await getPublicUserProfile(profileOf);
 
             console.log("ProfileBanner response:", response);
-            setProfile(response);
-        };
 
+            setProfile(response);
+            setAvatarSrc(
+                response?.avatar
+                    ? `avatars/${response.id}/${response.avatar}`
+                    : null,
+            );
+        };
         fetchProfile();
-    }, [params]);
+    }, [params.profile]);
 
     // create banner container ref
     const [bannerContainerWidth, setBannerContainerWidth] = useState(600);
     const [bannerContainerHeight, setBannerContainerHeight] = useState(240);
-    const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
     let bannerContainerRef = React.createRef<HTMLDivElement>();
 
     useEffect(() => {
@@ -186,13 +191,11 @@ function ProfileBanner({ params }: { params: { profile: string } }) {
                                 );
                             }}
                         >
-                            {profile.avatar ? (
+                            {profile.avatar && avatarSrc ? (
                                 <ChromaImage
-                                    src={
-                                        avatarSrc ||
-                                        `avatars/${profile.id}/${profile.avatar}`
-                                    }
-                                    alt={`${profile.display_name}'s avatar`}
+                                    style={{ width: "180px", height: "180px" }}
+                                    src={avatarSrc}
+                                    alt={`${profile.display_name || profile.username}'s avatar`}
                                     thumbhash={
                                         profile.avatar_thumbhash || undefined
                                     }
@@ -210,14 +213,20 @@ function ProfileBanner({ params }: { params: { profile: string } }) {
                             {is_owner && (
                                 <EditAvatarPopup
                                     onUpdate={(res) => {
-                                        setProfile(
-                                            res.avatar
-                                                ? {
-                                                      ...profile,
-                                                      avatar: res.avatar,
-                                                  }
-                                                : profile,
+                                        setAvatarSrc(
+                                            `avatars/${res.id}/${res.avatar}`,
                                         );
+                                        setProfile((prevProfile) => {
+                                            if (prevProfile) {
+                                                return {
+                                                    ...prevProfile,
+                                                    avatar: res.avatar,
+                                                    avatar_thumbhash:
+                                                        res.avatar_thumbhash,
+                                                };
+                                            }
+                                            return prevProfile;
+                                        });
                                     }}
                                 />
                             )}
@@ -244,7 +253,7 @@ function ProfileBanner({ params }: { params: { profile: string } }) {
                     </div>
                 </>
             ) : (
-                <p>Loading profile...</p>
+                <ProfileBannerSkeleton />
             )}
         </div>
     );

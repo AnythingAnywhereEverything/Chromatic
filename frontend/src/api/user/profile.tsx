@@ -30,7 +30,7 @@ export async function getPublicUserProfile(username: string): Promise<PublicUser
   return data;
 }
 
-export async function patchUserAvatar(formData: FormData): Promise<PublicUserProfileResponse | null> {
+export async function updateUserAvatar(formData: FormData): Promise<PublicUserProfileResponse | null> {
 
   const res = await fetchWithAuth(`v2/users/me/avatar`, {
     method: "PATCH",

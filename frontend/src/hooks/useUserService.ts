@@ -2,8 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   updateDisplayName,
   updateUsername,
-  updateProfilePicture
 } from "@/api/user";
+import { updateUserAvatar } from "@/api/user/profile";
 
 export const useUserService = () => {
   const queryClient = useQueryClient();
@@ -23,13 +23,13 @@ export const useUserService = () => {
   });
 
   const profileMutation = useMutation({
-    mutationFn: updateProfilePicture,
+    mutationFn: updateUserAvatar,
     onSuccess: handleSuccess,
   });
 
   return {
     updateDisplayName: displayNameMutation,
     updateUsername: usernameMutation,
-    updateProfilePicture: profileMutation,
+    updateUserAvatar: profileMutation,
   };
 };

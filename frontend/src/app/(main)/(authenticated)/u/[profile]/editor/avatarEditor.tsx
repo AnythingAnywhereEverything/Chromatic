@@ -11,7 +11,8 @@ import { FaPen } from "react-icons/fa";
 import { IoMdClose } from "react-icons/io";
 import { BiSolidImageAdd } from "react-icons/bi";
 import { AvatarCropper } from "./avatarCropper";
-import { patchUserAvatar, PublicUserProfileResponse } from "@/api/user/profile";
+import { updateUserAvatar, PublicUserProfileResponse } from "@/api/user/profile";
+import { useUserService } from "@/hooks/useUserService";
 
 export function EditAvatarPopup({
     onUpdate,
@@ -31,6 +32,8 @@ export function EditAvatarPopup({
         height: 0,
     });
 
+    let userService = useUserService();
+
     const handleFileUpload = () => {
         if (!file) return;
 
@@ -42,14 +45,12 @@ export function EditAvatarPopup({
         formData.append("scale", cropScale.toString());
 
         // send the form data to the
-        patchUserAvatar(formData).then((response) => {
-            if (response) {
-                console.log("Avatar updated successfully:", response);
-                // Optionally, you can close the crop dialog after successful upload
+        userService.updateUserAvatar.mutateAsync(formData).then((res) => {
+            if (res) {
+                onUpdate(res);
+                setIsOpen(false);
                 setCropOpen(false);
-                onUpdate(response); // Call the onUpdate callback with the new avatar URL
-            } else {
-                // handle error
+                setFile(null);
             }
         });
     };
