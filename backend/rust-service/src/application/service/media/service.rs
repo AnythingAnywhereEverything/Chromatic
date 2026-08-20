@@ -524,7 +524,7 @@ impl MediaService {
                             uploaded_file.rename(&hash)?;
                         }
 
-                        if is_animated && container_conf.use_animated_image_indicator && container_conf.use_hash_names {
+                        if is_animated && container_conf.use_animated_image_indicator && (container_conf.use_hash_names || !container_conf.use_raw_names) {
                             let name = uploaded_file.get_name();
                             let image = VipsImage::new_from_file(&uploaded_file.get_full_path())?;
                             uploaded_file.rename(&format!("a_{}", name))?;

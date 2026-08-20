@@ -1,12 +1,11 @@
 use axum::{
-    Json, extract::{Multipart, Path, Query, State},
+    Json, extract::{Multipart, Path, State},
 };
 use hyper::StatusCode;
 use multipart_derive::Multipart;
-use tracing::warn;
 
 use crate::{
-    api::{APIError, RequestAuth, dtos::{post_dtos::{LikeDTO, PostDTO, TagDTO}, user_dtos::MediaFullDTO}, version}, application::{
+    api::{APIError, RequestAuth, dtos::post_dtos::{LikeDTO, PostDTO}, version}, application::{
         repository::{
             media::{self as media_repo, row::MediaStatus},
             post::{self as post_repo},
@@ -15,10 +14,7 @@ use crate::{
                 processor::types::{
                     ImageProcessorType, MediaProcessorFFlags, MediaProcessorOptions,
                     PostProcessingType, ResizeStyle, VideoPostProcessorType,
-                },
-                service::MediaService,
-                service_type::MediaServiceOptions,
-                types::{
+                }, service::MediaService, service_type::{ContainerConfig, MediaServiceOptions}, types::{
                     file::MultipartFile,
                     media_options::{
                         FieldTypeFilter, MediaType, MultipartExtractorOptions, ValidationOptions,
@@ -163,7 +159,11 @@ pub async fn create_new_post_handler(
     let new_media_opts = MediaServiceOptions {
         upload_route: format!("posts/{}", new_post_id),
         uploader_id: user_id,
-        container: None,
+        container: Some(ContainerConfig {
+            generate_thumbhash: true,
+            use_animated_image_indicator: true,
+            ..Default::default()
+        }),
         processor: Some(MediaProcessorOptions {
             fflags: Some(MediaProcessorFFlags {
                 video_thumbnail: true,
