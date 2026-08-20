@@ -258,9 +258,10 @@ export const TooltipTrigger = React.forwardRef<
 
 export const TooltipContent = React.forwardRef<
     HTMLDivElement,
-    React.HTMLProps<HTMLDivElement>
+    React.HTMLProps<HTMLDivElement> &
+    {zIndex?: number}
 >(function TooltipContent(
-    { children, style, className, ...props },
+    { children, style, className, zIndex, ...props },
     propRef,
 ) {
     const state = useTooltipState();
@@ -277,7 +278,7 @@ export const TooltipContent = React.forwardRef<
         <Portal>
             <div
                 ref={ref}
-                style={state.floatingStyles}
+                style={{ ...state.floatingStyles, zIndex }}
                 {...state.getFloatingProps()}
             >
                 <div

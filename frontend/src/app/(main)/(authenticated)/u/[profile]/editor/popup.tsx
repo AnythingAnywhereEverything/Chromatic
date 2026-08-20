@@ -1,5 +1,3 @@
-import { PublicUserProfileResponse } from "@/api/user/profile";
-import { useUserService } from "@/hooks/useUserService";
 import React from "react";
 import {
     Dialog,
@@ -287,9 +285,12 @@ function ImageCropper({
                     onChange={(event) => {
                         onCropScaleChange(Number(event.target.value));
                     }}
-                    style={{
-                        direction: "rtl",
-                    }}
+                    style={
+                        {
+                            direction: "rtl",
+                            "--slider-progress": `${((1 - cropScale) / 0.9) * 100}%`,
+                        } as React.CSSProperties
+                    }
                 />
             </div>
         </div>
@@ -305,6 +306,7 @@ export function ImageEditor({
     const [isOpen, setIsOpen] = React.useState(false);
     const [cropOpen, setCropOpen] = React.useState(false);
     const [file, setFile] = React.useState<File | null>(null);
+    const [uploadingState, setUploadingState] = React.useState("none");
 
     const [cropPosX, setCropPosX] = React.useState(0.5);
     const [cropPosY, setCropPosY] = React.useState(0.5);
@@ -332,19 +334,18 @@ export function ImageEditor({
                 height: image.naturalHeight,
             });
 
-            console.log(
-                "Loaded image dimensions:",
-                image.naturalWidth,
-                image.naturalHeight,
-            );
-
-            // * Every newly selected image starts centered.
             setCropPosX(0.5);
             setCropPosY(0.5);
             setCropScale(1.0);
+            setUploadingState("none");
 
             URL.revokeObjectURL(imageUrl);
         };
+
+        // check if the file size is greater than 10MB
+        if (selectedFile.size > 10 * 1024 * 1024) {
+            throw new Error("File size exceeds 10MB limit.");
+        }
 
         image.src = imageUrl;
 
@@ -380,7 +381,9 @@ export function ImageEditor({
                 onOpenChange={setIsOpen}
                 overlayClassName={style["overlay"]}
             >
-                <DialogTrigger asChild onClick={() => setIsOpen(true)}>{triggerElement}</DialogTrigger>
+                <DialogTrigger asChild onClick={() => setIsOpen(true)}>
+                    {triggerElement}
+                </DialogTrigger>
 
                 <DialogContent className={style["content"]}>
                     <div className={style["editor-header"]}>
@@ -397,16 +400,18 @@ export function ImageEditor({
                         </DialogClose>
                     </div>
 
-                    <button
-                        name="upload-button"
-                        className={style["upload-button"]}
-                        onClick={() => {
-                            fileInputRef.current?.click();
-                        }}
-                    >
-                        <BiSolidImageAdd />
-                        <p>Upload Image</p>
-                    </button>
+                    <div className={style["editor-body"]}>
+                        <button
+                            name="upload-button"
+                            className={style["upload-button"]}
+                            onClick={() => {
+                                fileInputRef.current?.click();
+                            }}
+                        >
+                            <BiSolidImageAdd />
+                            <p>Upload Image</p>
+                        </button>
+                    </div>
 
                     <p className={style["upload-instructions"]}>
                         Max image size 10MB
@@ -429,6 +434,7 @@ export function ImageEditor({
                     overlayClassName={style["overlay"]}
                 >
                     <DialogContent className={style["content"]}>
+                        <div className={style["cropper-uploadbar"]} data-uploading-state={uploadingState} />
                         <div className={style["cropper-header"]}>
                             <h2>Edit Image</h2>
 
@@ -457,25 +463,39 @@ export function ImageEditor({
                         </div>
                         <div className={style["cropper-footer"]}>
                             <button
-                                className={style["cancel-button"]}
-                                onClick={() => setCropOpen(false)}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className={style["save-button"]}
-                                onClick={async () => {
-                                    await onUpload({
-                                        File: file,
-                                        PositionX: cropPosX,
-                                        PositionY: cropPosY,
-                                        Scale: cropScale,
-                                    });
-                                    setCropOpen(false);
+                                className={style["reset-button"]}
+                                onClick={() => {
+                                    setCropPosX(0.5);
+                                    setCropPosY(0.5);
+                                    setCropScale(1.0);
                                 }}
                             >
-                                Save
+                                Reset
                             </button>
+                            <div className={style["cropper-actions"]}>
+                                <button
+                                    className={style["cancel-button"]}
+                                    onClick={() => setCropOpen(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className={style["save-button"]}
+                                    onClick={async () => {
+                                        setUploadingState("started");
+                                        await onUpload({
+                                            File: file,
+                                            PositionX: cropPosX,
+                                            PositionY: cropPosY,
+                                            Scale: cropScale,
+                                        });
+                                        setUploadingState("ended");
+                                        setCropOpen(false);
+                                    }}
+                                >
+                                    Apply
+                                </button>
+                            </div>
                         </div>
                     </DialogContent>
                 </Dialog>
