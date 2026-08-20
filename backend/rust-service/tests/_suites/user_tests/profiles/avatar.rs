@@ -50,13 +50,12 @@ async fn test_profile_update_user_random_position(pool: PgPool) {
 
     println!("Profile JSON: {}", profile_json);
 
-    let avatar_media = &profile_json["avatar_media_id"];
-
     // get path of the avatar media from avatar_media object within the test storage directory
-    let avatar_media_url = avatar_media["path"].as_str().unwrap();
+    let avatar_file = profile_json["avatar"].as_str().unwrap();
+    let user_id = profile_json["id"].as_str().unwrap();
 
     // read the media data directly from local storage to verify the image size
-    let avatar_file_path = format!("tests/media/{}/{}", test_id, avatar_media_url);
+    let avatar_file_path = format!("tests/media/{}/avatars/{}/{}", test_id, user_id, avatar_file);
     println!("Avatar file path: {}", avatar_file_path);
     let avatar_file_bytes = std::fs::read(&avatar_file_path).unwrap();
     let avatar_image = VipsImage::new_from_buffer(&avatar_file_bytes, "").unwrap();
