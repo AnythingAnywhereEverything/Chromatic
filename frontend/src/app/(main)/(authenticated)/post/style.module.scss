@@ -6,7 +6,7 @@
     align-items: stretch;
 }
 .post-left-layout{
-    max-width: 520px;
+    width: calc(var(--spacing) * 150);
 }
 .feedLayout{
     max-width: 1080px;
