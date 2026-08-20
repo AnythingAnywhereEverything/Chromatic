@@ -380,15 +380,13 @@ impl MediaService {
         uploaded_file.set_id(file_id);
 
         // Determine the file name based on the container configuration and processing options
-        if container_conf.use_hash_names && has_process {
-            let hash = uploaded_file.get_hash()?;
-            uploaded_file.rename(&hash.to_string())?;
-        } else if container_conf.use_raw_names && !has_process {
+        if container_conf.use_raw_names && !has_process {
             let name = uploaded_file.get_name().clone();
             uploaded_file.rename(&name)?;
         } else {
             uploaded_file.rename(&file_id.to_string())?;
         }
+        // * Hash done later
 
         tracing::debug!(
             "Renamed uploaded file: {:#?} with file_id: {} and container_path: {}",
@@ -480,21 +478,7 @@ impl MediaService {
 
                         let opts = VOption::new().set("strip", true);
 
-                        if is_animated && container_conf.use_animated_image_indicator && container_conf.use_hash_names {
-                            let name = uploaded_file.get_name();
-                            uploaded_file.set_name(format!("a_{}", name));
-
-                            // thumbnail image 512 x 512
-                            uploaded_file.set_extension("png".to_string());
-                            let thumbnail = image.thumbnail_image(512)?;
-                            let relative_path = format!("{}/{}", container_path, uploaded_file.get_full_name());
-                            let full_path = storage.temp_full_path(&relative_path).to_string_lossy().to_string();
-                            thumbnail.write_to_file_with_opts(
-                                &full_path,
-                                VOption::new()
-                                .set("strip", true)
-                            )?;
-                        }
+                        
 
                         uploaded_file.set_extension("webp".to_string());
                         let name = uploaded_file.get_full_name();
@@ -528,6 +512,28 @@ impl MediaService {
 
                         uploaded_file.revalidate(&storage)?;
                         uploaded_file.set_extension("webp".to_string());
+
+                        if container_conf.use_hash_names {
+                            let hash = uploaded_file.get_hash()?;
+                            uploaded_file.rename(&hash)?;
+                        }
+
+                        if is_animated && container_conf.use_animated_image_indicator && container_conf.use_hash_names {
+                            let name = uploaded_file.get_name();
+                            let image = VipsImage::new_from_file(&uploaded_file.get_full_path())?;
+                            uploaded_file.rename(&format!("a_{}", name))?;
+
+                            // thumbnail image 512 x 512
+                            uploaded_file.set_extension("png".to_string());
+                            let thumbnail = image.thumbnail_image(512)?;
+                            let relative_path = format!("{}/{}", container_path, uploaded_file.get_full_name());
+                            let full_path = storage.temp_full_path(&relative_path).to_string_lossy().to_string();
+                            thumbnail.write_to_file_with_opts(
+                                &full_path,
+                                VOption::new()
+                                .set("strip", true)
+                            )?;
+                        }
 
                         tracing::debug!(
                             "Processed image revalidated: {:#?}",
