@@ -13,8 +13,8 @@ pub fn routes() -> Router<SharedState> {
         
         .route("/new", post(create_new_post_handler))
         
-        .route("/{id}/update", put(update_post_handler))
-        .route("/{id}/delete", delete(delete_post_handler))
+        .route("/{id}", put(update_post_handler))
+        .route("/{id}", delete(delete_post_handler))
 
         .route("/{id}/like", post(liked_handler))
         
