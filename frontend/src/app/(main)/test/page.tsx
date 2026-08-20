@@ -66,7 +66,7 @@ const TestPage = () => {
                             position: "fixed",
                             top: 0,
                             left: 0,
-                            backgroundColor: "white",
+                            backgroundColor: "grey",
                             padding: "10px",
                         }}
                     >
@@ -214,18 +214,6 @@ const TestPage = () => {
             </section>
             {/* Testing purpose */}
             <section style={{width: "640px"}}>
-              <Post
-                id={""}
-                ownerId={""}
-                ownerName={""}
-                content={`
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi at consequat sem. Donec tincidunt auctor nisl iaculis ultrices. Maecenas a velit purus. Nulla sit amet sem nulla. Morbi tincidunt purus sit amet eros bibendum, quis lobortis eros molestie. In accumsan bibendum velit non dapibus. Cras id varius lacus. Donec faucibus eget lorem mollis rutrum. Donec ante quam, pretium eget felis vitae, pulvinar efficitur nisi. Phasellus eget risus sollicitudin, posuere enim nec, placerat eros. Praesent maximus bibendum velit ut pretium. Praesent arcu turpis, euismod eu ex porta, scelerisque iaculis est. Nulla semper felis tortor, ut mattis elit viverra id. Duis vel hendrerit sem.
-                    Nullam posuere lectus nec lectus tempor dignissim. Nulla magna tortor, facilisis ac nisl vel, rutrum congue neque. Fusce a justo porta, venenatis quam et, euismod lorem. Duis sit amet maximus nunc. Quisque sed mattis mauris, non gravida metus. Ut faucibus erat lectus, eget tempus ex rutrum sed. Ut mollis ante nisl, et egestas risus sodales consectetur. Vivamus et arcu scelerisque, semper lorem et, feugiat tellus. Morbi sagittis eros sed iaculis consequat.
-                    Etiam sit amet pulvinar lectus. Aenean consectetur libero sollicitudin feugiat consequat. Ut ante lorem, dignissim ut massa sit amet, lacinia varius est. Pellentesque id est vitae magna sagittis tincidunt vel in nibh. Suspendisse ac congue sem. Praesent at mauris turpis. Morbi eleifend facilisis metus.
-                `}
-                like={0}
-                comment={[]} 
-                bookmark={false}/>
             </section>
 
             <section>
