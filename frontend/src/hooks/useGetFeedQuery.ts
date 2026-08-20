@@ -1,4 +1,4 @@
-import { getUserFeed } from "@/api/getFeed";
+import { getUserFeed } from "@/api/post/getFeed";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 
