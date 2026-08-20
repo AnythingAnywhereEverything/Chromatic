@@ -1,40 +1,48 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import style from "./style.module.scss"
 import { LuThumbsUp } from "react-icons/lu";
 import { GoComment } from "react-icons/go";
 import { IoMdShare } from "react-icons/io";
-import { IoBookmarkOutline } from "react-icons/io5";
-interface PostProps {
-    id: string;
-    ownerId: string;
-    ownerName: string;
-    content:string
-    attachment?: string[]
-    like: number;
-    comment: string[];
-    bookmark: boolean
-}
+import { IoBookmarkOutline, IoClipboardOutline, IoClose } from "react-icons/io5";
+import { BsThreeDots } from "react-icons/bs";
+import { mediaPostProps } from "@/api/post/getFeed";
+import { ChromaImage } from "../chromaImage";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeading, DialogTrigger } from "../dialogue";
+import { FieldError } from "@components/ui/chromaticUI";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../tooltip";
+import { Portal } from "@/app/_components/portal";
+import { TogglePostLike } from "@/api/post/like";
 
-interface commenter {
-    userId: string;
-    username: string
-    like: string
-    comment: string[]
-}
-const Post:React.FC<PostProps> = ({
+// todo: community will be add soon
+const Post:React.FC<mediaPostProps> = ({
     id,
-    ownerId,
-    ownerName,
+    user_id, //owner
+    username,
     content,
-    like,
-    comment,
-    attachment}) => {
+    total_comment,
+    total_likes,
+    visibility,
+    is_repost,
+    repost_from,
+    has_attachment,
+    created_at,
+    updated_at,
+    media =[],
+    tag =[],
+    is_liked,
+}) => {
     
     const [open,setOpen] = useState(false);
     const [showReadMoreButton, setShowReadMoreButton] = useState(false)
     const ref = useRef<HTMLSpanElement | null>(null);
+    const [openOption, setOpenOption] = useState(false);
+    const [likeState, setLikeState] = useState(is_liked);
+    const [likeCount, setLikeCount] = useState(total_likes);
+    useEffect(() => {
+    setLikeState(is_liked);
+}, [is_liked]);
 
     useEffect(() => {
         if (ref.current) {
@@ -49,17 +57,21 @@ const Post:React.FC<PostProps> = ({
         key={id}>
             <div className={style["header"]}>
                 <section className={style["profile"]}>
-                    <div className={style["avatar"]}>
+                    <div className={style["avatar"]} key={user_id}>
                         <img src="https://placehold.co/400" alt="" />
                     </div>
                     <div className={style["username"]}>
                         <p>{
-                            ownerName ?? ownerName ? ownerName: "Username"
+                            username ?? username ? username: "Username"
                         }</p>
+                        <div className={style["postTime"]}>
+                            <p>{created_at}</p>
+                        </div>
                     </div>
                 </section>
+                {/* //todo: dropdown options for user */}
                 <div className={style["option"]}>
-                    ...
+                    <BsThreeDots />
                 </div>
             </div>
 
@@ -72,7 +84,6 @@ const Post:React.FC<PostProps> = ({
                         {content}
                     </span>
                     <div>
-
                     {showReadMoreButton && (
                         <button
                         type="button"
@@ -85,34 +96,100 @@ const Post:React.FC<PostProps> = ({
                     </div>
                 </div>
 
-                <div className={style["subject-tag"]}>
-                    <div>
+                <ul className={style["image-grid"]}>
+                    {media.map((item) => {
+                        return (
+                            <li key={item.id}>
+                                <ChromaImage
+                                    src={`${item.path}`}
+                                    thumbhash={item.thumbhash}
+                                    width={item.width}
+                                    height={item.height}
+                                />
+                            </li>
+                        );
+                    })}
+                </ul>
 
-                    </div>
-                </div>                
+                {/* //todo: */}
+                <ul className={style["subject-tag"]}>
+                    {tag.map((item) => {
+
+                        return (
+                            <li key={item.tag_id}>
+                                <p>{item.tag_name}</p>
+                            </li>
+                        )
+                    })}
+                </ul>                
             </div>
 
             <div className={style["bottom-container"]}>
                 <section className={style["interaction"]}>
                     <div style={{userSelect: "none"}}>
+                        
+                        {/* //todo: Add animation if possible*/}
                         <button type="button"
                         style={{cursor:"pointer"}}
+                        onClick={async () => {
+                                try {
+                                    const nextLikeState = !likeState;
+                                
+                                    console.log({
+                                        id,
+                                        is_liked: likeState,
+                                        likeState,
+                                        nextLikeState
+                                    });
+                                
+                                    const response = await TogglePostLike(
+                                        id,
+                                        nextLikeState
+                                    );
+                                
+                                    setLikeState(nextLikeState);
+                                    setLikeCount(response.total_liked);
+                                } catch (error) {
+                                    console.error(
+                                        "Failed to toggle like:",
+                                        error
+                                    );
+                                }
+                            }}
                         >
                             <LuThumbsUp/>
                         </button>
-                        {like}
+                        {/* //todo: onClick get panigation user liked on post */}
+                        <button
+                        className={style["has-hover"]}
+                        style={{cursor:"pointer"}}
+                        type="button"
+                        
+                        >
+                            {likeCount || 0}
+                        </button>
                     </div>
                     <div style={{userSelect: "none",cursor:"pointer"}}>
-                        <GoComment/>
-                        {comment?.length || 0}
+                        {/* //todo: onClick pass to specific post and fetch comment */}
+                        <button type="button">
+                            <GoComment/>
+                        </button>
+                        {total_comment || 0}
                     </div>
                 </section>
 
                 <section className={style["interaction"]}>
-                    <button type="button">
-                        <IoMdShare/>
+                    {/* //todo: dialog for share *if possible */}
+                    <button
+                    type="button"
+                    style={{cursor:"pointer"}}        
+                    >
+                        <DialogSharePost/>
                     </button>
-                    <button type="button">
+                    {/* //todo: bookmark ofc why not xdddddddddddd */}
+                    <button type="button"
+                    style={{cursor:"pointer"}}
+                    >
                         <IoBookmarkOutline/>
                     </button>
                 </section>
@@ -122,3 +199,84 @@ const Post:React.FC<PostProps> = ({
 }
 
 export {Post}
+
+function DialogSharePost () {
+    const [linkToCopy, setLinkToCopy] = useState("asidnsadjasodaijdiajsidjasidjajdoiasjidjsadjiasjdiaj");
+    const [isCopied, setIsCopied] = useState(true);
+    const [errorText, setErrorText] = useState("");
+
+    async function copyToClipBoard(){
+        try {
+            await navigator.clipboard.writeText(linkToCopy);
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+        } catch(err) {
+            setErrorText("Faield to copy link : " + err)
+            setTimeout(() => setErrorText(""), 5000);
+        }
+    }
+    return (
+        <Dialog overlayClassName={style["link-dialog-overlay"]}>
+            <DialogTrigger asChild><IoMdShare/></DialogTrigger>
+
+            <DialogContent className={style["link-container"]}>
+                <DialogHeading className={style["header"]}>
+                    <DialogClose className={style["box"]}>
+                        <IoClose />
+                    </DialogClose>
+                    <p className={style["title"]}>
+                            Share
+                    </p>
+                    <div className={style["box"]}>
+
+                    </div>
+                </DialogHeading>
+                <section className={style["main"]}>
+
+                    <section className={style["clip-board"]}>
+                        <div className={style["board"]}
+                        >
+                            {/* //fixme : tooltip somehow is showing behind z-index 999*/}
+                            <Tooltip open={isCopied}>
+                                <TooltipTrigger asChild>
+                                    {isCopied}
+                                </TooltipTrigger>
+
+                                <TooltipContent 
+                                style={{
+                                    zIndex: 9999, 
+                                    position: "relative",
+                                    top: "-10px",
+                                    left: "-10px"
+                                }}
+                                >
+                                        asdmadiaidsjdjsajdiasjdsaijdaijadss
+                                </TooltipContent>
+                            </Tooltip>
+                            
+                            <input
+                            type="text" 
+                            value={linkToCopy}
+                            onChange={(e) => setLinkToCopy(e.target.value)}
+                            onClick={copyToClipBoard}
+                            readOnly
+                            />
+                            <div className={style["copy-button"]}>
+                                <button
+                                type="button"
+                                onClick={copyToClipBoard}
+                                >
+                                    {/* //todo: on complete changing icon */}
+                                    <IoClipboardOutline />
+                                </button>
+                            </div>   
+                        </div>
+                    </section>
+                    <div>
+                        {errorText}
+                    </div>
+                </section>
+            </DialogContent>
+        </Dialog>
+    )   
+}
