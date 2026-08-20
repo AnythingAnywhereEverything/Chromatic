@@ -4,16 +4,12 @@ import {
     getPublicUserProfile,
     PublicUserProfileResponse,
 } from "@/api/user/profile";
-import { ChromaImage } from "@/app/_components/ui/chromatic/chromaImage";
-import getIdColor from "@lib/getIdColor";
 import { useEffect, useState } from "react";
 
 import style from "./style.module.scss";
-import React from "react";
-import { UserIdAvatar } from "@/app/_components/ui/chromatic/initialAvatar";
 import { getCacheUserId } from "@/handler/token_handler";
-import { FaCamera } from "react-icons/fa";
-import { EditAvatarPopup } from "./editor/avatarEditor";
+import { Banner } from "./editor/banner";
+import { Avatar } from "./editor/avatar";
 
 function ProfileBannerSkeleton() {
     return (
@@ -36,55 +32,6 @@ interface AvatarUploadItem {
     file: File;
     name: string;
     avatar: string;
-}
-
-function Banner({
-    userId,
-    banner,
-    banner_thumbhash,
-    width,
-    height,
-}: {
-    userId: string;
-    banner: string | null;
-    banner_thumbhash: string | null;
-    width: number; // read width from image Container
-    height: number; // read height from image Container
-}) {
-    console.log(
-        "Banner props:",
-        userId,
-        banner,
-        banner_thumbhash,
-        width,
-        height,
-    );
-    if (banner) {
-        return (
-            <ChromaImage
-                className={style["profile-banner"]}
-                src={`banners/${userId}/${banner}`}
-                alt="User Banner"
-                width={width}
-                height={height}
-                thumbhash={banner_thumbhash || undefined}
-            />
-        );
-    } else {
-        let backgroundColor = getIdColor(userId);
-        return (
-            <div
-                className={style["default-banner"]}
-                style={{
-                    backgroundColor,
-                    width: `${width}px`,
-                    height: `${height}px`,
-                }}
-            >
-                {/* Default banner content */}
-            </div>
-        );
-    }
 }
 
 function isAvatarAnimated(avatar: string): boolean {
@@ -116,33 +63,7 @@ function ProfileBanner({ params }: { params: { profile: string } }) {
     }, [params.profile]);
 
     // create banner container ref
-    const [bannerContainerWidth, setBannerContainerWidth] = useState(600);
-    const [bannerContainerHeight, setBannerContainerHeight] = useState(240);
-    let bannerContainerRef = React.createRef<HTMLDivElement>();
-
-    useEffect(() => {
-        const handleResize = () => {
-            console.log(
-                "Banner container size:",
-                bannerContainerWidth,
-                bannerContainerHeight,
-            );
-            if (bannerContainerRef.current) {
-                setBannerContainerWidth(bannerContainerRef.current.offsetWidth);
-                setBannerContainerHeight(
-                    (bannerContainerRef.current.offsetWidth / 5) * 2,
-                ); // maintain aspect ratio 5 / 2
-            }
-        };
-
-        // Initial size
-        handleResize();
-
-        window.addEventListener("resize", handleResize);
-        return () => {
-            window.removeEventListener("resize", handleResize);
-        };
-    }, [bannerContainerRef]);
+    
 
     if (!profile) {
         return <ProfileBannerSkeleton />;
@@ -154,83 +75,19 @@ function ProfileBanner({ params }: { params: { profile: string } }) {
         <div className={style["profile-header"]}>
             {profile ? (
                 <>
-                    <div
-                        ref={bannerContainerRef}
-                        className={style["profile-banner-container"]}
-                    >
-                        <Banner
-                            userId={profile.id}
-                            banner={profile.banner}
-                            banner_thumbhash={profile.banner_thumbhash}
-                            width={bannerContainerWidth}
-                            height={bannerContainerHeight}
-                        />
-                        {is_owner && (
-                            <button className={style["edit-banner-button"]}>
-                                <FaCamera />
-                                Edit Banner
-                            </button>
-                        )}
-                    </div>
+                    <Banner
+                        userId={profile.id}
+                        banner={profile.banner}
+                        banner_thumbhash={profile.banner_thumbhash}
+                        is_owner={is_owner}
+                        setProfile={setProfile}
+                    />
                     <div className={style["profile-info"]}>
-                        <div
-                            className={style["profile-avatar"]}
-                            onMouseEnter={() => {
-                                if (isAvatarAnimated(profile.avatar || "")) {
-                                    // trim .png and replace with .webp for animated avatar
-                                    const animatedAvatarSrc = `avatars/${profile.id}/${profile.avatar?.replace(
-                                        ".png",
-                                        ".webp",
-                                    )}`;
-                                    setAvatarSrc(animatedAvatarSrc);
-                                }
-                            }}
-                            onMouseLeave={() => {
-                                setAvatarSrc(
-                                    `avatars/${profile.id}/${profile.avatar}`,
-                                );
-                            }}
-                        >
-                            {profile.avatar && avatarSrc ? (
-                                <ChromaImage
-                                    style={{ width: "180px", height: "180px" }}
-                                    src={avatarSrc}
-                                    alt={`${profile.display_name || profile.username}'s avatar`}
-                                    thumbhash={
-                                        profile.avatar_thumbhash || undefined
-                                    }
-                                    size={180}
-                                />
-                            ) : (
-                                <UserIdAvatar
-                                    userId={profile.id}
-                                    name={
-                                        profile.display_name || profile.username
-                                    }
-                                    size={180}
-                                />
-                            )}
-                            {is_owner && (
-                                <EditAvatarPopup
-                                    onUpdate={(res) => {
-                                        setAvatarSrc(
-                                            `avatars/${res.id}/${res.avatar}`,
-                                        );
-                                        setProfile((prevProfile) => {
-                                            if (prevProfile) {
-                                                return {
-                                                    ...prevProfile,
-                                                    avatar: res.avatar,
-                                                    avatar_thumbhash:
-                                                        res.avatar_thumbhash,
-                                                };
-                                            }
-                                            return prevProfile;
-                                        });
-                                    }}
-                                />
-                            )}
-                        </div>
+                        <Avatar
+                            is_owner={is_owner}
+                            profile={profile}
+                            setProfile={setProfile}
+                        />
                         <div className={style["profile-details"]}>
                             <h2>{profile.username}</h2>
                             <p>{profile.display_name}</p>

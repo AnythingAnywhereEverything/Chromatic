@@ -1,0 +1,79 @@
+.profile-banner-container {
+    width: 100%;
+    max-width: 900px;
+    border-radius: calc(var(--spacing) * 2);
+    overflow: hidden;
+    position: relative;
+
+    @media (max-width: 1000px) {
+        max-width: 100%;
+        border-radius: 0;
+    }
+
+    .edit-button-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: color-mix(
+            in oklab,
+            var(--background),
+            transparent 40%
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        cursor: pointer;
+
+        &:hover {
+            opacity: 1;
+        }
+    }
+
+    .edit-button {
+        position: absolute;
+        bottom: calc(var(--spacing) * 4);
+        right: calc(var(--spacing) * 4);
+        height: calc(var(--spacing) * 10);
+        gap: calc(var(--spacing) * 2);
+        color: var(--foreground);
+        border: none;
+        padding-inline: calc(var(--spacing) * 3);
+        border-radius: calc(var(--spacing) * 2);
+        transition: background-color 0.3s ease;
+        opacity: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: color-mix(
+            in oklab,
+            var(--background) 80%,
+            transparent 20%
+        );
+
+        svg {
+            margin-top: -1px;
+            width: calc(var(--spacing) * 4);
+            height: calc(var(--spacing) * 4);
+        }
+    }
+}
+
+.cropper-selection {
+    position: absolute;
+
+    width: 90%;
+    aspect-ratio: 5 / 2;
+
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+
+    border: 2px solid white;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.58);
+
+    pointer-events: none;
+}
