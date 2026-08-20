@@ -11,6 +11,7 @@ pub struct PostRow {
     // media_posts tb
     pub id: i64,
     pub user_id: i64,
+    pub username: Option<String>,
     pub content: String,
     pub total_likes: i32,
     pub total_comments: i32,
@@ -21,7 +22,25 @@ pub struct PostRow {
     pub updated_at: chrono::DateTime<chrono::Utc>,
     pub visibility: PostVisibility,
     pub media_attachment: Json<Vec<MediaAttachment>>,
-    pub tags: Json<Vec<TagAttachmentFull>>
+    pub tags: Json<Vec<TagAttachmentFull>>,
+    pub is_liked: bool,
+}
+
+#[derive(sqlx::FromRow, Debug)]
+pub struct CreatePostRow{
+    pub id: i64,
+    pub user_id: i64,
+    pub content: String,
+    pub total_likes: i32,
+    pub total_comments: i32,
+    pub reposted_from: Option<i64>,
+    pub is_repost: bool,
+    pub has_attachment: bool,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub visibility: PostVisibility,
+    pub media_attachment: Json<Vec<MediaAttachment>>,
+    pub tags: Json<Vec<TagAttachmentFull>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,7 +70,7 @@ pub struct HasAttachmentRow{
 #[derive(sqlx::FromRow)]
 pub struct TotalLikesRow{
     pub id: i64,
-    pub total_likes: i32
+    pub total_likes: i32,
 }
 
 #[derive(sqlx::FromRow)]

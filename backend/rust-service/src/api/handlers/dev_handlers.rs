@@ -1,6 +1,6 @@
 use crate::{
     api::{APIError, RequestAuth, dtos::post_dtos::PostDTO, version}, application::{
-        repository::{media::{self as media_repo, row::MediaStatus}, post::{self as post_repo}}, service::media::{
+        repository::{media::{self as media_repo, row::MediaStatus}, post::{self as post_repo}}, service::{errors::AuthServiceError, media::{
             processor::types::{
                 CropStyle, ImageProcessorType, MediaProcessorFFlags, MediaProcessorOptions, PostProcessingType, ResizeStyle, VideoPostProcessorType,
             }, service::MediaService, service_type::MediaServiceOptions, types::{
@@ -10,7 +10,7 @@ use crate::{
                     ValidationType,
                 },
             },
-        }, state::SharedState,
+        }}, state::SharedState,
     },
 };
 use axum::{Json, extract::{Multipart, Path, State}};
@@ -118,13 +118,12 @@ pub async fn get_specific_post(
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
 
-    let _user_id = match req_auth.user {
+    let user_id = match req_auth.user {
         Some(user) => user.user_id,
-        // None => return Err(AuthServiceError::InvalidCredentials.into()),
-        None => 81727418892554240,
+        None => return Err(AuthServiceError::InvalidCredentials.into()),
     };
 
     let mut tx = state.db_pool.begin().await?;
-    let post: PostDTO = post_repo::post::get_post_by_id(&mut tx, post_id).await?.into();
+    let post: PostDTO = post_repo::post::get_post_by_id(&mut tx, post_id, user_id).await?.into();
     Ok(Json(post))
 }

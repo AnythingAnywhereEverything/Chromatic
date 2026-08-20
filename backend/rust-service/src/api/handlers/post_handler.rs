@@ -88,7 +88,10 @@ pub struct CreatePostRequest {
 pub struct LikeRequest {
     pub is_like: bool,
 }
-
+#[derive(Debug, serde::Deserialize)]
+pub struct BookmarkRequest {
+    pub is_bookmark: bool,
+}
 impl PostVisibility {
     pub fn as_str(&self) -> &'static str {
         match self {
@@ -99,16 +102,21 @@ impl PostVisibility {
     }
 }
 
-// ! This might cause slow server
 pub async fn get_feed_post_handler(
     State(state): State<SharedState>,
     Path(version): Path<String>,
+    req_auth: RequestAuth
 ) -> Result<Json<Vec<PostDTO>>, APIError> {
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
 
+    let user_id = match req_auth.user {
+        Some(user) => Some(user.user_id),
+        None => None,
+    };
+
     let mut tx = state.db_pool.begin().await?;
-    let all_post = post_repo::post::get_feed_public(&mut tx, None).await?;
+    let all_post = post_repo::post::get_feed_public(&mut tx, None, user_id).await?;
     tracing::warn!("POST AS JSON BEFORE {:#?}", all_post);
 
     let post_vec: Vec<PostDTO> = all_post.into_iter().map(|post| post.into()).collect();
@@ -149,7 +157,6 @@ pub async fn create_new_post_handler(
         .multipart_extractor
         .extract::<CreatePostRequest>(request, options)
         .await?;
-    tracing::debug!("Extracted payload: {:#?}", extracted);
 
     let new_post_id = &state.snowflake_generator.generate_id()?;
 
@@ -189,23 +196,20 @@ pub async fn create_new_post_handler(
     let media_service = MediaService::new();
 
     if let Some(ref files) = extracted.media_src {
-        tracing::debug!("Extracted media_src files: {:#?}", files);
 
         let all_media = media_service
             .save_media_group(&state, files.to_vec(), new_media_opts)
             .await?;
-        tracing::debug!("Saved media group: {:#?}", all_media);
         for media in all_media {
             // set to complete the media processing
             media_repo::update::media_status(&mut tx, &media.get_id(), &MediaStatus::Completed).await?;
-            tracing::debug!("Media processing completed for media ID: {}", media.get_id());
             post_repo::post::add_has_attachment(&mut tx, *new_post_id, media.get_id(), MediaTypeAttachment::Post.as_str().to_string()).await?;
         }
     }
 
     let post_tags = extracted.media_tags.unwrap_or_default();
 
-    let _new_post =
+    let _ =
             post_repo::post::create_post(&mut tx, new_post_id, 
             user_id, &content, 
             extracted.repost_from, !extracted.media_src.is_none(),
@@ -214,12 +218,10 @@ pub async fn create_new_post_handler(
     if !post_tags.is_empty() {
         tracing::trace!("Entering add tags stage");
         for tag in post_tags {
-            tracing::trace!("Tags ID : {}", tag);
             post_repo::post::add_tags_target(&mut tx, *new_post_id, "post".to_string(), tag ).await?;
         }
     }
-    let post: PostDTO = post_repo::post::get_post_by_id(&mut tx, *new_post_id).await?.into();
-    tracing::trace!("Json Data {:#?}", post);
+    let post: PostDTO = post_repo::post::get_post_by_id(&mut tx, *new_post_id, user_id).await?.into();
     
     tx.commit().await?;
     Ok(Json(post))
@@ -239,7 +241,7 @@ pub async fn update_post_handler(
     // ! Temporary testing ID
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
-        None => 81727418892554240,
+        None => return Err(AuthServiceError::InvalidCredentials.into()),
     };
 
     let options = MultipartExtractorOptions {
@@ -254,18 +256,49 @@ pub async fn update_post_handler(
         .extract::<CreatePostRequest>(media_src, options)
         .await?;
 
+    if extracted.content.len() > 2500 {
+        return Err(PostServiceError::PostTextContentTooLarge.into());
+    }
+
     tracing::debug!("Extracted payload: {:#?}", extracted);
 
     let mut tx = state.db_pool.begin().await?;
 
-    let old_post = post_repo::post::get_post_by_id(&mut tx, post_id).await?;
+    let old_post = post_repo::post::get_post_by_id(&mut tx, post_id, user_id).await?;
     let old_tags = post_repo::post::get_tag_attachments(&mut tx, post_id).await?;
 
-    let tag_id = state.snowflake_generator.generate_id();
-    if let Some(new_tags) = extracted.media_tags {
-        
+if let Some(new_tags) = extracted.media_tags {
+    let old_tag_ids: std::collections::HashSet<i64> =
+        old_tags.iter().map(|tag| tag.tag_id).collect();
+
+    let new_tag_ids: std::collections::HashSet<i64> =
+        new_tags.iter().copied().collect();
+
+    // * Delete old tags that are no longer present.
+    for old_tag in &old_tags {
+        if !new_tag_ids.contains(&old_tag.tag_id) {
+            post_repo::post::delete_tag_attachment(
+                &mut tx,
+                post_id,
+                old_tag.tag_id,
+            )
+            .await?;
+        }
     }
 
+    // * Add new tags that weren't already attached.
+    for tag_id in new_tags {
+        if !old_tag_ids.contains(&tag_id) {
+            post_repo::post::add_tags_target(
+                &mut tx,
+                post_id,
+                "post".to_string(),
+                tag_id,
+            )
+            .await?;
+        }
+    }
+}
     tracing::trace!("Old post: {:?}", old_post);
 
     let content = if extracted.content != old_post.content {
@@ -274,9 +307,22 @@ pub async fn update_post_handler(
         old_post.content
     };
 
-    let _ = post_repo::post::update_post(&mut tx, post_id, user_id, content, extracted.visibility).await?;
-    let post: PostDTO = post_repo::post::get_post_by_id(&mut tx, post_id).await?.into();
+    let _ = post_repo::post::update_post(
+        &mut tx,
+        post_id,
+        user_id,
+        content,
+        extracted.visibility,
+    )
+    .await?;
+
+    let post: PostDTO =
+        post_repo::post::get_post_by_id(&mut tx, post_id, user_id)
+            .await?
+            .into();
+
     tracing::trace!("Updated post {:#?}", post);
+
     tx.commit().await?;
 
     Ok(Json(post))
@@ -289,15 +335,17 @@ pub async fn delete_post_handler(
 ) -> Result<StatusCode, APIError> {
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
+
+
     let mut tx = state.db_pool.begin().await?;
 
-    post_repo::post::get_post_by_id(&mut tx, post_id).await?;
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
         None => return Err(AuthServiceError::InvalidCredentials.into()),
         // None => 1234,
     };
-
+    
+    post_repo::post::get_post_by_id(&mut tx, post_id, user_id).await?;
     let delete = post_repo::post::delete_post(&mut tx, post_id, user_id).await?;
     tx.commit().await?;
 
@@ -307,70 +355,12 @@ pub async fn delete_post_handler(
     
     Ok(StatusCode::NO_CONTENT)
 }
-
-pub async fn get_post_handler(
-    State(state): State<SharedState>,
-    Path((version, post_id)): Path<(String, i64)>,
-) -> Result<Json<Vec<PostDTO>>, APIError> {
-    let api_version = version::parse_version(&version)?;
-    tracing::trace!("api version: {}", api_version);
-
-    let mut tx = state.db_pool.begin().await?;
-    let all_post = post_repo::post::get_feed_public(&mut tx, None).await?;
-    tracing::warn!("POST AS JSON BEFORE {:#?}", all_post);
-
-    let mut post_vec: Vec<PostDTO> = Vec::new();
+// pub async fn get_like_handler(
+//     State(state): State<SharedState>,
+//     Path((version, post_id)): Path<(String, i64)>,
+// ) -> Result<> {
     
-    for post in all_post.into_iter() {
-        tracing::warn!("POST AS JSON BEFORE {:#?}", post);
-        let media_with_post = post_repo::post::get_post_attachment(&mut tx, post.id).await?;
-        let media_tags = post_repo::post::get_tag_attachments(&mut tx, post.id)
-            .await?
-            .into_iter()
-            .map(|tag| TagDTO {
-                target_id: tag.target_id.to_string(),
-                tag_name: tag.tag_name,
-                tag_id: tag.tag_id.to_string(),
-            })
-            .collect::<Vec<_>>();
-
-        let media = media_with_post
-            .into_iter()
-            .map(|m| MediaFullDTO {
-                id: m.id.to_string(),
-                path: m.path,
-                name: m.name,
-                thumbhash: m.thumbhash,
-                status: m.status.to_string(),
-                created_at: m.created_at,
-                file_size: m.file_size,
-                mime_type: m.mime_type,
-                width: m.width,
-                height: m.height,
-                duration: m.duration,
-            })
-            .collect::<Vec<_>>();
-
-        post_vec.push(PostDTO {
-            id: post.id.to_string(),
-            user_id: post.user_id.to_string(),
-            content: post.content,
-            total_comments: post.total_comments,
-            total_likes: post.total_likes,
-            reposted_from: post.reposted_from.map(|id| id.to_string()),
-            is_repost: post.is_repost,
-            has_attachment: post.has_attachment,
-            created_at: Some(post.created_at.to_rfc3339()),
-            updated_at: Some(post.updated_at.to_rfc3339()),
-            visibility: post.visibility.as_str().to_string(),
-            media,
-            tag: media_tags,
-        });
-    }
-    Ok(Json(post_vec))
-}
-
-
+// }
 
 pub async fn liked_handler(
     State(state): State<SharedState>,
@@ -384,12 +374,11 @@ pub async fn liked_handler(
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
         None => return Err(AuthServiceError::InvalidCredentials.into()),
-        // None => 81727418892554240,
     };
 
     let mut tx = state.db_pool.begin().await?;
     tracing::info!(user_id, target_id, req.is_like, "liking post");
-    let total_liked = post_repo::post::like_post_repo(
+    let post_like = post_repo::post::like_post_repo(
         &mut tx,
         user_id,
         target_id,
@@ -399,7 +388,27 @@ pub async fn liked_handler(
     tx.commit().await?;
 
     Ok(Json(LikeDTO {
-        id: total_liked.id.to_string(),
-        total_liked: total_liked.total_likes
+        id: post_like.id.to_string(),
+        total_liked: post_like.total_likes,
     }))
+}
+
+pub async fn bookmark_handler(
+    State(state) : State<SharedState>,
+    Path((version, target_id)): Path<(String, i64)>,
+    req_auth: RequestAuth,
+    payload: Json<BookmarkRequest>
+) -> Result<(), APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+
+    let user_id = match req_auth.user {
+        Some(user) => user.user_id,
+        None => return Err(AuthServiceError::InvalidCredentials.into()),
+    };
+
+    let mut tx = state.db_pool.begin().await?;
+    let _bookmark = post_repo::post::toggle_bookmark(&mut tx, target_id, user_id, payload.is_bookmark).await;
+
+    Ok(())
 }

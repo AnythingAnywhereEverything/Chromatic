@@ -7,6 +7,7 @@ use crate::{api::dtos::user_dtos::MediaFullDTO, application::repository::post::r
 pub struct PostDTO {
     pub id:String,
     pub user_id: String,
+    pub username: String,
     pub content: String,
     pub total_likes: i32,
     pub total_comments: i32,
@@ -18,7 +19,8 @@ pub struct PostDTO {
     pub visibility: String,
 
     pub media: Vec<MediaFullDTO>,
-    pub tag: Vec<TagDTO>
+    pub tag: Vec<TagDTO>,
+    pub is_liked: bool,
 }
 
 impl Into<PostDTO> for PostRow {
@@ -26,6 +28,7 @@ impl Into<PostDTO> for PostRow {
         PostDTO {
             id: self.id.to_string(),
             user_id: self.user_id.to_string(),
+            username: self.username.unwrap_or_default(),
             content: self.content,
             total_likes: self.total_likes,
             total_comments: self.total_comments,
@@ -52,7 +55,8 @@ impl Into<PostDTO> for PostRow {
                 target_id: tag.target_id.to_string(),
                 tag_name: tag.tag_name,
                 tag_id: tag.tag_id.to_string()
-            }).collect()
+            }).collect(),
+            is_liked: self.is_liked
         }
     }
 }
@@ -81,5 +85,5 @@ pub struct CommentDTO {
 #[derive(Debug, Serialize)]
 pub struct LikeDTO {
     pub id: String,
-    pub total_liked: i32
+    pub total_liked: i32,
 }

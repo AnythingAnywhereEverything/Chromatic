@@ -1,34 +1,25 @@
 use sqlx::{Postgres, Transaction};
 
-use crate::{api::handlers::post_handler::PostVisibility, application::{repository::{media::row::MediaDataWithMetadataRow, post::row::{ HasAttachmentRow, PostLikesRow, PostRow, TagAttachmentFull, TagAttachmentRow, TotalLikesRow}}, service::errors::PostServiceError}};
+use crate::{api::handlers::post_handler::PostVisibility, application::{repository::{media::row::MediaDataWithMetadataRow, post::row::{ CreatePostRow, HasAttachmentRow, PostLikesRow, PostRow, TagAttachmentFull, TagAttachmentRow, TotalLikesRow}}, service::errors::PostServiceError}};
 
 // todo: func get YOUR FRIEND post
 // todo: func get feed comment :d
-// ! check visiblity
-// Limit 15 on scroll FIXED //* If cause a slowness then lower it later... */
-// Cursor pagnigation (created_at, Id) 
-// ? snowflake is already relate to time still need created_at ?
 
-// * / When the post has many attachment will cause the output row too many.
-// * / EX: 3 Attachment and 2 tags on 1 post will cause 6 row
-/*
-    //*  */ Change it into json for cause match LIMIT item row output 
-    //*  */ and the media_post id will not being duplicate too much 
-*/
 // ? How am I gonna balanced the feed between friends and normal since there's no ML for the feed
 // * Schuding them for show some of there friends post
 // ? Do feed setting to let user edit the feed to show friend first, no friend, normal 
-//// ! BUT there's not see post in DB so the post will be always show
 
 pub async fn get_feed_public(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     cursor_id: Option<i64>,
+    user_id: Option<i64>,
 ) -> Result<Vec<PostRow>, sqlx::Error> {
     sqlx::query_as::<_, PostRow>(
         r#"
-            SELECT
+             SELECT
                 m.id,
                 m.user_id,
+                u.username,
                 m.content,
                 m.total_comments,
                 m.total_likes,
@@ -38,9 +29,19 @@ pub async fn get_feed_public(
                 m.created_at,
                 m.updated_at,
                 m.visibility,
+
+                EXISTS (
+                    SELECT 1
+                    FROM media_likes ml
+                    WHERE ml.media_post_id = m.id
+                      AND ml.user_id = $2
+                ) AS is_liked,
+
                 COALESCE(att.attachments, '[]'::json) AS media_attachment,
                 COALESCE(tag.tags, '[]'::json) AS tags
+
             FROM media_posts m
+
             LEFT JOIN LATERAL (
                 SELECT json_agg(
                     json_build_object(
@@ -51,7 +52,6 @@ pub async fn get_feed_public(
                         'thumbhash', md.thumbhash,
                         'name', md.name,
                         'updated_at', md.updated_at,
-                        -- * status added, MediaFullDTO needs it
                         'status', md.status,
                         'file_size', mdt.file_size,
                         'mime_type', mdt.mime_type,
@@ -65,14 +65,15 @@ pub async fn get_feed_public(
                 JOIN media_data md ON md.id = a.media_id
                 JOIN media_metadata mdt ON mdt.media_id = md.id
                 WHERE a.target_id = m.id
-                AND md.status = 'completed'
+                  AND md.status = 'completed'
             ) att ON TRUE
+
             LEFT JOIN LATERAL (
                 SELECT json_agg(
                     json_build_object(
                         'target_id', ta.target_id,
                         'target_type', ta.target_type,
-                        'tag_id', it.id::text,
+                        'tag_id', it.id,
                         'tag_name', it.tag_name
                     )
                     ORDER BY it.tag_name
@@ -81,15 +82,20 @@ pub async fn get_feed_public(
                 JOIN interest_tags it ON it.id = ta.tag_id
                 WHERE ta.target_id = m.id
             ) tag ON TRUE
+
+            LEFT JOIN users u ON m.user_id = u.id
+
             WHERE
                 m.visibility = 'everyone'
                 AND m.status != 'inactive'
                 AND ($1 IS NULL OR m.id < $1)
+
             ORDER BY m.id DESC
             LIMIT 15
         "#
     )
     .bind(cursor_id)
+    .bind(user_id)
     .fetch_all(tx.as_mut())
     .await
 }
@@ -107,12 +113,14 @@ pub async fn get_feed_public(
 pub async fn get_post_by_id(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     post_id: i64,
+    user_id: i64
 ) -> Result<PostRow, sqlx::Error> {
     sqlx::query_as::<_, PostRow>(
         r#"
             SELECT
                 m.id,
                 m.user_id,
+                u.username,
                 m.content,
                 m.total_comments,
                 m.total_likes,
@@ -123,7 +131,14 @@ pub async fn get_post_by_id(
                 m.updated_at,
                 m.visibility,
                 COALESCE(att.attachments, '[]'::json) AS media_attachment,
-                COALESCE(tag.tags, '[]'::json) AS tags
+                COALESCE(tag.tags, '[]'::json) AS tags,
+                
+                EXISTS (
+                    SELECT 1
+                    FROM media_likes ml
+                    WHERE ml.media_post_id = m.id
+                      AND ml.user_id = $2
+                ) AS is_liked
             FROM media_posts m
             LEFT JOIN LATERAL (
                 SELECT json_agg(
@@ -164,6 +179,7 @@ pub async fn get_post_by_id(
                 JOIN interest_tags it ON it.id = ta.tag_id
                 WHERE ta.target_id = m.id
             ) tag ON TRUE
+            LEFT JOIN users u ON m.user_id = u.id
             WHERE
                 m.id = $1
                 AND m.visibility = 'everyone'
@@ -171,6 +187,7 @@ pub async fn get_post_by_id(
         "#
     )
     .bind(post_id)
+    .bind(user_id)
     .fetch_one(tx.as_mut())
     .await
 }
@@ -184,8 +201,8 @@ pub async fn create_post(
     has_attachment: bool,
     is_repost: bool,
     visibility: PostVisibility,
-) -> Result<PostRow, sqlx::Error> {
-    sqlx::query_as::<_, PostRow>(
+) -> Result<CreatePostRow, sqlx::Error> {
+    sqlx::query_as::<_, CreatePostRow>(
         r#"
         INSERT INTO media_posts (
             id,
@@ -232,8 +249,8 @@ pub async fn update_post(
     user_id: i64,
     content: String,
     visibility: PostVisibility,
-) -> Result<PostRow, sqlx::Error> {
-    sqlx::query_as::<_, PostRow>(
+) -> Result<CreatePostRow, sqlx::Error> {
+    sqlx::query_as::<_, CreatePostRow>(
         r#"
             UPDATE media_posts
             SET 
@@ -399,17 +416,18 @@ pub async fn get_tag_attachments(
 
 pub async fn delete_tag_attachment(
     tx: &mut Transaction<'_, Postgres>,
+    target_id: i64,
     tag_id: i64,
-    post_id: i64
 ) -> Result<u64, sqlx::Error> {
     let row = sqlx::query(
         r#"
             DELETE FROM tag_attachments
-            WHERE target_id = $1 AND post_id = $2
-        "#
+            WHERE target_id = $1
+              AND tag_id = $2
+        "#,
     )
+    .bind(target_id)
     .bind(tag_id)
-    .bind(post_id)
     .execute(tx.as_mut())
     .await?;
 
@@ -465,9 +483,15 @@ pub async fn like_post_repo(
                     updated_at,
                     is_liked
                 )
-                VALUES ($1, $2, NOW(), NOW(), $3)
-                ON CONFLICT (user_id, media_post_id) DO UPDATE
-                SET
+                VALUES (
+                    $1,
+                    $2,
+                    NOW(),
+                    NOW(),
+                    $3
+                )
+                ON CONFLICT (user_id, media_post_id)
+                DO UPDATE SET
                     is_liked = EXCLUDED.is_liked,
                     updated_at = NOW()
                 RETURNING is_liked
@@ -475,9 +499,18 @@ pub async fn like_post_repo(
             UPDATE media_posts
             SET total_likes = total_likes +
                 CASE
-                    WHEN (SELECT is_liked FROM previous) IS NULL AND $3 = TRUE THEN 1
-                    WHEN (SELECT is_liked FROM previous) = FALSE AND $3 = TRUE THEN 1
-                    WHEN (SELECT is_liked FROM previous) = TRUE AND $3 = FALSE THEN -1
+                    WHEN NOT EXISTS (SELECT 1 FROM previous)
+                         AND $3 = TRUE
+                        THEN 1
+
+                    WHEN (SELECT is_liked FROM previous) = FALSE
+                         AND $3 = TRUE
+                        THEN 1
+
+                    WHEN (SELECT is_liked FROM previous) = TRUE
+                         AND $3 = FALSE
+                        THEN -1
+
                     ELSE 0
                 END
             WHERE id = $2
@@ -532,3 +565,37 @@ pub async fn remove_bookmark_post(
     Ok(())
 }
 
+// if true insert 
+pub async fn toggle_bookmark(
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    media_id: i64,
+    user_id: i64,
+    is_bookmarking: bool,
+) -> Result<(), PostServiceError> {
+    if is_bookmarking {
+        sqlx::query(
+            r#"
+                INSERT INTO media_bookmarks (post_id, user_id, created_at)
+                VALUES ($1, $2, NOW())
+                ON CONFLICT DO NOTHING
+            "#,
+        )
+        .bind(media_id)
+        .bind(user_id)
+        .execute(tx.as_mut())
+        .await?; // * propagate error instead of ignoring it
+    } else {
+        sqlx::query(
+            r#"
+                DELETE FROM media_bookmarks
+                WHERE post_id = $1 AND user_id = $2
+            "#,
+        )
+        .bind(media_id)
+        .bind(user_id)
+        .execute(tx.as_mut())
+        .await?; // ! ensure the record exists or handle 0 rows affected if needed
+    }
+
+    Ok(())
+}
