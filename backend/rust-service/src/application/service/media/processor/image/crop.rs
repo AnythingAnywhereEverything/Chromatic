@@ -88,14 +88,6 @@ pub fn compute_crop_dimensions(
         None => (max_left / 2, max_top / 2),
     };
 
-    tracing::debug!(
-        "Computed crop dimensions: left={}, top={}, width={}, height={}",
-        left,
-        top,
-        crop_width,
-        crop_height
-    );
-
     let crop = PreCalculatedCrop {
         left,
         top,

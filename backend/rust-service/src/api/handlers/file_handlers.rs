@@ -1,10 +1,19 @@
 use crate::{
-    api::APIError, application::{
+    api::APIError,
+    application::{
         service::{
-            errors::MediaServiceError, media::{
-                processor::{image::ImageProcessor, types::{CropStyle, ImageProcessorType, MediaProcessorOptions, ResizeStyle}, video::video::extract_thumbnail}, types::media_options::MediaCategory, utils::{categorize, get_mime_and_extension},
+            errors::MediaServiceError,
+            media::{
+                processor::{
+                    image::ImageProcessor,
+                    types::{CropStyle, ImageProcessorType, MediaProcessorOptions, ResizeStyle},
+                    video::video::extract_thumbnail,
+                },
+                types::media_options::MediaCategory,
+                utils::{categorize, get_mime_and_extension},
             },
-        }, state::SharedState,
+        },
+        state::SharedState,
     },
 };
 use axum::extract::{Path, Query, State};
@@ -40,12 +49,7 @@ pub async fn get_files_handler(
     Query(params): Query<FileParameters>,
     _headers: HeaderMap, // for future usage, e.g., for Range Request for large video files that aren't HLS
 ) -> Result<Response, APIError> {
-    tracing::debug!(
-        "Received request for file: {}, version: {}, params: {:?}",
-        file,
-        version,
-        params
-    );
+    tracing::debug!("Received request API version: {}", version);
 
     if let Some(format) = &params.format {
         check_format(format)?;
@@ -58,8 +62,6 @@ pub async fn get_files_handler(
         .metadata()
         .await
         .map_err(|_| MediaServiceError::InternalServer)?;
-
-    tracing::debug!("Successfully read file: {} bytes", metadata.len());
 
     let detect_byte = {
         let mut buf = [0u8; 512];
@@ -102,9 +104,9 @@ pub async fn get_files_handler(
             image.get_width(),
             image.get_height()
         );
-        
+
         drop(image);
-        
+
         if is_animated && !params.format.is_some() {
             let opts = VOption::new().set("n", -1);
             let image = VipsImage::new_from_file_with_opts(&path, opts)
@@ -120,7 +122,7 @@ pub async fn get_files_handler(
                             height: params.height.unwrap_or(image.get_height()) as u32,
                             scale: 1.0,
                         },
-                        position: Some((0.5, 0.5))
+                        position: Some((0.5, 0.5)),
                     },
                     ImageProcessorType::Resize {
                         style: ResizeStyle::Absolute {
@@ -128,13 +130,13 @@ pub async fn get_files_handler(
                             height: params.height.unwrap_or(image.get_height()),
                         },
                         upscale: false,
-                    }
+                    },
                 ]),
                 ..Default::default()
             };
 
             tracing::debug!("Processing image with options: {:?}", options);
-    
+
             let image = ImageProcessor::transform(
                 &mut processor,
                 image,
@@ -142,10 +144,19 @@ pub async fn get_files_handler(
                 is_animated,
             )?;
 
-            let response = VipsImage::write_to_buffer(&image, &format!(".{}", params.format.as_deref().unwrap_or(&extension)))
-                .map_err(MediaServiceError::LibvipsError)?;
+            let response = VipsImage::write_to_buffer(
+                &image,
+                &format!(".{}", params.format.as_deref().unwrap_or(&extension)),
+            )
+            .map_err(MediaServiceError::LibvipsError)?;
 
-            let content_type = match params.format.as_deref().unwrap_or(&extension).to_lowercase().as_str() {
+            let content_type = match params
+                .format
+                .as_deref()
+                .unwrap_or(&extension)
+                .to_lowercase()
+                .as_str()
+            {
                 "jpg" | "jpeg" => "image/jpeg",
                 "png" => "image/png",
                 "webp" => "image/webp",
@@ -160,7 +171,7 @@ pub async fn get_files_handler(
                 // cache control headers with a long max-age about 1 week and immutable to indicate that the file won't change
                 .header("Cache-Control", "public, max-age=604800, immutable")
                 .body(Body::from(response))
-                .map_err(|_| MediaServiceError::InternalServer)?)
+                .map_err(|_| MediaServiceError::InternalServer)?);
         } else {
             let opts = VOption::new();
             let image = VipsImage::new_from_file_with_opts(&path, opts)
@@ -169,11 +180,14 @@ pub async fn get_files_handler(
             let width = params.width.unwrap_or(image.get_width());
             let height = params.height.unwrap_or(image.get_height());
 
-            let response = make_static_thumbnail(image, width, height, params.format.as_deref().unwrap_or(&extension))?;
+            let response = make_static_thumbnail(
+                image,
+                width,
+                height,
+                params.format.as_deref().unwrap_or(&extension),
+            )?;
             return Ok(response);
         }
-
-
     } else if category == MediaCategory::Video
         && (params.width.is_some() || params.height.is_some())
     {
@@ -182,9 +196,13 @@ pub async fn get_files_handler(
             .storage
             .full_path(&file)
             .map_err(|_| MediaServiceError::InternalServer)?;
-        let video_thumbnail = extract_thumbnail(&input_path.to_string_lossy(), params.format.as_deref().unwrap_or("webp"), 1)
-            .await
-            .map_err(|_| MediaServiceError::InternalServer)?;
+        let video_thumbnail = extract_thumbnail(
+            &input_path.to_string_lossy(),
+            params.format.as_deref().unwrap_or("webp"),
+            1,
+        )
+        .await
+        .map_err(|_| MediaServiceError::InternalServer)?;
 
         let image = VipsImage::new_from_buffer(&video_thumbnail, "")
             .map_err(MediaServiceError::LibvipsError)?;
@@ -192,7 +210,12 @@ pub async fn get_files_handler(
         let width = params.width.unwrap_or(image.get_width());
         let height = params.height.unwrap_or(image.get_height());
 
-        let response = make_static_thumbnail(image, width, height, params.format.as_deref().unwrap_or("webp"))?;
+        let response = make_static_thumbnail(
+            image,
+            width,
+            height,
+            params.format.as_deref().unwrap_or("webp"),
+        )?;
 
         return Ok(response);
     }
