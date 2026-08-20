@@ -37,7 +37,6 @@ function constructImageUrl(
     width?: number,
     height?: number,
     format?: string,
-    size?: number,
 ): string {
     if (!process.env.NEXT_PUBLIC_CDN_URL) {
         throw new Error("NEXT_PUBLIC_CDN_URL is not defined");
@@ -49,10 +48,6 @@ function constructImageUrl(
     }
     if (height) {
         url.searchParams.set("height", String(height));
-    }
-    if (size && !width && !height) {
-        url.searchParams.set("width", String(size));
-        url.searchParams.set("height", String(size));
     }
     if (format) {
         url.searchParams.set("format", format);
@@ -80,11 +75,17 @@ export function ChromaImage({
         () => (thumbhash ? thumbhashB64ToDataURL(thumbhash) : undefined),
         [thumbhash],
     );
+    // size to width and height if size is provided
+    if (size) {
+        width = size;
+        height = size;
+    }
 
     const imageUrl = useMemo(
-        () => constructImageUrl(src, width, height, format, size),
-        [src, width, height, format, size],
+        () => constructImageUrl(src, width, height, format),
+        [src, width, height, format],
     );
+
 
     return (
         <div
