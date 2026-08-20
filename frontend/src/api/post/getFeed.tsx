@@ -28,17 +28,16 @@ export interface mediaPostProps {
     current_user_id: string
 }
 
-interface mediaPostAttechment {
+export interface mediaPostAttechment {
     id: string // * media from media_data
     uploader_id: string
     name: string
     path: string
     status: string
     thumbhash: string
-    lock_has: string
+    mime_type: string
     create_at: string
     updated_at: string
-    lock_expiration: string
     width: number
     height: number
     duration: number
