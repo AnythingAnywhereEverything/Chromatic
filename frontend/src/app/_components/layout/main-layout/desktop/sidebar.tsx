@@ -121,15 +121,14 @@ function SidebarProfile() {
                                 src={avatarUrl}
                                 alt={`${username}'s profile`}
                                 className={style["profile-image"]}
-                                width={40}
-                                height={40}
+                                size={44}
                                 thumbhash={avatar_thumbhash || undefined}
                             />
                         ) : (
                             <UserIdAvatar
                                 userId={userId}
                                 name={username}
-                                size={40}
+                                size={44}
                             />
                         )
                     }
