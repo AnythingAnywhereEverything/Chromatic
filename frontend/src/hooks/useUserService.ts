@@ -3,7 +3,7 @@ import {
   updateDisplayName,
   updateUsername,
 } from "@/api/user";
-import { updateUserAvatar } from "@/api/user/profile";
+import { updateUserAvatar, updateUserBanner } from "@/api/user/profile";
 
 export const useUserService = () => {
   const queryClient = useQueryClient();
@@ -27,9 +27,15 @@ export const useUserService = () => {
     onSuccess: handleSuccess,
   });
 
+  const bannerMutation = useMutation({
+    mutationFn: updateUserBanner,
+    onSuccess: handleSuccess,
+  });
+
   return {
     updateDisplayName: displayNameMutation,
     updateUsername: usernameMutation,
     updateUserAvatar: profileMutation,
+    updateUserBanner: bannerMutation,
   };
 };

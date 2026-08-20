@@ -18,6 +18,22 @@ export interface PublicUserProfileResponse {
   created_at: string;
 }
 
+interface UserResponse {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar: string | null;
+  avatar_thumbhash: string | null;
+  banner: string | null;
+  banner_thumbhash: string | null;
+  bio: string | null;
+  email: string;
+  email_verified:boolean;
+  active: boolean;
+  created_at: string;
+}
+
+
 export async function getPublicUserProfile(username: string): Promise<PublicUserProfileResponse | null> {
   const res = await fetchWithOptionAuth(`v2/users/profile/${username}`, {
     method: "GET",
@@ -30,9 +46,21 @@ export async function getPublicUserProfile(username: string): Promise<PublicUser
   return data;
 }
 
-export async function updateUserAvatar(formData: FormData): Promise<PublicUserProfileResponse | null> {
+export async function updateUserAvatar(formData: FormData): Promise<UserResponse | null> {
 
   const res = await fetchWithAuth(`v2/users/me/avatar`, {
+    method: "PATCH",
+    body: formData,
+  });
+
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data;
+}
+
+export async function updateUserBanner(formData: FormData): Promise<UserResponse | null> {
+
+  const res = await fetchWithAuth(`v2/users/me/banner`, {
     method: "PATCH",
     body: formData,
   });
