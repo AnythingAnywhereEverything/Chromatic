@@ -9,7 +9,6 @@ import React, { useEffect, useState } from "react";
 import { FieldError, FieldSeparator } from "@components/ui/chromaticUI";
 import { Form } from "@base-ui/react";
 import Link from "next/link";
-import GoogleAuthButton from "@components/ui/google/GoogleLoginBtn";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 
 const SignUpForm = () => {
@@ -110,8 +109,6 @@ const SignUpForm = () => {
         <div className={style.form}>
             <section className={field.fieldSet}>
                 <h2>Sign Up</h2>
-
-                <GoogleAuthButton />
 
                 <FieldSeparator>or</FieldSeparator>
 
