@@ -28,6 +28,7 @@ export default function PostGroup() {
                     user_id={post.user_id}
                     username={post.username}
                     content={post.content}
+                    current_user_id={post.current_user_id}
                     total_comment={post.total_comment}
                     total_likes={post.total_likes}
                     visibility={post.visibility}

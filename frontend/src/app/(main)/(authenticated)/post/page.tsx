@@ -11,7 +11,9 @@ export default async function PostPage() {
     return (
     <AuthenticatedLayout>
         <div className={style["postLayout"]}>
-            <PostGroup />
+            <div className={style["post-left-layout"]}>
+                <PostGroup />
+            </div>
             <PostRightLayout/>
         </div>
     </AuthenticatedLayout>

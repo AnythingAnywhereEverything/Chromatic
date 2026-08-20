@@ -25,6 +25,7 @@ export interface mediaPostProps {
     tag: PostTag[]
     media: mediaPostAttechment[]
     is_liked: boolean
+    current_user_id: string
 }
 
 interface mediaPostAttechment {
@@ -59,4 +60,14 @@ export const getUserFeed = async(
     console.log(data);
 
     return data;
+}
+
+export const deletePost = async (postId: string): Promise<void> => {
+    const res = await fetchWithAuth(`v2/posts/${postId}`, {
+        method: "DELETE",
+    });
+
+    if (!res.ok) {
+        throw new Error(`Failed to delete post: ${res.status}`);
+    }
 }

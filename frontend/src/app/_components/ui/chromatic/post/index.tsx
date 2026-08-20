@@ -7,13 +7,16 @@ import { GoComment } from "react-icons/go";
 import { IoMdShare } from "react-icons/io";
 import { IoBookmarkOutline, IoClipboardOutline, IoClose } from "react-icons/io5";
 import { BsThreeDots } from "react-icons/bs";
-import { mediaPostProps } from "@/api/post/getFeed";
+import { deletePost, mediaPostProps } from "@/api/post/getFeed";
 import { ChromaImage } from "../chromaImage";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeading, DialogTrigger } from "../dialogue";
 import { FieldError } from "@components/ui/chromaticUI";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../tooltip";
 import { Portal } from "@/app/_components/portal";
 import { TogglePostLike } from "@/api/post/like";
+import {formatSocialMediaDate} from "./dataformat";
+import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from "../dropdown";
+import { getUser } from "@/api/user";
 
 // todo: community will be add soon
 const Post:React.FC<mediaPostProps> = ({
@@ -32,21 +35,29 @@ const Post:React.FC<mediaPostProps> = ({
     media =[],
     tag =[],
     is_liked,
+    current_user_id,
 }) => {
-    
     const [open,setOpen] = useState(false);
     const [showReadMoreButton, setShowReadMoreButton] = useState(false)
     const ref = useRef<HTMLSpanElement | null>(null);
     const [openOption, setOpenOption] = useState(false);
     const [likeState, setLikeState] = useState(is_liked);
     const [likeCount, setLikeCount] = useState(total_likes);
+
+    const handleDeletePost = async () => {
+        try {
+            await deletePost(id);
+            // Optionally, you can add a callback to remove the post from the UI after deletion
+        } catch (error) {
+            console.error("Failed to delete post:", error);
+        }
+    };
     useEffect(() => {
     setLikeState(is_liked);
 }, [is_liked]);
 
     useEffect(() => {
         if (ref.current) {
-            console.log(ref.current.scrollHeight, ref.current.clientHeight)
             setShowReadMoreButton(
                 ref.current.scrollHeight !== ref.current.clientHeight
             )
@@ -60,19 +71,41 @@ const Post:React.FC<mediaPostProps> = ({
                     <div className={style["avatar"]} key={user_id}>
                         <img src="https://placehold.co/400" alt="" />
                     </div>
-                    <div className={style["username"]}>
-                        <p>{
-                            username ?? username ? username: "Username"
-                        }</p>
-                        <div className={style["postTime"]}>
-                            <p>{created_at}</p>
+                    <div className={style["user-info"]}>
+                        <div className={style["username"]}>
+                            <p>{
+                                username ?? username ? username: "Username"
+                            }</p>
                         </div>
+                        <div className={style["post-date"]}>
+                            <p>{formatSocialMediaDate(created_at)}</p>
+                        </div>
+                    </ div>
+                    <div className={style["option"]}>
+                        <Dropdown>
+                            <DropdownTrigger asChild>
+                                <BsThreeDots />
+                            </DropdownTrigger>
+                            {user_id === current_user_id ? (
+                                <DropdownContent>
+                                    <DropdownItem>Edit Post</DropdownItem>
+                                    <DropdownItem
+                                        onClick={handleDeletePost}
+                                    >Delete Post</DropdownItem>
+                                </DropdownContent>
+                            ) : (
+                                <DropdownContent>
+                                    <DropdownItem>Follow @{username}</DropdownItem>
+                                    <DropdownItem>Add Friend @{username}</DropdownItem>
+                                    <DropdownItem>Block @{username}</DropdownItem>
+                                    <DropdownItem>Report</DropdownItem>
+                                </DropdownContent>
+                            )}
+                        </Dropdown>
                     </div>
                 </section>
                 {/* //todo: dropdown options for user */}
-                <div className={style["option"]}>
-                    <BsThreeDots />
-                </div>
+
             </div>
 
             <div className={style["main-container"]}>
