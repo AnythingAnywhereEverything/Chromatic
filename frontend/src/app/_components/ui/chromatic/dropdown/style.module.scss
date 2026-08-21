@@ -5,15 +5,22 @@
 }
 
 .content {
+    display: flex;
+    flex-direction: column;
     width: calc(var(--spacing) * 36);
     background-color: var(--popover);
-    color: var(--popover-foreground);
+    color: var(--text-neutral);
     overflow: hidden;
+    padding: calc(var(--spacing) * 2);
+    border-radius: var(--radius-small);
+    border: 1px solid var(--border);
 
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
     transform: scale(0.95) translateY(-6px);
+
+    gap: var(--spacing);
 
     transition:
         opacity 200ms ease,

@@ -10,6 +10,7 @@ import {
     offset,
     flip,
     size,
+    hide,
     autoUpdate,
     useMergeRefs,
     FloatingList,
@@ -29,7 +30,8 @@ interface DropdownOptions {
     overlayClassName?: string;
     outsidePress?: boolean;
     placement?: Placement;
-    hasTypeAhead?: string[] | null;
+    containerRef?: React.RefObject<HTMLElement>;
+    offsetPlacement?: number;
 }
 
 function useDropdown(
@@ -40,11 +42,14 @@ function useDropdown(
         overlayClassName,
         outsidePress = true,
         placement = "bottom-start",
-        hasTypeAhead,
-    }: DropdownOptions = { hasTypeAhead: [] }
+        containerRef,
+        offsetPlacement = 5,
+    }: DropdownOptions,
 ) {
     const [uncontrolledOpen, setUncontrolledOpen] = React.useState(initialOpen);
+
     const [labelId, setLabelId] = React.useState<string | undefined>();
+
     const [descriptionId, setDescriptionId] = React.useState<
         string | undefined
     >();
@@ -55,19 +60,15 @@ function useDropdown(
     );
 
     const listRef = useRef([]);
-    const listContentRef = React.useRef<(string | null)[]>(hasTypeAhead ?? []);
-    const isTypingRef = React.useRef(false);
-
     const open = controlledOpen ?? uncontrolledOpen;
     const setOpen = setControlledOpen ?? setUncontrolledOpen;
-
     const data = useFloating<HTMLElement>({
         open,
         onOpenChange: setOpen,
-        placement: placement,
+        placement,
         whileElementsMounted: autoUpdate,
         middleware: [
-            offset(5),
+            offset(offsetPlacement),
             flip({ padding: 10 }),
             size({
                 apply({ rects, elements, availableHeight }) {
@@ -78,9 +79,10 @@ function useDropdown(
                 },
                 padding: 10,
             }),
+            hide({ strategy: "referenceHidden" }),
         ],
     });
-
+    
     const context = data.context;
 
     const click = useClick(context, {
@@ -121,6 +123,7 @@ function useDropdown(
             activeIndex,
             selectedIndex,
             setSelectedIndex,
+            containerRef,
         }),
         [
             open,
@@ -137,6 +140,7 @@ function useDropdown(
             activeIndex,
             selectedIndex,
             setSelectedIndex,
+            containerRef,
         ],
     );
 }
@@ -225,7 +229,7 @@ const DropdownMenuContent = React.forwardRef<
     if (!isMounted) return null;
 
     return (
-        <Portal>
+        <Portal container={context.containerRef?.current}>
             <FloatingFocusManager context={floatingContext} modal={false}>
                 <FloatingList elementsRef={context.listRef}>
                     <div

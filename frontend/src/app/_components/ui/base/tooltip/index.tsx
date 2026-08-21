@@ -33,6 +33,7 @@ interface TooltipOptions {
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
     allowHovering?: boolean;
+    parent?: HTMLElement | null;
 }
 
 const anchorArrow = ({
@@ -95,6 +96,7 @@ export function useTooltip({
     open: controlledOpen,
     onOpenChange: setControlledOpen,
     allowHovering = false,
+    parent = null,
 }: TooltipOptions = {}) {
     const [uncontrolledOpen, setUncontrolledOpen] = React.useState(initialOpen);
     const open = controlledOpen ?? uncontrolledOpen;
@@ -144,6 +146,7 @@ export function useTooltip({
             open,
             setOpen,
             arrowAnchorRef,
+            parent,
             ...interactions,
             ...data,
             getArrowProps: () => ({
@@ -275,7 +278,7 @@ export const TooltipContent = React.forwardRef<
     if (!isMounted) return null;
 
     return (
-        <Portal>
+        <Portal container={state.parent ?? undefined} asChild={true}>
             <div
                 ref={ref}
                 style={{ ...state.floatingStyles, zIndex }}

@@ -17,10 +17,15 @@ const DialogTrigger = ({
 }
 
 const DialogContent = ({
+    className,
     ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content>) => {
     return (
-        <DialogPrimitive.Content data-component="dialog-content" {...props} />
+        <DialogPrimitive.Content
+            data-component="dialog-content"
+            className={`${styles["dialog-content"]} ${className ?? ""}`}
+            {...props}
+        />
     );
 }
 

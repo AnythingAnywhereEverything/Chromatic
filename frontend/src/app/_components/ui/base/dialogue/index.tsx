@@ -17,29 +17,65 @@ interface DialogOptions {
     initialOpen?: boolean;
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
+    onClose?: () => void | boolean | Promise<void | boolean>;
     overlayClassName?: string;
     outsidePress?: boolean;
+    portalContainer?: HTMLElement | null;
+    portalAsChild?: boolean;
+    interactable?: boolean;
 }
 
 function useDialog({
     initialOpen = false,
     open: controlledOpen,
     onOpenChange: setControlledOpen,
+    onClose,
     overlayClassName,
     outsidePress = true,
+    portalContainer,
+    portalAsChild = false,
+    interactable = true,
 }: DialogOptions = {}) {
     const [uncontrolledOpen, setUncontrolledOpen] = React.useState(initialOpen);
+
     const [labelId, setLabelId] = React.useState<string | undefined>();
+
     const [descriptionId, setDescriptionId] = React.useState<
         string | undefined
     >();
 
     const open = controlledOpen ?? uncontrolledOpen;
     const setOpen = setControlledOpen ?? setUncontrolledOpen;
+    const close = React.useCallback(async () => {
+        if (!onClose) {
+            setOpen(false);
+            return;
+        }
+
+        const result = await onClose();
+
+        // * Returning false prevents the dialog from closing.
+        if (result === false) {
+            return;
+        }
+
+        setOpen(false);
+    }, [onClose, setOpen]);
+
+    const handleOpenChange = React.useCallback(
+        (nextOpen: boolean) => {
+            if (nextOpen) {
+                setOpen(true);
+                return;
+            }
+            void close();
+        },
+        [setOpen, close],
+    );
 
     const data = useFloating({
         open,
-        onOpenChange: setOpen,
+        onOpenChange: handleOpenChange,
     });
 
     const context = data.context;
@@ -47,10 +83,12 @@ function useDialog({
     const click = useClick(context, {
         enabled: controlledOpen == null,
     });
+
     const dismiss = useDismiss(context, {
         outsidePressEvent: "mousedown",
         outsidePress,
     });
+
     const role = useRole(context);
 
     const interactions = useInteractions([click, dismiss, role]);
@@ -59,6 +97,7 @@ function useDialog({
         () => ({
             open,
             setOpen,
+            close,
             ...interactions,
             ...data,
             labelId,
@@ -66,8 +105,23 @@ function useDialog({
             setLabelId,
             setDescriptionId,
             overlayClassName,
+            portalContainer,
+            portalAsChild,
+            interactable,
         }),
-        [open, setOpen, interactions, data, labelId, descriptionId],
+        [
+            open,
+            setOpen,
+            close,
+            interactions,
+            data,
+            labelId,
+            descriptionId,
+            overlayClassName,
+            portalContainer,
+            portalAsChild,
+            interactable
+        ],
     );
 }
 
@@ -156,7 +210,10 @@ const DialogContent = React.forwardRef<
     if (!isMounted) return null;
 
     return (
-        <Portal>
+        <Portal
+            container={context.portalContainer}
+            asChild={context.portalAsChild}
+        >
             <FloatingOverlay
                 data-status={status}
                 className={context.overlayClassName}
@@ -168,6 +225,7 @@ const DialogContent = React.forwardRef<
                         data-status={status}
                         aria-labelledby={context.labelId}
                         aria-describedby={context.descriptionId}
+                        data-interact={context.interactable ? "true" : "false"}
                         {...context.getFloatingProps(props)}
                     >
                         {props.children}
@@ -223,14 +281,19 @@ const DialogDescription = React.forwardRef<
 const DialogClose = React.forwardRef<
     HTMLButtonElement,
     React.ButtonHTMLAttributes<HTMLButtonElement>
->(function DialogClose(props, ref) {
-    const { setOpen } = useDialogContext();
+>(function DialogClose({ onClick, ...props }, ref) {
+    const { close } = useDialogContext();
     return (
         <button
             type="button"
             {...props}
             ref={ref}
-            onClick={() => setOpen(false)}
+            onClick={(event) => {
+                onClick?.(event);
+                if (!event.defaultPrevented) {
+                    void close();
+                }
+            }}
         />
     );
 });

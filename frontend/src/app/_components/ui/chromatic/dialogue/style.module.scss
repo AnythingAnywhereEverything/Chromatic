@@ -14,3 +14,25 @@
         opacity: 1;
     }
 }
+
+.dialog-content {
+    ::after {
+        content: "";
+        display: block;
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        inset: 0;
+        z-index: 9999;
+        pointer-events: none;
+        background-color: transparent;
+        transition: background-color 300ms ease;
+    }
+    &[data-interact="false"] {
+        pointer-events: none;
+        ::after {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+    }
+
+}
