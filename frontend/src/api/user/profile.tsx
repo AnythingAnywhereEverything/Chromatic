@@ -53,30 +53,6 @@ export async function getCurrentProfile(): Promise<PublicUserProfileResponse | n
   return data;
 }
 
-export async function updateUserAvatar(formData: FormData): Promise<UserResponse | null> {
-
-  const res = await fetchWithAuth(`v2/users/me/avatar`, {
-    method: "PATCH",
-    body: formData,
-  });
-
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data;
-}
-
-export async function updateUserBanner(formData: FormData): Promise<UserResponse | null> {
-
-  const res = await fetchWithAuth(`v2/users/me/banner`, {
-    method: "PATCH",
-    body: formData,
-  });
-
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data;
-}
-
 export async function updateUserProfile(formData: FormData): Promise<PublicUserProfileResponse | null> {
 
   const res = await fetchWithAuth(`v2/users/me/profile`, {
