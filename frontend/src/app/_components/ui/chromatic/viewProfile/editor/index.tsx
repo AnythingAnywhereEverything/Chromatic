@@ -5,7 +5,7 @@ import {
     DialogContent,
     DialogTrigger,
 } from "@/app/_components/ui/chromatic/dialogue";
-import style from "./popup.module.scss";
+import style from "./editor.module.scss";
 import { IoMdClose } from "react-icons/io";
 import { BiSolidImageAdd } from "react-icons/bi";
 
@@ -21,8 +21,10 @@ interface ImageEditorProps {
     descriptionText?: string;
     ratio?: [number, number];
     cropSelectorStyle?: string;
-    triggerElement?: React.ReactNode;
+    isOpen?: boolean;
+    onOpenChange?: (open: boolean) => void;
     onUpload: (data: imageUploadProps) => Promise<void>;
+    containerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 interface ImageCropperProps {
@@ -299,11 +301,12 @@ function ImageCropper({
 
 export function ImageEditor({
     ratio = [1, 1],
-    triggerElement,
     onUpload,
     cropSelectorStyle = style["cropper-selection"],
+    containerRef,
+    isOpen = false,
+    onOpenChange,
 }: ImageEditorProps) {
-    const [isOpen, setIsOpen] = React.useState(false);
     const [cropOpen, setCropOpen] = React.useState(false);
     const [file, setFile] = React.useState<File | null>(null);
     const [uploadingState, setUploadingState] = React.useState("none");
@@ -350,7 +353,7 @@ export function ImageEditor({
         image.src = imageUrl;
 
         setFile(selectedFile);
-        setIsOpen(false);
+        // setIsOpen(false);
         setCropOpen(true);
     };
 
@@ -378,13 +381,11 @@ export function ImageEditor({
         <>
             <Dialog
                 open={isOpen}
-                onOpenChange={setIsOpen}
+                onOpenChange={onOpenChange}
                 overlayClassName={style["overlay"]}
+                portalContainer={containerRef?.current || undefined}
+                portalAsChild={containerRef?.current ? true : false}
             >
-                <DialogTrigger asChild onClick={() => setIsOpen(true)}>
-                    {triggerElement}
-                </DialogTrigger>
-
                 <DialogContent className={style["content"]}>
                     <div className={style["editor-header"]}>
                         <div>
@@ -432,16 +433,24 @@ export function ImageEditor({
                     open={cropOpen}
                     onOpenChange={setCropOpen}
                     overlayClassName={style["overlay"]}
+                    portalContainer={containerRef?.current || undefined}
+                    portalAsChild={containerRef?.current ? true : false}
+                    onClose={() => {
+                        return uploadingState === "none" || uploadingState === "ended" ? true : false;
+                    }}
+                    interactable={uploadingState === "none" || uploadingState === "ended" ? true : false}
                 >
                     <DialogContent className={style["content"]}>
-                        <div className={style["cropper-uploadbar"]} data-uploading-state={uploadingState} />
+                        <div
+                            className={style["cropper-uploadbar"]}
+                            data-uploading-state={uploadingState}
+                        />
                         <div className={style["cropper-header"]}>
                             <h2>Edit Image</h2>
 
                             <DialogClose
                                 className={style["close-button"]}
                                 aria-label="Close"
-                                onClick={() => setCropOpen(false)}
                             >
                                 <IoMdClose />
                             </DialogClose>
@@ -473,12 +482,9 @@ export function ImageEditor({
                                 Reset
                             </button>
                             <div className={style["cropper-actions"]}>
-                                <button
-                                    className={style["cancel-button"]}
-                                    onClick={() => setCropOpen(false)}
-                                >
+                                <DialogClose className={style["cancel-button"]}>
                                     Cancel
-                                </button>
+                                </DialogClose>
                                 <button
                                     className={style["save-button"]}
                                     onClick={async () => {

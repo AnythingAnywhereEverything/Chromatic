@@ -1,15 +1,9 @@
 
-import { ChromaImage } from "@/app/_components/ui/chromatic/chromaImage";
 import style from "./banner.module.scss";
 import getIdColor from "@lib/getIdColor";
-import { FaPen } from "react-icons/fa";
 import React from "react";
-import { ImageEditor } from "./popup";
-import { useUserService } from "@/hooks/useUserService";
 import { PublicUserProfileResponse } from "@/api/user/profile";
-import { ImageProcessor } from "@lib/cropImage";
 import { Image } from "@/app/_components/ui/chromatic/Image";
-import { OptimizationType } from "@/app/_components/ui/chromatic/Image/type";
 
 interface BannerProps {
     userId: string;

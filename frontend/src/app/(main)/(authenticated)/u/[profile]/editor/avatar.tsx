@@ -1,12 +1,9 @@
 import { PublicUserProfileResponse } from "@/api/user/profile";
-import { useUserService } from "@/hooks/useUserService";
 import React from "react";
-import { ImageEditor, imageUploadProps } from "./popup";
 
 import style from "./avatar.module.scss";
 import { ChromaImage } from "@/app/_components/ui/chromatic/chromaImage";
 import { UserIdAvatar } from "@/app/_components/ui/chromatic/initialAvatar";
-import { FaPen } from "react-icons/fa";
 
 /**
  * prefix with "a_" indicates animated avatar
