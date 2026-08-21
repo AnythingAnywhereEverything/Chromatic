@@ -51,6 +51,7 @@ pub async fn profile_full_by_id(
         "#,
     )
     .bind(user_id)
+    .bind(user_id)
     .fetch_one(tx.as_mut())
     .await?;
 
