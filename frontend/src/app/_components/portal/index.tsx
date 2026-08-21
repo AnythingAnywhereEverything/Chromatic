@@ -59,15 +59,18 @@ export const PortalProvider = ({
 interface PortalProps {
     children: ReactNode;
     /** Target element for the portal. If not provided, it uses the PortalProvider context or document.body */
-    target?: HTMLElement | null;
+    container?: HTMLElement | null;
     /** A wrapper element for the portaled content (Optional) */
     wrapperProps?: React.HTMLAttributes<HTMLDivElement>;
+    /** If true, the portal will render its children as the only child of the wrapper element */
+    asChild?: boolean;
 }
 
 export const Portal = ({
     children,
-    target,
+    container,
     wrapperProps,
+    asChild = false,
 }: PortalProps) => {
     const contextContainer = usePortalContainer();
     const [mounted, setMounted] = useState(false);
@@ -79,12 +82,16 @@ export const Portal = ({
     if (!mounted) return null;
 
     const targetElement =
-        target ??
+        container ??
         contextContainer ??
         document.body;
 
-    return createPortal(
-        <div {...wrapperProps}>{children}</div>,
-        targetElement,
-    );
+    if (!asChild) {
+        return createPortal(
+            <div {...wrapperProps}>{children}</div>,
+            targetElement,
+        );
+    }
+
+    return createPortal(children, targetElement);
 };
