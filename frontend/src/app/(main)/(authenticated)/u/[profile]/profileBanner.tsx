@@ -88,9 +88,7 @@ function ProfileBanner({ params }: { params: { profile: string } }) {
                     />
                     <div className={style["profile-info"]}>
                         <Avatar
-                            is_owner={is_owner}
                             profile={profile}
-                            setProfile={setProfile}
                         />
                         <div className={style["profile-details"]}>
                             <h2>{profile.username}</h2>
