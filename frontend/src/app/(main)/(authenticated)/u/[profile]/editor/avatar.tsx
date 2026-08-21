@@ -34,33 +34,6 @@ export function Avatar({
         }
     }, [profile]);
 
-    let userService = useUserService();
-
-    const handleFileUpload = async (data: imageUploadProps) => {
-        const formData = new FormData();
-        formData.append("uploaded_avatar", data.File);
-        formData.append("position_x", data.PositionX.toString());
-        formData.append("position_y", data.PositionY.toString());
-        formData.append("scale", data.Scale.toString());
-
-        // send the form data to the
-        await userService.updateUserAvatar.mutateAsync(formData).then((res) => {
-            if (res) {
-                setAvatarSrc(`avatars/${res.id}/${res.avatar}`);
-                setProfile((prevProfile) => {
-                    if (prevProfile) {
-                        return {
-                            ...prevProfile,
-                            avatar: res.avatar,
-                            avatar_thumbhash: res.avatar_thumbhash,
-                        };
-                    }
-                    return prevProfile;
-                });
-            }
-        });
-    };
-
     return (
         <div
             className={style["profile-avatar"]}
@@ -91,20 +64,6 @@ export function Avatar({
                     userId={profile.id}
                     name={profile.display_name || profile.username}
                     size={180}
-                />
-            )}
-            {is_owner && (
-                <ImageEditor
-                    triggerElement={
-                        <button className={style["edit-avatar-overlay"]}>
-                            <div className={style["edit-avatar-button"]}>
-                                <FaPen />
-                            </div>
-                        </button>
-                    }
-                    onUpload={async (data: imageUploadProps): Promise<void> => {
-                        await handleFileUpload(data);
-                    }}
                 />
             )}
         </div>
