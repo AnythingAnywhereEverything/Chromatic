@@ -79,7 +79,7 @@ const BannerBackdrop = ({
                     containerWidth={bannerContainerWidth}
                     containerHeight={bannerContainerHeight}
                     thumbhash={thumbhash || undefined}
-                    optimizationType={OptimizationType.Static}
+                    optimizationType="static"
                 />
             )}
         </div>

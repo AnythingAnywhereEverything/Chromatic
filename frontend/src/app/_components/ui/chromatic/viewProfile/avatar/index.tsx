@@ -1,7 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import getIdColor from "@lib/getIdColor";
 import { Image } from "@/app/_components/ui/chromatic/Image";
-import { OptimizationType } from "../../Image/type";
 import style from "./avatar.module.scss";
 import { ImageEditor, imageUploadProps } from "../editor";
 import { FaPen } from "react-icons/fa";
@@ -119,8 +117,8 @@ const AvatarPreview = ({
                 thumbhash={thumbhash || undefined}
                 optimizationType={
                     animatedSrc()
-                        ? OptimizationType.AnimatedInViewport
-                        : OptimizationType.Static
+                        ? "animated_in_viewport"
+                        : "static"
                 }
             />
         );

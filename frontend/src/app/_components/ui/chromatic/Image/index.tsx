@@ -21,7 +21,7 @@ export function Image({
     containerClassName,
     containerWidth,
     containerHeight,
-    optimizationType = OptimizationType.Static,
+    optimizationType = "static",
     ...props
 }: ImageProps) {
     const [loaded, setLoaded] = useState(false);
@@ -71,7 +71,7 @@ export function Image({
     );
 
     useEffect(() => {
-        if (optimizationType !== OptimizationType.AnimatedInViewport) {
+        if (optimizationType !== "animated_in_viewport") {
             return;
         }
 
@@ -100,11 +100,11 @@ export function Image({
 
     const shouldLoadAnimated =
         !!animatedImageUrl &&
-        (optimizationType === OptimizationType.AnimatedOnLoad
+        (optimizationType === "animated_on_load"
             ? loaded
-            : optimizationType === OptimizationType.AnimatedInViewport
+            : optimizationType === "animated_in_viewport"
               ? inViewport
-              : optimizationType === OptimizationType.AnimatedOnHover
+              : optimizationType === "animated_on_hover"
                 ? hovered
                 : false);
 
@@ -122,12 +122,12 @@ export function Image({
                 overflow: "hidden",
             }}
             onMouseEnter={() => {
-                if (optimizationType === OptimizationType.AnimatedOnHover) {
+                if (optimizationType === "animated_on_hover") {
                     setHovered(true);
                 }
             }}
             onMouseLeave={() => {
-                if (optimizationType === OptimizationType.AnimatedOnHover) {
+                if (optimizationType === "animated_on_hover") {
                     setHovered(false);
                 }
             }}

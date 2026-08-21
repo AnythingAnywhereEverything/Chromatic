@@ -4,6 +4,7 @@ import React from "react";
 import style from "./avatar.module.scss";
 import { ChromaImage } from "@/app/_components/ui/chromatic/chromaImage";
 import { UserIdAvatar } from "@/app/_components/ui/chromatic/initialAvatar";
+import { Image } from "@/app/_components/ui/chromatic/Image";
 
 /**
  * prefix with "a_" indicates animated avatar
@@ -49,12 +50,13 @@ export function Avatar({
             }}
         >
             {profile.avatar && avatarSrc ? (
-                <ChromaImage
+                <Image
                     style={{ width: "180px", height: "180px" }}
                     src={avatarSrc}
                     alt={`${profile.display_name || profile.username}'s avatar`}
                     thumbhash={profile.avatar_thumbhash || undefined}
                     size={180}
+                    optimizationType="animated_in_viewport"
                 />
             ) : (
                 <UserIdAvatar

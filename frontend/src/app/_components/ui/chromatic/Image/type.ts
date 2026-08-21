@@ -9,16 +9,11 @@ type UrlParameters = {
     size?: number;
 };
 
-enum OptimizationType {
-    // * Image is animated on hover */
-    AnimatedOnHover = "animated_on_hover",
-    // * Image will load static first then load animated image for first preview */
-    AnimatedOnLoad = "animated_on_load",
-    // * Image is animated when it enters the viewport */
-    AnimatedInViewport = "animated_in_viewport",
-    // * Image is static */
-    Static = "static",
-}
+type OptimizationType =
+    | "animated_on_hover"
+    | "animated_on_load"
+    | "animated_in_viewport"
+    | "static";
 
 type ImageProps = UrlParameters &
     React.ImgHTMLAttributes<HTMLImageElement> & {
@@ -36,5 +31,4 @@ type ImageProps = UrlParameters &
         optimizationType?: OptimizationType;
     };
     
-export type { ImageProps };
-export { OptimizationType };
+export type { ImageProps, OptimizationType, UrlParameters };

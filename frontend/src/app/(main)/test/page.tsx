@@ -37,7 +37,7 @@ const TestPage = () => {
             <button onMouseOver={showInner} onMouseOut={() => setInner(false)}>
                 Open Portal
             </button>
-            {inner && <Portal target={innerRef.current}>Something</Portal>}
+            {inner && <Portal container={innerRef.current}>Something</Portal>}
             <div>
                 <p>Hover over the button to open the portal.</p>
                 <div>

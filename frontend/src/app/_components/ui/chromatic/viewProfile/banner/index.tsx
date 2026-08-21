@@ -117,8 +117,8 @@ const BannerPreview = ({
                 thumbhash={thumbhash || undefined}
                 optimizationType={
                     animatedSrc()
-                        ? OptimizationType.AnimatedInViewport
-                        : OptimizationType.Static
+                        ? "animated_in_viewport"
+                        : "static"
                 }
             />
         );
