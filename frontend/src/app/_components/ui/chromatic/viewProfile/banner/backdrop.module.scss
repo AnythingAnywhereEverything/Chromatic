@@ -1,0 +1,28 @@
+
+.backdrop-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: fit-content;
+    z-index: -10;
+    opacity: 0.5;
+    overflow: hidden;
+
+    &::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        backdrop-filter: blur(5px);
+        background-color: rgba(0, 0, 0, 0.2);
+        // make image fade out from top to bottom
+        background: linear-gradient(to top, var(--popover) 10%, rgba(0, 0, 0, 0) 200%);
+    }
+    .backdrop-banner {
+        // push image up a little to prevent weird cropping at the bottom
+        margin-top: -1%;
+    }
+}
