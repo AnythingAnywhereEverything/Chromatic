@@ -46,6 +46,13 @@ export async function getPublicUserProfile(username: string): Promise<PublicUser
   return data;
 }
 
+export async function getCurrentProfile(): Promise<PublicUserProfileResponse | null> {
+  const res = await fetchWithAuth(`v2/users/me/profile`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data;
+}
+
 export async function updateUserAvatar(formData: FormData): Promise<UserResponse | null> {
 
   const res = await fetchWithAuth(`v2/users/me/avatar`, {
@@ -61,6 +68,18 @@ export async function updateUserAvatar(formData: FormData): Promise<UserResponse
 export async function updateUserBanner(formData: FormData): Promise<UserResponse | null> {
 
   const res = await fetchWithAuth(`v2/users/me/banner`, {
+    method: "PATCH",
+    body: formData,
+  });
+
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data;
+}
+
+export async function updateUserProfile(formData: FormData): Promise<PublicUserProfileResponse | null> {
+
+  const res = await fetchWithAuth(`v2/users/me/profile`, {
     method: "PATCH",
     body: formData,
   });
