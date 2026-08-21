@@ -3,39 +3,38 @@ import {
   updateDisplayName,
   updateUsername,
 } from "@/api/user";
-import { updateUserAvatar, updateUserBanner } from "@/api/user/profile";
+import {updateUserProfile } from "@/api/user/profile";
 
 export const useUserService = () => {
   const queryClient = useQueryClient();
 
-  const handleSuccess = (updatedUser: any) => {
+  const handleUserSuccess = (updatedUser: any) => {
     queryClient.setQueryData(["user"], updatedUser);
+  };
+
+  const handleProfileSuccess = (updatedProfile: any) => {
+    queryClient.setQueryData(["profile"], updatedProfile);
+    queryClient.invalidateQueries({ queryKey: ["user"] });
   };
 
   const displayNameMutation = useMutation({
     mutationFn: updateDisplayName,
-    onSuccess: handleSuccess,
+    onSuccess: handleUserSuccess,
   });
 
   const usernameMutation = useMutation({
     mutationFn: updateUsername,
-    onSuccess: handleSuccess,
+    onSuccess: handleUserSuccess,
   });
 
   const profileMutation = useMutation({
-    mutationFn: updateUserAvatar,
-    onSuccess: handleSuccess,
-  });
-
-  const bannerMutation = useMutation({
-    mutationFn: updateUserBanner,
-    onSuccess: handleSuccess,
+    mutationFn: updateUserProfile,
+    onSuccess: handleProfileSuccess,
   });
 
   return {
     updateDisplayName: displayNameMutation,
     updateUsername: usernameMutation,
-    updateUserAvatar: profileMutation,
-    updateUserBanner: bannerMutation,
+    updateUserProfile: profileMutation,
   };
 };
