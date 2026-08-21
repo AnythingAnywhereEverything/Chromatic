@@ -1,0 +1,223 @@
+.root-overlay {
+    &[data-status="open"] {
+        opacity: 1;
+        .root-content {
+            scale: 1;
+        }
+    }
+}
+
+.sub-overlay {
+    &[data-status="open"] {
+        opacity: 1;
+        .sub-content {
+            scale: 1;
+        }
+    }
+}
+
+.root-overlay,
+.sub-overlay {
+    width: 100%;
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    transition: opacity 200ms ease;
+    pointer-events: all;
+    .root-content,
+    .sub-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        overflow: hidden;
+        justify-content: center;
+        background-color: var(--popover);
+        border-radius: calc(var(--spacing) * 2);
+        box-shadow: inset 0 0 0 2px var(--border);
+        scale: 0.8;
+        transition: scale 200ms ease;
+    }
+}
+
+.root-content {
+    gap: var(--spacing);
+    padding: calc(var(--spacing) * 8);
+    padding-bottom: 0;
+    // set max-width to 800px and min-width to 300px, but allow it to scale with the viewport width
+
+    width: clamp(300px, 100%, 800px);
+    height: clamp(300px, 100%, 600px);
+    background-color: var(--popover);
+}
+
+.unsaved-changes-wrapper {
+    z-index: 1;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 0;
+    position: absolute;
+    display: flex;
+}
+
+.unsaved-changes {
+    position: relative;
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--spacing) * 2);
+
+    background-color: var(--popover);
+    color: var(--text-neutral);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-small);
+    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 4);
+    font-size: var(--text-small);
+    cursor: pointer;
+    transition:
+    opacity 200ms ease,
+    transform 200ms cubic-bezier(0.5, 0.4, 0.3, 2);
+    svg {
+        width: calc(var(--spacing) * 6);
+        height: calc(var(--spacing) * 6);
+    }
+    &[data-state="open"] {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(-150%);
+
+    }
+    
+
+    &[data-state="closed"] {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-100%);
+    }
+}
+
+.unsaved-cancel-button {
+    background-color: color-mix(in oklab, var(--input) 70%, transparent);
+    &:hover {
+        background-color: color-mix(in oklab, var(--input) 90%, transparent);
+    }
+}
+
+.unsaved-save-button {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    &:hover {
+        background-color: color-mix(in oklab, var(--primary) 80%, transparent);
+    }
+}
+
+.unsaved-cancel-button,
+.unsaved-save-button {
+    border: none;
+    cursor: pointer;
+    color: var(--text-neutral);
+    width: calc(var(--spacing) * 18);
+    height: calc(var(--spacing) * 6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--spacing);
+
+    transition: background-color 0.2s ease;
+
+    &:disabled {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+}
+
+.close-button {
+    position: absolute;
+    top: calc(var(--spacing) * 2);
+    right: calc(var(--spacing) * 2);
+    background-color: color-mix(in oklab, var(--input) 70%, transparent);
+    border: none;
+    cursor: pointer;
+    color: var(--text-neutral);
+    width: calc(var(--spacing) * 6);
+    height: calc(var(--spacing) * 6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--spacing);
+    svg {
+        width: calc(var(--spacing) * 6);
+        height: calc(var(--spacing) * 6);
+    }
+
+    transition:
+        transform 0.2s cubic-bezier(0, -1.05, 1, 4.09),
+        background-color 0.2s cubic-bezier(0, -1.05, 1, 4.09);
+
+    &:hover {
+        transform: scale(1.05);
+        background-color: color-mix(in oklab, var(--input) 90%, transparent);
+    }
+}
+
+.profile-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: calc(var(--spacing) * 4);
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+}
+
+.header-group {
+    display: flex;
+    flex-direction: row;
+    gap: calc(var(--spacing) * 3);
+    padding-right: calc(var(--spacing) * 4);
+    width: 100%;
+    z-index: 1;
+}
+
+.profile-text {
+    width: 100%;
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: fit-content;
+    align-items: flex-start;
+}
+
+.profile-username {
+    font-size: var(--text-small);
+    font-weight: var(--font-weight-bold);
+    color: var(--muted-foreground);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.profile-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing);
+    overflow: hidden; /* NEW */
+    min-width: 0; /* NEW; needed for Firefox */
+    height: 100%;
+    background-color: var(--popover-focus-area);
+    border-radius: var(--radius-large) var(--radius-large) 0 0;
+}
+
+.profile-interests {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing);
+}
