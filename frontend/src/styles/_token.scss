@@ -43,6 +43,7 @@
     --popover: #fff;
     --popover-foreground: #000000;
     
+    --popover-focus-area: #d6d6d6;
     --border: #b0b0b0;
     --input: #e5e5e5;
     --destructive: #ff6466;
@@ -51,15 +52,6 @@
     --success-foreground: #5de323;
     --warning: #ffaa64;
     --warning-foreground: #e38323;
-    
-    --stock-in: #16a34a;
-    --stock-low: #ea580c;
-    --stock-out: #dc2626;
-
-    --product-add-bg: #ff7b7b;
-    --product-add-foreground: #911a1a;
-    --product-buy-bg: #ffbb55;
-    --product-buy-foreground: #733f17;
     
     --text-neutral: #0a0a0a;
     --text-muted: #505050;
@@ -74,6 +66,8 @@
     --text-sm--line-height: calc(1.25 / .875);
     --text-large: calc(var(--text-base) * 1.125);
     --text-lg--line-height: calc(1.75 / 1.125);
+    --text-extra-large: calc(var(--text-base) * 1.5);
+    --text-xl--line-height: calc(1.75 / 1.5);
     
     // Border
     --radius: .625rem;
@@ -111,6 +105,7 @@
     --text-link: #8aadf7;
     --ring: #989898;
 
+    --popover-focus-area: #161618;
     --popover: #1e2023;
     --popover-foreground: #fafafa;
     --border: lab(100% 0 0 / .1);
