@@ -37,3 +37,35 @@ pub async fn soft_delete_user(
 
     Ok(true)
 }
+
+pub async fn user_banner_media_id(
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    user_id: i64,
+) -> RepositoryResult<Option<i64>> {
+    let row = sqlx::query_scalar::<_, Option<i64>>(
+        r#"
+        SELECT banner_media_id FROM user_profiles WHERE user_id = $1
+        "#,
+    )
+    .bind(user_id)
+    .fetch_one(tx.as_mut())
+    .await?;
+
+    Ok(row)
+}
+
+pub async fn user_avatar_media_id(
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    user_id: i64,
+) -> RepositoryResult<Option<i64>> {
+    let row = sqlx::query_scalar::<_, Option<i64>>(
+        r#"
+        SELECT avatar_media_id FROM user_profiles WHERE user_id = $1
+        "#,
+    )
+    .bind(user_id)
+    .fetch_one(tx.as_mut())
+    .await?;
+
+    Ok(row)
+}

@@ -4,6 +4,48 @@ use crate::application::repository::{
     RepositoryResult,
 };
 
+pub async fn user_display_name(
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    user_id: i64,
+    new_display_name: &str,
+) -> RepositoryResult<()> {
+    sqlx::query(
+        r#"
+        UPDATE user_profiles
+        SET display_name = $1,
+            updated_at = now()
+        WHERE user_id = $2
+        "#,
+    )
+    .bind(new_display_name)
+    .bind(user_id)
+    .execute(tx.as_mut())
+    .await?;
+
+    Ok(())
+}
+
+pub async fn user_bio(
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    user_id: i64,
+    new_bio: &str,
+) -> RepositoryResult<()> {
+    sqlx::query(
+        r#"
+        UPDATE user_profiles
+        SET bio = $1,
+            updated_at = now()
+        WHERE user_id = $2
+        "#,
+    )
+    .bind(new_bio)
+    .bind(user_id)
+    .execute(tx.as_mut())
+    .await?;
+
+    Ok(())
+}
+
 pub async fn banner_media_id(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     user_id: i64,
