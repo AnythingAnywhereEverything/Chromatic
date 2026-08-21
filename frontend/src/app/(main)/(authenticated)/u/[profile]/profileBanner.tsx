@@ -10,6 +10,8 @@ import style from "./style.module.scss";
 import { getCacheUserId } from "@/handler/token_handler";
 import { Banner } from "./editor/banner";
 import { Avatar } from "./editor/avatar";
+import { ViewProfile } from "@/app/_components/ui/chromatic/viewProfile";
+import { useProfile } from "@/hooks/useProfile";
 
 function ProfileBannerSkeleton() {
     return (
@@ -45,22 +47,24 @@ function ProfileBanner({ params }: { params: { profile: string } }) {
     );
     const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
 
+    const userProfile = useProfile();
+
     useEffect(() => {
         const fetchProfile = async () => {
             const profileOf = params.profile;
             const response = await getPublicUserProfile(profileOf);
 
-            console.log("ProfileBanner response:", response);
+            // if owner, use profile from user service
+            if (getCacheUserId() === response?.id && userProfile?.data) {
+                console.log("Using profile from user service");
+                setProfile(userProfile.data);
+                return;
+            }
 
             setProfile(response);
-            setAvatarSrc(
-                response?.avatar
-                    ? `avatars/${response.id}/${response.avatar}`
-                    : null,
-            );
         };
         fetchProfile();
-    }, [params.profile]);
+    }, [params.profile, userProfile?.data]); // refetch when the profile param changes or when the user profile data changes
 
     // create banner container ref
     
@@ -107,6 +111,11 @@ function ProfileBanner({ params }: { params: { profile: string } }) {
                                 </p>
                             </div>
                         </div>
+                        <ViewProfile username={profile.username}>
+                            <button>
+                                edit profile
+                            </button>
+                        </ViewProfile>
                     </div>
                 </>
             ) : (
