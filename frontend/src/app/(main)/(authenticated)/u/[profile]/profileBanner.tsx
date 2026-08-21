@@ -45,7 +45,6 @@ function ProfileBanner({ params }: { params: { profile: string } }) {
     const [profile, setProfile] = useState<PublicUserProfileResponse | null>(
         null,
     );
-    const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
 
     const userProfile = useProfile();
 
