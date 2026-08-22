@@ -156,6 +156,7 @@ const ViewProfile = ({
 
     const profileService = useUserService();
     const handleSave = async () => {
+        console.log("ViewProfile: handleSave", payload);
         if (isSaving) return;
         setIsSaving(true);
         const formData = new FormData();
@@ -165,13 +166,13 @@ const ViewProfile = ({
         if (payload.uploaded_avatar) {
             formData.append("uploaded_avatar", payload.uploaded_avatar);
         }
-        if (payload.remove_avatar !== undefined) {
+        if (payload.remove_avatar !== undefined && payload.remove_avatar) {
             formData.append("remove_avatar", "true");
         }
         if (payload.uploaded_banner) {
             formData.append("uploaded_banner", payload.uploaded_banner);
         }
-        if (payload.remove_banner !== undefined) {
+        if (payload.remove_banner !== undefined && payload.remove_banner) {
             formData.append("remove_banner", "true");
         }
         if (payload.quote !== undefined) {
