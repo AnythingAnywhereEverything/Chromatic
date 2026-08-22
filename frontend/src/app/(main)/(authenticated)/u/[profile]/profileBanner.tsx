@@ -90,8 +90,8 @@ function ProfileBanner({ params }: { params: { profile: string } }) {
                             profile={profile}
                         />
                         <div className={style["profile-details"]}>
-                            <h2>{profile.username}</h2>
-                            <p>{profile.display_name}</p>
+                            <h2>{profile.display_name ? profile.display_name : profile.username}</h2>
+                            <p>{profile.username}</p>
                             <p>{profile.bio}</p>
                             <div className={style["profile-stats"]}>
                                 <p>
