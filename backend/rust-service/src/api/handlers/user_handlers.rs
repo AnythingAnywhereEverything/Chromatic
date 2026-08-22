@@ -206,15 +206,28 @@ pub async fn update_current_user_profile_handler(
             .save_media(&state, uploaded_avatar, new_media_opt.clone())
             .await?;
 
-        user_repo::update::avatar_media_id(&mut tx, user_id, Some(uploaded_medias.get_id()))
-            .await?;
-
         media_repo::update::media_status(
             &mut tx,
             &uploaded_medias.get_id(),
             &MediaStatus::Completed,
         )
         .await?;
+
+        let media_to_delete =
+            user_repo::update::avatar_media_id(&mut tx, user_id, Some(uploaded_medias.get_id()))
+                .await?;
+
+        if let Some(media_id) = media_to_delete {
+            let path = media_repo::delete::hard_delete_media_data(&mut tx, media_id).await?;
+
+            // if path contains a_ means it's an animated image
+            // we need to change .png to webp since we save as static png
+            if path.contains("a_") {
+                let animated_path = path.replace(".png", ".webp");
+                state.storage.delete(&animated_path).await;
+            }
+            state.storage.delete(&path).await;
+        }
 
         tx.commit().await?;
     }
@@ -245,15 +258,25 @@ pub async fn update_current_user_profile_handler(
             .save_media(&state, uploaded_banner, new_media_opt)
             .await?;
 
-        user_repo::update::banner_media_id(&mut tx, user_id, Some(uploaded_medias.get_id()))
-            .await?;
-
         media_repo::update::media_status(
             &mut tx,
             &uploaded_medias.get_id(),
             &MediaStatus::Completed,
         )
         .await?;
+
+        let media_to_delete =
+            user_repo::update::banner_media_id(&mut tx, user_id, Some(uploaded_medias.get_id()))
+                .await?;
+
+        if let Some(media_id) = media_to_delete {
+            let path = media_repo::delete::hard_delete_media_data(&mut tx, media_id).await?;
+            if path.contains("a_") {
+                let animated_path = path.replace(".png", ".webp");
+                state.storage.delete(&animated_path).await;
+            }
+            state.storage.delete(&path).await;
+        }
 
         tx.commit().await?;
     }
