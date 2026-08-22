@@ -13,6 +13,7 @@ pub async fn get_feed_public(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     cursor_id: Option<i64>,
     user_id: Option<i64>,
+    limit: i32
 ) -> Result<Vec<PostRow>, sqlx::Error> {
     sqlx::query_as::<_, PostRow>(
         r#"
@@ -91,11 +92,12 @@ pub async fn get_feed_public(
                 AND ($1 IS NULL OR m.id < $1)
 
             ORDER BY m.id DESC
-            LIMIT 15
+            LIMIT $3
         "#
     )
     .bind(cursor_id)
     .bind(user_id)
+    .bind(limit)
     .fetch_all(tx.as_mut())
     .await
 }

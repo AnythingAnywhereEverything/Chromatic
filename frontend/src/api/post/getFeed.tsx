@@ -49,11 +49,11 @@ interface PostTag {
     target_id :string
 }
 
-const LIMIT = 15;
+const LIMIT = 8;
 
 export const getUserFeed = async(
 ):Promise<mediaPostProps[]> => {
-    const res = await fetchWithAuth(`v2/posts/feed`);
+    const res = await fetchWithAuth(`v2/posts/feed?${LIMIT}`);
     if (!res.ok) throw new Error("Failed to get post data")
     const data = await res.json();
     console.log(data);

@@ -1,20 +1,30 @@
 use axum::{
-    Json, extract::{Multipart, Path, State},
+    Json, extract::{Multipart, Path, Query, State},
 };
 use hyper::StatusCode;
 use multipart_derive::Multipart;
 
 use crate::{
-    api::{APIError, RequestAuth, dtos::post_dtos::{LikeDTO, PostDTO}, version}, application::{
+    api::{
+        APIError, RequestAuth,
+        dtos::post_dtos::{LikeDTO, PostDTO},
+        version,
+    },
+    application::{
         repository::{
             media::{self as media_repo, row::MediaStatus},
             post::{self as post_repo},
-        }, service::{
-            errors::{AuthServiceError, PostServiceError}, media::{
+        },
+        service::{
+            errors::{AuthServiceError, PostServiceError},
+            media::{
                 processor::types::{
                     ImageProcessorType, MediaProcessorFFlags, MediaProcessorOptions,
                     PostProcessingType, ResizeStyle, VideoPostProcessorType,
-                }, service::MediaService, service_type::{ContainerConfig, MediaServiceOptions}, types::{
+                },
+                service::MediaService,
+                service_type::{ContainerConfig, MediaServiceOptions},
+                types::{
                     file::MultipartFile,
                     media_options::{
                         FieldTypeFilter, MediaType, MultipartExtractorOptions, ValidationOptions,
@@ -22,7 +32,8 @@ use crate::{
                     },
                 },
             },
-        }, state::SharedState,
+        },
+        state::SharedState,
     },
 };
 #[derive(serde::Deserialize, sqlx::Type, Debug)]
@@ -33,11 +44,11 @@ pub enum PostStatus {
     InActive,
 }
 #[derive(serde::Deserialize, sqlx::Type, Debug)]
-#[sqlx(type_name = "post_visibility",rename_all = "lowercase")]
+#[sqlx(type_name = "post_visibility", rename_all = "lowercase")]
 pub enum PostVisibility {
     Everyone,
     Friend,
-    Private
+    Private,
 }
 
 impl ToString for PostVisibility {
@@ -52,11 +63,11 @@ impl ToString for PostVisibility {
 
 #[derive(serde::Deserialize, sqlx::Type, Debug)]
 #[sqlx(rename_all = "lowercase")]
-pub enum MediaTypeAttachment{
+pub enum MediaTypeAttachment {
     Post,
     Comment,
     Message,
-    Community
+    Community,
 }
 
 impl MediaTypeAttachment {
@@ -77,9 +88,14 @@ pub struct CreatePostRequest {
     pub media_src: Option<Vec<MultipartFile>>,
     pub repost_from: Option<i64>,
     pub visibility: PostVisibility,
-    pub media_tags: Option<Vec<i64>>
+    pub media_tags: Option<Vec<i64>>,
 }
 
+#[derive(serde::Deserialize)]
+pub struct FeedQuery {
+    pub limit: Option<i32>,
+    pub cursor_id: Option<i64>,
+}
 #[derive(Debug, serde::Deserialize)]
 pub struct LikeRequest {
     pub is_like: bool,
@@ -101,7 +117,8 @@ impl PostVisibility {
 pub async fn get_feed_post_handler(
     State(state): State<SharedState>,
     Path(version): Path<String>,
-    req_auth: RequestAuth
+    req_auth: RequestAuth,
+    query: Query<FeedQuery>,
 ) -> Result<Json<Vec<PostDTO>>, APIError> {
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
@@ -110,13 +127,12 @@ pub async fn get_feed_post_handler(
         Some(user) => Some(user.user_id),
         None => None,
     };
-
+    let limit = query.limit.unwrap_or(8);
     let mut tx = state.db_pool.begin().await?;
-    let all_post = post_repo::post::get_feed_public(&mut tx, None, user_id).await?;
-    tracing::warn!("POST AS JSON BEFORE {:#?}", all_post);
+    let all_post = post_repo::post::get_feed_public(&mut tx, None, user_id, limit).await?;
 
     let mut post_vec: Vec<PostDTO> = all_post.into_iter().map(|post| post.into()).collect();
-    
+
     for post in &mut post_vec {
         post.current_user_id = user_id.map(|id| id.to_string());
     }
@@ -190,42 +206,57 @@ pub async fn create_new_post_handler(
     };
 
     let mut tx = state.db_pool.begin().await?;
-    
+
     if extracted.content.len() > 2500 {
         return Err(PostServiceError::PostTextContentTooLarge.into());
     }
-    
+
     let content = extracted.content;
     let media_service = MediaService::new();
 
     if let Some(ref files) = extracted.media_src {
-
         let all_media = media_service
             .save_media_group(&state, files.to_vec(), new_media_opts)
             .await?;
         for media in all_media {
             // set to complete the media processing
-            media_repo::update::media_status(&mut tx, &media.get_id(), &MediaStatus::Completed).await?;
-            post_repo::post::add_has_attachment(&mut tx, *new_post_id, media.get_id(), MediaTypeAttachment::Post.as_str().to_string()).await?;
+            media_repo::update::media_status(&mut tx, &media.get_id(), &MediaStatus::Completed)
+                .await?;
+            post_repo::post::add_has_attachment(
+                &mut tx,
+                *new_post_id,
+                media.get_id(),
+                MediaTypeAttachment::Post.as_str().to_string(),
+            )
+            .await?;
         }
     }
 
     let post_tags = extracted.media_tags.unwrap_or_default();
 
-    let _ =
-            post_repo::post::create_post(&mut tx, new_post_id, 
-            user_id, &content, 
-            extracted.repost_from, !extracted.media_src.is_none(),
-            extracted.repost_from.is_some(), extracted.visibility).await?;
+    let _ = post_repo::post::create_post(
+        &mut tx,
+        new_post_id,
+        user_id,
+        &content,
+        extracted.repost_from,
+        !extracted.media_src.is_none(),
+        extracted.repost_from.is_some(),
+        extracted.visibility,
+    )
+    .await?;
 
     if !post_tags.is_empty() {
         tracing::trace!("Entering add tags stage");
         for tag in post_tags {
-            post_repo::post::add_tags_target(&mut tx, *new_post_id, "post".to_string(), tag ).await?;
+            post_repo::post::add_tags_target(&mut tx, *new_post_id, "post".to_string(), tag)
+                .await?;
         }
     }
-    let mut post: PostDTO = post_repo::post::get_post_by_id(&mut tx, *new_post_id, user_id).await?.into();
-    
+    let mut post: PostDTO = post_repo::post::get_post_by_id(&mut tx, *new_post_id, user_id)
+        .await?
+        .into();
+
     post.current_user_id = Some(user_id.to_string());
     tx.commit().await?;
     Ok(Json(post))
@@ -271,38 +302,27 @@ pub async fn update_post_handler(
     let old_post = post_repo::post::get_post_by_id(&mut tx, post_id, user_id).await?;
     let old_tags = post_repo::post::get_tag_attachments(&mut tx, post_id).await?;
 
-if let Some(new_tags) = extracted.media_tags {
-    let old_tag_ids: std::collections::HashSet<i64> =
-        old_tags.iter().map(|tag| tag.tag_id).collect();
+    if let Some(new_tags) = extracted.media_tags {
+        let old_tag_ids: std::collections::HashSet<i64> =
+            old_tags.iter().map(|tag| tag.tag_id).collect();
 
-    let new_tag_ids: std::collections::HashSet<i64> =
-        new_tags.iter().copied().collect();
+        let new_tag_ids: std::collections::HashSet<i64> = new_tags.iter().copied().collect();
 
-    // * Delete old tags that are no longer present.
-    for old_tag in &old_tags {
-        if !new_tag_ids.contains(&old_tag.tag_id) {
-            post_repo::post::delete_tag_attachment(
-                &mut tx,
-                post_id,
-                old_tag.tag_id,
-            )
-            .await?;
+        // * Delete old tags that are no longer present.
+        for old_tag in &old_tags {
+            if !new_tag_ids.contains(&old_tag.tag_id) {
+                post_repo::post::delete_tag_attachment(&mut tx, post_id, old_tag.tag_id).await?;
+            }
+        }
+
+        // * Add new tags that weren't already attached.
+        for tag_id in new_tags {
+            if !old_tag_ids.contains(&tag_id) {
+                post_repo::post::add_tags_target(&mut tx, post_id, "post".to_string(), tag_id)
+                    .await?;
+            }
         }
     }
-
-    // * Add new tags that weren't already attached.
-    for tag_id in new_tags {
-        if !old_tag_ids.contains(&tag_id) {
-            post_repo::post::add_tags_target(
-                &mut tx,
-                post_id,
-                "post".to_string(),
-                tag_id,
-            )
-            .await?;
-        }
-    }
-}
     tracing::trace!("Old post: {:?}", old_post);
 
     let content = if extracted.content != old_post.content {
@@ -311,19 +331,12 @@ if let Some(new_tags) = extracted.media_tags {
         old_post.content
     };
 
-    let _ = post_repo::post::update_post(
-        &mut tx,
-        post_id,
-        user_id,
-        content,
-        extracted.visibility,
-    )
-    .await?;
+    let _ = post_repo::post::update_post(&mut tx, post_id, user_id, content, extracted.visibility)
+        .await?;
 
-    let post: PostDTO =
-        post_repo::post::get_post_by_id(&mut tx, post_id, user_id)
-            .await?
-            .into();
+    let post: PostDTO = post_repo::post::get_post_by_id(&mut tx, post_id, user_id)
+        .await?
+        .into();
 
     tracing::trace!("Updated post {:#?}", post);
 
@@ -340,7 +353,6 @@ pub async fn delete_post_handler(
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
 
-
     let mut tx = state.db_pool.begin().await?;
 
     let user_id = match req_auth.user {
@@ -348,7 +360,7 @@ pub async fn delete_post_handler(
         None => return Err(AuthServiceError::InvalidCredentials.into()),
         // None => 1234,
     };
-    
+
     post_repo::post::get_post_by_id(&mut tx, post_id, user_id).await?;
     let delete = post_repo::post::delete_post(&mut tx, post_id, user_id).await?;
     tx.commit().await?;
@@ -356,14 +368,14 @@ pub async fn delete_post_handler(
     if delete == 0 {
         return Err(PostServiceError::CommentNotFoundOrUnauthorized.into());
     }
-    
+
     Ok(StatusCode::NO_CONTENT)
 }
 // pub async fn get_like_handler(
 //     State(state): State<SharedState>,
 //     Path((version, post_id)): Path<(String, i64)>,
 // ) -> Result<> {
-    
+
 // }
 
 pub async fn liked_handler(
@@ -382,12 +394,8 @@ pub async fn liked_handler(
 
     let mut tx = state.db_pool.begin().await?;
     tracing::info!(user_id, target_id, req.is_like, "liking post");
-    let post_like = post_repo::post::like_post_repo(
-        &mut tx,
-        user_id,
-        target_id,
-        req.is_like,
-    ).await?;
+    let post_like =
+        post_repo::post::like_post_repo(&mut tx, user_id, target_id, req.is_like).await?;
 
     tx.commit().await?;
 
@@ -398,10 +406,10 @@ pub async fn liked_handler(
 }
 
 pub async fn bookmark_handler(
-    State(state) : State<SharedState>,
+    State(state): State<SharedState>,
     Path((version, target_id)): Path<(String, i64)>,
     req_auth: RequestAuth,
-    payload: Json<BookmarkRequest>
+    payload: Json<BookmarkRequest>,
 ) -> Result<(), APIError> {
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
@@ -412,7 +420,8 @@ pub async fn bookmark_handler(
     };
 
     let mut tx = state.db_pool.begin().await?;
-    let _bookmark = post_repo::post::toggle_bookmark(&mut tx, target_id, user_id, payload.is_bookmark).await;
+    let _bookmark =
+        post_repo::post::toggle_bookmark(&mut tx, target_id, user_id, payload.is_bookmark).await;
 
     Ok(())
 }
