@@ -1,6 +1,6 @@
 const MIN_WIDTH_RATIO = 0.6;
 const MAX_WIDTH_RATIO = 0.9;
-const MIN_HEIGHT_RATIO = 0.3;
+const MIN_HEIGHT_RATIO = 0.4;
 const SINGLE_MAX_HEIGHT_RATIO = 1.10;
 
 export type Media = {
@@ -33,29 +33,34 @@ function fitSingle(
 ): FittedMedia {
     console.log("containerWidth:", containerWidth, "containerHeight:", containerHeight);
     const minWidth = containerWidth * MIN_WIDTH_RATIO;
-
+    const minHeight = containerHeight * MIN_HEIGHT_RATIO;
     const maxHeight = containerHeight * SINGLE_MAX_HEIGHT_RATIO;
 
     const ratio = media.w / media.h;
 
-    // * First: fill the container width while retaining ratio.
+    // fill the container width while retaining ratio.
     let width = containerWidth;
     let height = width / ratio;
 
-    // * If height exceeds the single-image height allowance,
-    // * scale down while retaining ratio.
+    // If height exceeds the single-image height allowance,
+    // scale down while retaining ratio.
     if (height > maxHeight) {
         height = maxHeight;
         width = height * ratio;
     }
 
-    // * If width is still below the minimum visual width,
-    // * increase width and intentionally break the ratio.
+    // If width is still below the minimum visual width,
+    // increase width and intentionally break the ratio.
     if (width < minWidth) {
         width = minWidth;
-
-        // * Height may break ratio, but never exceed max height.
         height = Math.min(height, maxHeight);
+    }
+
+    // If height is still below the minimum visual height,
+    // increase height and intentionally break the ratio.
+    if (height < minHeight) {
+        height = minHeight;
+        width = Math.min(width, containerWidth);
     }
 
     return {
@@ -83,7 +88,7 @@ function fitOverflow(
     });
 
     /*
-     * * Let the thinnest image determine the
+     * Let the thinnest image determine the
      * useful row height.
      */
     let rowHeight = Math.max(...requiredHeights);
@@ -132,7 +137,7 @@ function tryFitTwo(
     const minimumHeight = containerHeight * MIN_HEIGHT_RATIO;
 
     /*
-     * * The two-image "fit together" layout
+     * The two-image fit together layout
      * must be visually useful as well as valid.
      *
      * Too tall  -> reject.
@@ -167,10 +172,7 @@ export function calculateMediaRow({
         return [fitSingle(medias[0], containerWidth, containerHeight)];
     }
 
-    /*
-     * * Two images get one attempt to fit
-     * together while preserving their ratios.
-     */
+    // * Two images may be able to fit together in a visually useful way.
     if (medias.length === 2) {
         const fitted = tryFitTwo(medias, containerWidth, containerHeight, gap);
 
@@ -179,9 +181,7 @@ export function calculateMediaRow({
         }
     }
 
-    /*
-     * * Failed two-image fit and 3+ images
-     * use the same visual overflow algorithm.
-     */
+
+    // * More than two images, or two images that failed to fit together
     return fitOverflow(medias, containerWidth, containerHeight);
 }
