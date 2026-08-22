@@ -22,6 +22,7 @@ export function Image({
     containerWidth,
     containerHeight,
     optimizationType = "static",
+    viewportThreshold = 0.5,
     ...props
 }: ImageProps) {
     const [loaded, setLoaded] = useState(false);
@@ -83,20 +84,17 @@ export function Image({
 
         const observer = new IntersectionObserver(
             ([entry]) => {
-                if (entry.isIntersecting) {
-                    setInViewport(true);
-                    observer.disconnect();
-                }
+                setInViewport(entry.intersectionRatio >= viewportThreshold);
             },
             {
-                threshold: 0.01,
+                threshold: [0, viewportThreshold, 1],
             },
         );
 
         observer.observe(element);
 
         return () => observer.disconnect();
-    }, [optimizationType]);
+    }, [optimizationType, viewportThreshold]);
 
     const shouldLoadAnimated =
         !!animatedImageUrl &&

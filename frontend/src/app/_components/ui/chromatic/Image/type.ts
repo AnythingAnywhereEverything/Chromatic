@@ -29,6 +29,7 @@ type ImageProps = UrlParameters &
         // * Delay in milliseconds for the transition from thumbhash to full image */
         delay?: number;
         optimizationType?: OptimizationType;
+        viewportThreshold?: number;
     };
     
 export type { ImageProps, OptimizationType, UrlParameters };
