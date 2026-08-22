@@ -16,6 +16,7 @@ import ViewProfileBody, { ProfilePayload } from "./body";
 import { Portal } from "@/app/_components/portal";
 import { useUser } from "@/hooks/useUser";
 import { useUserService } from "@/hooks/useUserService";
+import { getUserFeed, mediaPostProps } from "@/api/post/getFeed";
 
 interface ViewProfileOptions {
     username: string;
@@ -35,6 +36,7 @@ function useViewProfile({
         null,
     );
     const [isOwner, setIsOwner] = useState(false);
+    const [recentPost, setRecentPost] = React.useState<mediaPostProps[]>([]);
 
     // use user service to get the current user id
     const cUser = useProfile();
@@ -84,6 +86,14 @@ function useViewProfile({
         }
     }, [open]);
 
+    // React.useEffect(() => {
+    //   async function fetchFeed() {
+    //     const res = await getUserFeed();
+    //     setRecentPost(res);
+    //   }
+    //   fetchFeed();
+    // }, []);
+
     return React.useMemo(
         () => ({
             username,
@@ -95,6 +105,7 @@ function useViewProfile({
             profile,
             isOwner,
             setProfile,
+            recentPost,
         }),
         [
             isOpen,
@@ -104,6 +115,7 @@ function useViewProfile({
             profile,
             isOwner,
             setProfile,
+            recentPost,
         ],
     );
 }
@@ -161,6 +173,9 @@ const ViewProfile = ({
         }
         if (payload.remove_banner !== undefined) {
             formData.append("remove_banner", "true");
+        }
+        if (payload.quote !== undefined) {
+            formData.append("quote", payload.quote);
         }
 
         const data = await profileService.updateUserProfile.mutateAsync(formData);

@@ -221,3 +221,39 @@
     flex-direction: column;
     gap: var(--spacing);
 }
+
+.profile-activity {
+    display: flex;
+    flex-direction: row;
+    gap: calc(var(--spacing) * 2);
+}
+
+.recontly-post{
+    width: 100%;
+    background-color: red;
+}
+
+.profile-bio{
+    width: 100%;
+    color: var(--text-neutral);
+    margin-bottom: calc(var(--spacing) * 2);
+    flex: 0;
+    .bio-wrapper {
+    position: relative;
+    width: 100%;
+
+    &::before{
+        position: absolute;
+        width: 100%;
+        top: 50%;
+        height: 100%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: calc(var(--spacing) * 0.25) calc(var(--spacing) * 1);
+        border: 1px solid var(--primary);
+        box-sizing: content-box;
+        border-radius: var(--spacing);
+        z-index: 0;
+    }
+    }
+}

@@ -16,6 +16,7 @@ export interface PublicUserProfileResponse {
   following_count: number;
   active: boolean;
   created_at: string;
+  quote: string | null;
 }
 
 interface UserResponse {
