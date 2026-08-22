@@ -23,6 +23,29 @@ pub async fn user_display_name(
     Ok(())
 }
 
+/// status got renamed to quote due to making the site fit the theme
+pub async fn user_status(
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    user_id: i64,
+    new_quote: &str,
+) -> RepositoryResult<()> {
+    // if not exists, insert new row, else update existing row
+    sqlx::query(
+        r#"
+        INSERT INTO user_profiles (user_id, quote, updated_at)
+        VALUES ($2, $1, now())
+        ON CONFLICT (user_id)
+        DO UPDATE SET quote = $1, updated_at = now()
+        "#,
+    )
+    .bind(new_quote)
+    .bind(user_id)
+    .execute(tx.as_mut())
+    .await?;
+
+    Ok(())
+}
+
 pub async fn user_bio(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     user_id: i64,
