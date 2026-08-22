@@ -1,7 +1,7 @@
 const MIN_WIDTH_RATIO = 0.6;
 const MAX_WIDTH_RATIO = 0.9;
 const MIN_HEIGHT_RATIO = 0.3;
-const SINGLE_MAX_HEIGHT_RATIO = 1.25;
+const SINGLE_MAX_HEIGHT_RATIO = 1.10;
 
 export type Media = {
     w: number;
@@ -31,60 +31,31 @@ function fitSingle(
     containerWidth: number,
     containerHeight: number,
 ): FittedMedia {
+    console.log("containerWidth:", containerWidth, "containerHeight:", containerHeight);
     const minWidth = containerWidth * MIN_WIDTH_RATIO;
-    const minHeight = containerHeight * MIN_HEIGHT_RATIO;
+
     const maxHeight = containerHeight * SINGLE_MAX_HEIGHT_RATIO;
 
     const ratio = media.w / media.h;
 
-    /*
-     * * Try minimum dimensions while retaining ratio.
-     */
-    const scale = Math.max(minWidth / media.w, minHeight / media.h);
-    let width = media.w * scale;
-    let height = media.h * scale;
+    // * First: fill the container width while retaining ratio.
+    let width = containerWidth;
+    let height = width / ratio;
 
-    /*
-     * * Ratio-preserving result fits.
-     */
-    if (width <= containerWidth && height <= maxHeight) {
-        return {
-            w: Math.round(width),
-            h: Math.round(height),
-            order: media.order,
-        };
-    }
-
-    /*
-     * * Too tall:
-     * * use the maximum allowed single-image height
-     * * while retaining the original ratio.
-     */
+    // * If height exceeds the single-image height allowance,
+    // * scale down while retaining ratio.
     if (height > maxHeight) {
         height = maxHeight;
         width = height * ratio;
     }
 
-    /*
-     * * Too wide:
-     * * fit the viewport width while retaining ratio.
-     */
-    if (width > containerWidth) {
-        width = containerWidth;
-        height = width / ratio;
-    }
-
-    /*
-     * ! If the ratio-preserving dimensions now
-     * ! fall below the minimum visual size,
-     * ! intentionally break the ratio.
-     */
+    // * If width is still below the minimum visual width,
+    // * increase width and intentionally break the ratio.
     if (width < minWidth) {
         width = minWidth;
-    }
 
-    if (height < minHeight) {
-        height = minHeight;
+        // * Height may break ratio, but never exceed max height.
+        height = Math.min(height, maxHeight);
     }
 
     return {

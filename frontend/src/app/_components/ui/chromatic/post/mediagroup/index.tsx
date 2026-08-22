@@ -15,8 +15,8 @@ function isAnimated(media: mediaPostAttechment): boolean {
     return media.path.includes("a_");
 }
 
-const CONTAINER_WIDTH_RATIO = 2;
-const CONTAINER_HEIGHT_RATIO = 3;
+const CONTAINER_WIDTH_RATIO = 1;
+const CONTAINER_HEIGHT_RATIO = 1;
 
 function GetAllMediaDimensions(
     media: mediaPostAttechment[],
