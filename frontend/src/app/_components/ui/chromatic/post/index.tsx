@@ -33,7 +33,7 @@ import {
   DropdownItem,
   DropdownTrigger,
 } from "../dropdown";
-import { ImageSingle } from "./mediaGroup";
+import { ImageSingle, MediaGroup } from "./mediaGroup";
 
 function isMediaAnimated(media: string): boolean {
   return media.startsWith("a_");
@@ -161,12 +161,7 @@ const Post: React.FC<mediaPostProps> = ({
                               item={media[0]}
                           />
                       ) : (
-                          media.map((item) => (
-                              <ImageSingle
-                                  key={item.id}
-                                  item={item}
-                              />
-                          ))
+                        <MediaGroup media={media}/>
                       )}
                   </div>
               </div>
