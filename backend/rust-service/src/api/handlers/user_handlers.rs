@@ -10,10 +10,8 @@ use crate::{
         APIError, RequestAuth,
         dtos::user_dtos::{PublicUserProfileDTO, UserDTO},
         version,
-    },
-    application::{
-        repository::user::{self as user_repo},
-        service::{
+    }, application::{
+        repository::user::{self as user_repo, find::URDQOpts}, service::{
             errors::AuthServiceError,
             media::types::{
                 file::MultipartFile,
@@ -22,8 +20,7 @@ use crate::{
                 },
             },
             profile_service::ProfileService,
-        },
-        state::SharedState,
+        }, state::SharedState,
     },
 };
 
@@ -147,6 +144,27 @@ pub async fn get_current_user_handler(
     };
 
     let user = user_repo::find::profile_with_minimal_by_id(&mut tx, user_id).await?;
+
+    Ok(Json(user.into()))
+}
+
+
+pub async fn get_user_minimal_handler(
+    State(state): State<SharedState>,
+    Path((version, user_id)): Path<(String, i64)>,
+) -> Result<Json<PublicUserProfileDTO>, APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+
+    let opts = URDQOpts {
+        target_id: Some(user_id),
+        target_username: None,
+        get_email: false,
+        get_avatar: true,
+        ..Default::default()
+    };
+
+    let user = ProfileService::get_profile_with_opts(&state, opts).await?;
 
     Ok(Json(user.into()))
 }

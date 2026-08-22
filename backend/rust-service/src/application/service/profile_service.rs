@@ -1,10 +1,8 @@
 use crate::{
     application::{
         repository::{
-            media::{self as media_repo, row::MediaStatus},
-            user::{self as user_repo, row::UserProfileRow},
-        },
-        service::{
+            media::{self as media_repo, row::MediaStatus}, user::{self as user_repo, find::URDQOpts, row::UserProfileRow},
+        }, service::{
             errors::ProfileServiceError,
             media::{
                 processor::types::{
@@ -14,10 +12,8 @@ use crate::{
                 service_type::{ContainerConfig, MediaServiceOptions},
                 types::file::MultipartFile,
             },
-        },
-        state::AppState,
-    },
-    domain::user::types::{Bio, DisplayName, Quotes},
+        }, state::AppState,
+    }, domain::user::types::{Bio, DisplayName, Quotes},
 };
 pub struct ProfileService;
 
@@ -30,6 +26,19 @@ impl ProfileService {
         let mut tx = state.db_pool.begin().await?;
 
         let profile = user_repo::find::profile_full_by_id(&mut tx, user_id, requester).await?;
+
+        tx.commit().await?;
+
+        Ok(profile)
+    }
+
+    pub async fn get_profile_with_opts(
+        state: &AppState,
+        opts: URDQOpts,
+    ) -> Result<UserProfileRow, ProfileServiceError> {
+        let mut tx = state.db_pool.begin().await?;
+
+        let profile = user_repo::find::experimental_dynamic_user_query(&mut tx, opts).await?;
 
         tx.commit().await?;
 

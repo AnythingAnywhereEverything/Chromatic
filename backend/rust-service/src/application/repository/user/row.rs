@@ -8,7 +8,7 @@ pub struct UserRow {
 #[derive(Debug, sqlx::FromRow)]
 pub struct UserProfileMinimalRow {
     pub id: i64,
-    pub email: String,
+    pub email: Option<String>,
     pub username: Option<String>,
     pub display_name: Option<String>,
     pub bio: Option<String>,
@@ -22,16 +22,16 @@ pub struct UserProfileMinimalRow {
 #[derive(Debug, sqlx::FromRow)]
 pub struct UserProfileRow {
     pub id: i64,
-    pub email: String,
+    pub email: Option<String>,
     pub username: Option<String>,
     pub display_name: Option<String>,
     pub bio: Option<String>,
     pub quote: Option<String>,
     pub is_follower: Option<bool>,
     pub is_following: Option<bool>,
-    pub followers_count: i32,
-    pub following_count: i32,
-    pub posts_count: i32,
+    pub followers_count: Option<i32>,
+    pub following_count: Option<i32>,
+    pub posts_count: Option<i32>,
     pub pinned_posts: Option<Vec<i64>>, // array of post ids
     pub avatar: Option<String>, // hash name
     pub avatar_thumbhash: Option<String>, // thumbhash

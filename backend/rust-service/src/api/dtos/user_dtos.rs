@@ -5,7 +5,7 @@ use crate::application::repository::{media::row::MediaDataWithMetadataRow, user:
 #[derive(Debug, Serialize)]
 pub struct UserDTO {
     pub id: String, // Use String to avoid issues with JavaScript number precision
-    pub email: String,
+    pub email: Option<String>,
     pub username: Option<String>,
     pub display_name: Option<String>,
     pub bio: Option<String>,
@@ -36,7 +36,7 @@ impl Into<UserDTO> for UserProfileMinimalRow {
 #[derive(Debug, Serialize)]
 pub struct PublicUserProfileDTO {
     pub id: String,
-    pub email: String,
+    pub email: Option<String>,
     pub username: Option<String>,
     pub display_name: Option<String>,
     pub bio: Option<String>,
@@ -47,8 +47,8 @@ pub struct PublicUserProfileDTO {
     pub is_blocked: bool,
     pub is_following: bool,
     pub is_follower: bool,
-    pub followers_count: i32,
-    pub following_count: i32,
+    pub followers_count: Option<i32>,
+    pub following_count: Option<i32>,
     pub created_at: String,
 }
 
