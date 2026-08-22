@@ -28,12 +28,20 @@ pub enum PasswordError {
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum DisplayNameError {
-    #[error("Display name cannot be empty.")]
-    Empty,
-    #[error("Display name cannot exceed 32 characters.")]
-    TooLong,
-    #[error("Display name cannot be blank.")]
-    Blank
+    #[error("Display name cannot exceed {0} characters.")]
+    TooLong(usize),
+}
+
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum BioError {
+    #[error("Bio cannot exceed {0} characters.")]
+    TooLong(usize),
+}
+
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum QuotesError {
+    #[error("Quotes cannot exceed {0} characters.")]
+    TooLong(usize),
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]

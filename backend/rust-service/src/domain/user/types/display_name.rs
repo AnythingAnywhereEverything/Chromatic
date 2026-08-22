@@ -24,13 +24,13 @@ impl DisplayName {
     /// let long_name = "a".repeat(33);
     /// let name = DisplayName::new(&long_name);
     /// assert!(name.is_err());
-    /// assert_eq!(name.err().unwrap(), DisplayNameError::TooLong);
+    /// assert_eq!(name.err().unwrap(), DisplayNameError::TooLong(MAX_DISPLAY_NAME_LENGTH));
     /// ```
     pub fn new(input: &str) -> Result<Self, DisplayNameError> {
         let trimmed = input.trim();
 
         if trimmed.len() > MAX_DISPLAY_NAME_LENGTH {
-            return Err(DisplayNameError::TooLong);
+            return Err(DisplayNameError::TooLong(MAX_DISPLAY_NAME_LENGTH));
         }
 
         Ok(Self(trimmed.to_string()))
