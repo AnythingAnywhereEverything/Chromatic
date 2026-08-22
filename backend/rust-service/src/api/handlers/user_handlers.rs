@@ -12,29 +12,19 @@ use crate::{
         version,
     },
     application::{
-        repository::{
-            media::{self as media_repo, row::MediaStatus},
-            user::{self as user_repo},
-        },
+        repository::user::{self as user_repo},
         service::{
             errors::AuthServiceError,
-            media::{
-                processor::types::{
-                    CropStyle, ImageProcessorType, MediaProcessorFFlags, MediaProcessorOptions,
-                },
-                service::MediaService,
-                service_type::{ContainerConfig, MediaServiceOptions},
-                types::{
-                    file::MultipartFile,
-                    media_options::{
-                        MediaType, MultipartExtractorOptions, ValidationOptions, ValidationType,
-                    },
+            media::types::{
+                file::MultipartFile,
+                media_options::{
+                    MediaType, MultipartExtractorOptions, ValidationOptions, ValidationType,
                 },
             },
+            profile_service::ProfileService,
         },
         state::SharedState,
     },
-    domain::user::types::DisplayName,
 };
 
 /// Get user profile by username
@@ -74,7 +64,7 @@ pub async fn get_current_user_profile_handler(
 
     let mut tx = state.db_pool.begin().await?;
 
-    let user = user_repo::find::profile_full_by_id(&mut tx, user_id).await?;
+    let user = user_repo::find::profile_full_by_id(&mut tx, user_id, None).await?;
 
     Ok(Json(user.into()))
 }
@@ -84,6 +74,7 @@ pub async fn get_current_user_profile_handler(
 struct UpdateUserProfilePayload {
     pub display_name: Option<String>,
     pub bio: Option<String>,
+    pub quote: Option<String>,
     #[multipart]
     pub uploaded_avatar: Option<MultipartFile>,
     pub remove_avatar: Option<bool>,
@@ -124,168 +115,20 @@ pub async fn update_current_user_profile_handler(
         .extract::<UpdateUserProfilePayload>(multipart, ext_opts)
         .await?;
 
-    if extracted.display_name.is_none()
-        && extracted.bio.is_none()
-        && extracted.uploaded_avatar.is_none()
-        && extracted.uploaded_banner.is_none()
-        && extracted.remove_avatar.unwrap_or(false) == false
-        && extracted.remove_banner.unwrap_or(false) == false
-    {
-        return Err((
-            hyper::StatusCode::BAD_REQUEST,
-            crate::api::APIErrorEntry {
-                code: Some("no_fields_to_update".to_string()),
-                message: "No fields to update".to_string(),
-                ..Default::default()
-            },
-        )
-            .into());
-    }
+    let uploaded_profile = ProfileService::update_profile(
+        &state,
+        user_id,
+        extracted.display_name,
+        extracted.bio,
+        extracted.quote,
+        extracted.uploaded_avatar,
+        extracted.remove_avatar,
+        extracted.uploaded_banner,
+        extracted.remove_banner,
+    )
+    .await?;
 
-    let mut tx = state.db_pool.begin().await?;
-
-    if extracted.remove_avatar.unwrap_or(false) {
-        user_repo::update::avatar_media_id(&mut tx, user_id, None).await?;
-    }
-    if extracted.remove_banner.unwrap_or(false) {
-        user_repo::update::banner_media_id(&mut tx, user_id, None).await?;
-    }
-
-    if let Some(display_name) = &extracted.display_name {
-        let dpn = DisplayName::new(display_name)?;
-        user_repo::update::user_display_name(&mut tx, user_id, dpn.as_str()).await?;
-    }
-    if let Some(bio) = &extracted.bio {
-        user_repo::update::user_bio(&mut tx, user_id, bio).await?;
-    }
-
-    tx.commit().await?;
-
-    let mut new_media_opt = MediaServiceOptions {
-        upload_route: format!("avatars/{}", user_id),
-        uploader_id: user_id,
-        container: Some(ContainerConfig {
-            use_hash_names: true,
-            use_animated_image_indicator: true,
-            ..Default::default()
-        }),
-        processor: Some(MediaProcessorOptions {
-            fflags: Some(MediaProcessorFFlags {
-                image_thumbhash: true,
-                ..Default::default()
-            }),
-            image_processors: Some(vec![]), // no processing for now, as the position and scale will be handled on the client side
-            video_processors: None,
-            post_processors: None,
-        }),
-    };
-
-    // image are positioned and scaled on the client side
-    // we just validating it, confirming that the image is valid and then saving it to the media service, and updating the user profile with the new media id
-    if let Some(uploaded_avatar) = extracted.uploaded_avatar {
-        new_media_opt.processor = Some(MediaProcessorOptions {
-            fflags: Some(MediaProcessorFFlags {
-                image_thumbhash: true,
-                ..Default::default()
-            }),
-            image_processors: Some(vec![ImageProcessorType::Crop {
-                style: CropStyle::Ratio {
-                    width: 1,
-                    height: 1,
-                    scale: 1.0,
-                },
-                position: Some((0.5, 0.5)),
-            }]),
-            ..Default::default()
-        });
-
-        let media_service = MediaService::new();
-
-        let mut tx = state.db_pool.begin().await?;
-        let uploaded_medias = media_service
-            .save_media(&state, uploaded_avatar, new_media_opt.clone())
-            .await?;
-
-        media_repo::update::media_status(
-            &mut tx,
-            &uploaded_medias.get_id(),
-            &MediaStatus::Completed,
-        )
-        .await?;
-
-        let media_to_delete =
-            user_repo::update::avatar_media_id(&mut tx, user_id, Some(uploaded_medias.get_id()))
-                .await?;
-
-        if let Some(media_id) = media_to_delete {
-            let path = media_repo::delete::hard_delete_media_data(&mut tx, media_id).await?;
-
-            // if path contains a_ means it's an animated image
-            // we need to change .png to webp since we save as static png
-            if path.contains("a_") {
-                let animated_path = path.replace(".png", ".webp");
-                state.storage.delete(&animated_path).await;
-            }
-            state.storage.delete(&path).await;
-        }
-
-        tx.commit().await?;
-    }
-
-    if let Some(uploaded_banner) = extracted.uploaded_banner {
-        new_media_opt.processor = Some(MediaProcessorOptions {
-            fflags: Some(MediaProcessorFFlags {
-                image_thumbhash: true,
-                ..Default::default()
-            }),
-            image_processors: Some(vec![ImageProcessorType::Crop {
-                style: CropStyle::Ratio {
-                    width: 5,
-                    height: 2,
-                    scale: 1.0,
-                },
-                position: Some((0.5, 0.5)),
-            }]),
-            ..Default::default()
-        });
-
-        new_media_opt.upload_route = format!("banners/{}", user_id);
-
-        let media_service: MediaService = MediaService::new();
-
-        let mut tx = state.db_pool.begin().await?;
-        let uploaded_medias = media_service
-            .save_media(&state, uploaded_banner, new_media_opt)
-            .await?;
-
-        media_repo::update::media_status(
-            &mut tx,
-            &uploaded_medias.get_id(),
-            &MediaStatus::Completed,
-        )
-        .await?;
-
-        let media_to_delete =
-            user_repo::update::banner_media_id(&mut tx, user_id, Some(uploaded_medias.get_id()))
-                .await?;
-
-        if let Some(media_id) = media_to_delete {
-            let path = media_repo::delete::hard_delete_media_data(&mut tx, media_id).await?;
-            if path.contains("a_") {
-                let animated_path = path.replace(".png", ".webp");
-                state.storage.delete(&animated_path).await;
-            }
-            state.storage.delete(&path).await;
-        }
-
-        tx.commit().await?;
-    }
-
-    let mut tx = state.db_pool.begin().await?;
-
-    let user = user_repo::find::profile_full_by_id(&mut tx, user_id).await?;
-
-    Ok(Json(user.into()))
+    Ok(Json(uploaded_profile.into()))
 }
 
 pub async fn get_current_user_handler(

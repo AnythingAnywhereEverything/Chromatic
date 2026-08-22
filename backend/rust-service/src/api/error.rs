@@ -69,6 +69,15 @@ pub enum APIErrorCode {
     // User
     UserNotFound,
 
+    // Profile
+    InvalidAvatarUpdate,
+    InvalidBannerUpdate,
+    ProfileServiceError,
+    NoUpdateFields,
+    DisplayNameError,
+    BioError,
+    QuotesError,
+
     // Transaction
     TransactionNotFound,
     TransferInsufficientFunds,
