@@ -1,6 +1,6 @@
 use serde::{Serialize};
 
-use crate::application::repository::{media::row::MediaDataWithMetadataRow, user::row::{UserProfileFullRow, UserProfileMinimalRow}};
+use crate::application::repository::{media::row::MediaDataWithMetadataRow, user::row::{UserProfileRow, UserProfileMinimalRow}};
 
 #[derive(Debug, Serialize)]
 pub struct UserDTO {
@@ -49,10 +49,10 @@ pub struct PublicUserProfileDTO {
     pub is_follower: bool,
     pub followers_count: i32,
     pub following_count: i32,
-    pub created_at: Option<String>,
+    pub created_at: String,
 }
 
-impl Into<PublicUserProfileDTO> for UserProfileFullRow {
+impl Into<PublicUserProfileDTO> for UserProfileRow {
     fn into(self) -> PublicUserProfileDTO {
         PublicUserProfileDTO {
             id: self.id.to_string(),
@@ -69,7 +69,7 @@ impl Into<PublicUserProfileDTO> for UserProfileFullRow {
             is_follower: self.is_follower.unwrap_or(false),
             followers_count: self.followers_count,
             following_count: self.following_count,
-            created_at: self.created_at.map(|dt| dt.to_rfc3339()),
+            created_at: self.created_at.to_rfc3339(),
         }
     }
 }

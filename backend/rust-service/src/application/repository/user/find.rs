@@ -2,23 +2,31 @@ use sqlx::Transaction;
 
 use crate::application::repository::{
     RepositoryResult,
-    user::row::{UserProfileFullRow, UserProfileMinimalRow, UserRow},
+    user::row::{UserProfileMinimalRow, UserProfileRow, UserRow},
 };
 
 pub async fn profile_full_by_id(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     user_id: i64,
-) -> RepositoryResult<UserProfileFullRow> {
-    let row = sqlx::query_as::<_, UserProfileFullRow>(
+    requester: Option<i64>,
+) -> RepositoryResult<UserProfileRow> {
+    let row = sqlx::query_as::<_, UserProfileRow>(
         r#"
-        SELECT 
+        SELECT
             u.id,
             u.email,
             u.username,
             up.followers_count,
             up.following_count,
+            up.posts_count,
+            (
+                SELECT ARRAY_AGG(upp.post_id ORDER BY upp.post_id)
+                FROM user_pinned_posts upp
+                WHERE upp.user_id = u.id
+            ) AS pinned_posts,
             up.display_name,
             up.bio,
+            us.message AS quote,
             uf1.is_following,
             uf2.is_follower,
             m1.name AS avatar,
@@ -27,6 +35,8 @@ pub async fn profile_full_by_id(
             m2.thumbhash AS banner_thumbhash,
             u.created_at
         FROM users u
+        LEFT JOIN user_statuses us
+            ON u.id = us.user_id
         LEFT JOIN user_profiles up
             ON u.id = up.user_id
         LEFT JOIN media_data m1
@@ -47,11 +57,12 @@ pub async fn profile_full_by_id(
         ) uf2
             ON u.id = uf2.follower_id
             AND uf2.user_id = $2
-        WHERE u.id = $1;
+        WHERE u.id = $1
+            AND u.deleted_at IS NULL;
         "#,
     )
     .bind(user_id)
-    .bind(user_id)
+    .bind(requester)
     .fetch_one(tx.as_mut())
     .await?;
 
@@ -61,9 +72,9 @@ pub async fn profile_full_by_id(
 pub async fn profile_full_by_username(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     username: &str,
-    fetch_user_id: Option<i64>,
-) -> RepositoryResult<UserProfileFullRow> {
-    let row = sqlx::query_as::<_, UserProfileFullRow>(
+    requester: Option<i64>,
+) -> RepositoryResult<UserProfileRow> {
+    let row = sqlx::query_as::<_, UserProfileRow>(
         r#"
         SELECT
             u.id,
@@ -71,8 +82,15 @@ pub async fn profile_full_by_username(
             u.username,
             up.followers_count,
             up.following_count,
+            up.posts_count,
+            (
+                SELECT ARRAY_AGG(upp.post_id ORDER BY upp.post_id)
+                FROM user_pinned_posts upp
+                WHERE upp.user_id = u.id
+            ) AS pinned_posts,
             up.display_name,
             up.bio,
+            us.message AS quote,
             uf1.is_following,
             uf2.is_follower,
             m1.name AS avatar,
@@ -81,6 +99,8 @@ pub async fn profile_full_by_username(
             m2.thumbhash AS banner_thumbhash,
             u.created_at
         FROM users u
+        LEFT JOIN user_statuses us
+            ON u.id = us.user_id
         LEFT JOIN user_profiles up
             ON u.id = up.user_id
         LEFT JOIN media_data m1
@@ -101,11 +121,11 @@ pub async fn profile_full_by_username(
         ) uf2
             ON u.id = uf2.follower_id
             AND uf2.user_id = $2
-        WHERE u.username = $1;
+        WHERE u.username = $1 AND u.deleted_at IS NULL;
         "#,
     )
     .bind(username)
-    .bind(fetch_user_id)
+    .bind(requester)
     .fetch_one(tx.as_mut())
     .await?;
 
@@ -149,7 +169,7 @@ pub async fn by_id(
 ) -> RepositoryResult<UserRow> {
     let row = sqlx::query_as::<_, UserRow>(
         r#"
-        SELECT id, email, username FROM users WHERE id = $1
+        SELECT id, email, username FROM users WHERE id = $1 AND deleted_at IS NULL
         "#,
     )
     .bind(user_id)
@@ -165,7 +185,7 @@ pub async fn by_email(
 ) -> RepositoryResult<UserRow> {
     let row = sqlx::query_as::<_, UserRow>(
         r#"
-        SELECT id, email, username FROM users WHERE email = $1
+        SELECT id, email, username FROM users WHERE email = $1 AND deleted_at IS NULL
         "#,
     )
     .bind(email)
@@ -181,7 +201,7 @@ pub async fn by_username(
 ) -> RepositoryResult<UserRow> {
     let row = sqlx::query_as::<_, UserRow>(
         r#"
-        SELECT id, email, username FROM users WHERE username = $1
+        SELECT id, email, username FROM users WHERE username = $1 AND deleted_at IS NULL
         "#,
     )
     .bind(username)
@@ -198,7 +218,7 @@ pub async fn by_username_or_email(
 ) -> RepositoryResult<UserRow> {
     let row = sqlx::query_as::<_, UserRow>(
         r#"
-        SELECT id, email, username FROM users WHERE username = $1 OR email = $1
+        SELECT id, email, username FROM users WHERE (username = $1 OR email = $1) AND deleted_at IS NULL
         "#,
     )
     .bind(identifier)
