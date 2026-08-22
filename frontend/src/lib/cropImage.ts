@@ -2,6 +2,37 @@
 
 const Vips = require("wasm-vips");
 
+let vipsPromise: Promise<any> | null = null;
+
+function getVips() {
+    if (!vipsPromise) {
+        vipsPromise = Vips({
+            mainScriptUrlOrBlob: "/wasm-vips/vips.js",
+            locateFile: (path: string) => {
+                if (path.endsWith("vips.wasm")) {
+                    return "/wasm-vips/vips.wasm";
+                }
+
+                if (path.endsWith("vips-heif.wasm")) {
+                    return "/wasm-vips/vips-heif.wasm";
+                }
+
+                if (path.endsWith("vips-jxl.wasm")) {
+                    return "/wasm-vips/vips-jxl.wasm";
+                }
+
+                if (path.endsWith("vips-resvg.wasm")) {
+                    return "/wasm-vips/vips-resvg.wasm";
+                }
+
+                return path;
+            },
+        });
+    }
+
+    return vipsPromise;
+}
+
 export interface ProcessResult {
     final: Blob;
     static?: Blob;
@@ -30,7 +61,6 @@ export interface CropPosition {
     x: number;
     y: number;
 }
-
 
 export interface PreCalculatedCrop {
     left: number;
@@ -144,7 +174,6 @@ export function computeCropDimensions(
 
 export class ImageProcessor {
     private vips: Awaited<ReturnType<typeof Vips>>;
-
     private calculatedCrop?: PreCalculatedCrop;
 
     private constructor(vips: Awaited<ReturnType<typeof Vips>>) {
@@ -156,27 +185,7 @@ export class ImageProcessor {
             throw new Error("ImageProcessor must run in the browser");
         }
 
-        const vips = await Vips({
-            mainScriptUrlOrBlob: "/wasm-vips/vips.js",
-
-            locateFile: (path: string) => {
-                if (path.endsWith("vips.wasm")) {
-                    return "/wasm-vips/vips.wasm";
-                }
-                if (path.endsWith("vips-heif.wasm")) {
-                    return "/wasm-vips/vips-heif.wasm";
-                }
-                if (path.endsWith("vips-jxl.wasm")) {
-                    return "/wasm-vips/vips-jxl.wasm";
-                }
-                if (path.endsWith("vips-resvg.wasm")) {
-                    return "/wasm-vips/vips-resvg.wasm";
-                }
-                return path;
-            },
-        });
-
-        return new ImageProcessor(vips);
+        return new ImageProcessor(await getVips());
     }
 
     private processCrop(
@@ -184,7 +193,6 @@ export class ImageProcessor {
         style: CropStyle,
         position?: CropPosition,
     ): any {
-        // * Calculate once so every animated frame uses identical geometry.
         const crop =
             this.calculatedCrop ??
             (this.calculatedCrop = computeCropDimensions(
@@ -218,7 +226,6 @@ export class ImageProcessor {
         const nPages = image.getInt("n-pages");
         const pageHeight = image.getInt("page-height");
 
-        // * Calculate the crop against one original frame.
         const crop =
             this.calculatedCrop ??
             (this.calculatedCrop = computeCropDimensions(
@@ -230,27 +237,33 @@ export class ImageProcessor {
 
         const frames: any[] = [];
 
-        for (let page = 0; page < nPages; page++) {
-            const frame = image.crop(
-                crop.left,
-                page * pageHeight + crop.top,
-                crop.crop_width,
-                crop.crop_height,
-            );
+        try {
+            for (let page = 0; page < nPages; page++) {
+                const frame = image.crop(
+                    crop.left,
+                    page * pageHeight + crop.top,
+                    crop.crop_width,
+                    crop.crop_height,
+                );
 
-            frames.push(frame);
+                frames.push(frame);
+            }
+
+            const result = this.vips.Image.arrayjoin(frames, {
+                across: 1,
+                hspacing: crop.crop_width,
+                vspacing: crop.crop_height,
+            });
+
+            result.setInt("n-pages", nPages);
+            result.setInt("page-height", crop.crop_height);
+
+            return result;
+        } finally {
+            for (const frame of frames) {
+                frame.delete();
+            }
         }
-
-        const result = this.vips.Image.arrayjoin(frames, {
-            across: 1,
-            hspacing: crop.crop_width,
-            vspacing: crop.crop_height,
-        });
-
-        result.setInt("n-pages", nPages);
-        result.setInt("page-height", crop.crop_height);
-
-        return result;
     }
 
     async transform(
@@ -260,49 +273,53 @@ export class ImageProcessor {
     ): Promise<ProcessResult> {
         const input = new Uint8Array(await file.arrayBuffer());
 
-        console.log("Vips input:", {
-            name: file.name,
-            type: file.type,
-            size: file.size,
-            bytes: Array.from(input.slice(0, 16)),
-        });
-
         let image: any;
+        let result: any;
+        let staticThumbnail: any;
 
-        const mime = file.type.toLowerCase();
+        try {
+            const mime = file.type.toLowerCase();
 
-        image = (() => {
-            if (mime === "image/gif" || mime === "image/webp") {
-                return this.vips.Image.newFromBuffer(input, "n=-1");
-            } else {
-                return this.vips.Image.newFromBuffer(input);
-            }
-        })();
+            image =
+                mime === "image/gif" || mime === "image/webp"
+                    ? this.vips.Image.newFromBuffer(input, "n=-1")
+                    : this.vips.Image.newFromBuffer(input);
 
-        const isAnimated =
-            (mime === "image/gif" || mime === "image/webp") &&
-            image.getInt("n-pages") > 1;
+            const isAnimated =
+                (mime === "image/gif" || mime === "image/webp") &&
+                image.getInt("n-pages") > 1;
 
-        const result = isAnimated
-            ? this.processAnimated(image, cropStyle, position)
-            : this.processStatic(image, cropStyle, position);
+            result = isAnimated
+                ? this.processAnimated(image, cropStyle, position)
+                : this.processStatic(image, cropStyle, position);
 
-        const output = result.writeToBuffer(".webp");
+            const output = result.writeToBuffer(".webp");
 
-        const buffer = new ArrayBuffer(output.byteLength);
+            const buffer = new ArrayBuffer(output.byteLength);
+            new Uint8Array(buffer).set(output);
 
-        new Uint8Array(buffer).set(output);
+            staticThumbnail = this.vips.Image.thumbnailBuffer(buffer, 256, {
+                size: "force",
+            });
 
-        const staticThumbnail = this.vips.Image.thumbnailBuffer(buffer, 256, {
-            size: "force",
-        });
+            const staticOutput = staticThumbnail.writeToBuffer(".webp");
 
-        return {
-            final: new Blob([buffer], { type: "image/webp" }),
-            static: new Blob([staticThumbnail.writeToBuffer(".webp")], {
-                type: "image/webp",
-            }),
-            filetype: "image/webp",
-        };
+            return {
+                final: new Blob([buffer], {
+                    type: "image/webp",
+                }),
+
+                static: new Blob([staticOutput], {
+                    type: "image/webp",
+                }),
+
+                filetype: "image/webp",
+            };
+        } finally {
+            // * Release libvips native/WASM objects after every transformation.
+            staticThumbnail?.delete();
+            result?.delete();
+            image?.delete();
+        }
     }
 }
