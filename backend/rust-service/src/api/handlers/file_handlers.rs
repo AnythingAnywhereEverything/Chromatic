@@ -1,19 +1,14 @@
 use crate::{
-    api::APIError,
-    application::{
+    api::APIError, application::{
         service::{
-            errors::MediaServiceError,
-            media::{
-                processor::{
+            errors::MediaServiceError, media::{
+                inspector::{self, MediaKind}, processor::{
                     image::ImageProcessor,
                     types::{CropStyle, ImageProcessorType, MediaProcessorOptions, ResizeStyle},
                     video::video::extract_thumbnail,
                 },
-                types::media_options::MediaCategory,
-                utils::{categorize, get_mime_and_extension},
             },
-        },
-        state::SharedState,
+        }, state::SharedState,
     },
 };
 use axum::extract::{Path, Query, State};
@@ -55,8 +50,9 @@ pub async fn get_files_handler(
         check_format(format)?;
     }
 
-    let storage = &state.storage;
-    let mut target_file = storage.read(&file).await?;
+    let storage = &state.persistent_store;
+    let (mut target_file, file_path) = storage.read_file(&file).await
+    .map_err(|e| MediaServiceError::StorageError(e))?;
 
     let metadata = target_file
         .metadata()
@@ -76,24 +72,21 @@ pub async fn get_files_handler(
 
     drop(target_file); // unused
 
-    let media_type = get_mime_and_extension(&detect_byte)?;
+    let media_type = inspector::get_mime_and_extension(&detect_byte)
+        .map_err(|e| MediaServiceError::InspectionError(e))?;
     let mime = media_type.0;
     let extension = media_type.1;
-    let category = categorize(&mime);
+    let category = inspector::categorize(&mime);
 
-    if category == MediaCategory::Image && (params.width.is_some() || params.height.is_some()) {
-        let path = state
-            .storage
-            .full_path(&file)
-            .map_err(|_| MediaServiceError::InternalServer)?;
+    if category == MediaKind::Image && (params.width.is_some() || params.height.is_some()) {
 
         let image = {
             if mime == "image/gif" || mime == "image/webp" {
                 let opts = VOption::new().set("n", -1);
-                VipsImage::new_from_file_with_opts(&path, opts)
+                VipsImage::new_from_file_with_opts(&file_path, opts)
                     .map_err(|e| MediaServiceError::LibvipsError(e))?
             } else {
-                VipsImage::new_from_file(&path).map_err(|e| MediaServiceError::LibvipsError(e))?
+                VipsImage::new_from_file(&file_path).map_err(|e| MediaServiceError::LibvipsError(e))?
             }
         };
 
@@ -109,7 +102,7 @@ pub async fn get_files_handler(
 
         if is_animated && !params.format.is_some() {
             let opts = VOption::new().set("n", -1);
-            let image = VipsImage::new_from_file_with_opts(&path, opts)
+            let image = VipsImage::new_from_file_with_opts(&file_path, opts)
                 .map_err(|e| MediaServiceError::LibvipsError(e))?;
 
             let mut processor = ImageProcessor::new();
@@ -142,7 +135,7 @@ pub async fn get_files_handler(
                 image,
                 options.image_processors,
                 is_animated,
-            )?;
+            ).map_err(|e| MediaServiceError::ProcessingError(e))?;
 
             let response = VipsImage::write_to_buffer(
                 &image,
@@ -174,7 +167,7 @@ pub async fn get_files_handler(
                 .map_err(|_| MediaServiceError::InternalServer)?);
         } else {
             let opts = VOption::new();
-            let image = VipsImage::new_from_file_with_opts(&path, opts)
+            let image = VipsImage::new_from_file_with_opts(&file_path, opts)
                 .map_err(|e| MediaServiceError::LibvipsError(e))?;
 
             let width = params.width.unwrap_or(image.get_width());
@@ -188,16 +181,12 @@ pub async fn get_files_handler(
             )?;
             return Ok(response);
         }
-    } else if category == MediaCategory::Video
+    } else if category == MediaKind::Video
         && (params.width.is_some() || params.height.is_some())
     {
         // get thumbnail for video
-        let input_path = state
-            .storage
-            .full_path(&file)
-            .map_err(|_| MediaServiceError::InternalServer)?;
         let video_thumbnail = extract_thumbnail(
-            &input_path.to_string_lossy(),
+            &file_path.to_string_lossy(),
             params.format.as_deref().unwrap_or("webp"),
             1,
         )
@@ -220,7 +209,8 @@ pub async fn get_files_handler(
         return Ok(response);
     }
 
-    let original_file = storage.read(&file).await?;
+    let (original_file, _) = storage.read_file(&file).await
+        .map_err(|e| MediaServiceError::StorageError(e))?;
     let stream = ReaderStream::new(original_file);
 
     Ok(Response::builder()

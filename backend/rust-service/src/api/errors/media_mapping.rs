@@ -1,89 +1,64 @@
 use axum::http::StatusCode;
 
 use crate::{
-    api::{APIError, APIErrorCode, APIErrorEntry, APIErrorKind},
-    application::service::errors::MediaServiceError,
+    api::{APIError, APIErrorCode, APIErrorEntry, APIErrorKind}, application::service::errors::{MediaServiceError, media_service::{ContainerError, ExtractionError}},
 };
 
-impl From<MediaServiceError> for APIError {
-    fn from(error: MediaServiceError) -> Self {
+impl From<ContainerError> for APIError {
+    fn from(error: ContainerError) -> Self {
         let (status, entry) = match error {
-            MediaServiceError::FileIsEmpty => (
-                StatusCode::BAD_REQUEST,
-                APIErrorEntry::new("File cannot be empty.")
-                    .code(APIErrorCode::MediaFileIsEmpty)
-                    .kind(APIErrorKind::MediaError)
-                    .description("The uploaded file is empty. Please provide a valid file."),
-            ),
-            MediaServiceError::MediaMissing => (
-                StatusCode::BAD_REQUEST,
-                APIErrorEntry::new("File is missing.")
-                    .code(APIErrorCode::MediaMissingFile)
+            ContainerError::InitializationFailed => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                APIErrorEntry::new("Invalid container.")
+                    .code(APIErrorCode::MediaInitializationFailed)
                     .kind(APIErrorKind::MediaError),
             ),
-            MediaServiceError::UnableToExtract => (
-                StatusCode::BAD_REQUEST,
-                APIErrorEntry::new("Unable to extract payload.")
-                    .code(APIErrorCode::MediaUnableToExtract)
+            ContainerError::MissingTargetPath => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                APIErrorEntry::new("Missing target path.")
+                    .code(APIErrorCode::MediaMisconfigured)
                     .kind(APIErrorKind::MediaError),
             ),
-            MediaServiceError::MultipartError(e) => (
+            e => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                APIErrorEntry::new(&e.to_string())
+                    .code(APIErrorCode::SystemError)
+                    .kind(APIErrorKind::MediaError),
+            ),
+        };
+        APIError::from((status, entry))
+    }
+}
+
+impl From<ExtractionError> for APIError {
+    fn from(error: ExtractionError) -> Self {
+        let (status, entry) = match error {
+            ExtractionError::MultipartError(e) => (
                 StatusCode::BAD_REQUEST,
                 APIErrorEntry::new(&e.to_string())
                     .code(APIErrorCode::MediaMultipartError)
                     .kind(APIErrorKind::MediaError),
             ),
-            MediaServiceError::InvalidScale => (
+            ExtractionError::ContainerError(e) => (
                 StatusCode::BAD_REQUEST,
-                APIErrorEntry::new("Invalid scale value.")
-                    .code(APIErrorCode::MediaInvalidScale)
+                APIErrorEntry::new(&e.to_string())
+                    .code(APIErrorCode::MediaContainerError)
                     .kind(APIErrorKind::MediaError),
             ),
-            MediaServiceError::InvalidMultipartField(e) => (
-                StatusCode::BAD_REQUEST,
-                APIErrorEntry::new(format!("Invalid multipart field value: {}", e).as_str())
-                    .code(APIErrorCode::MediaInvalidMultipartField)
+            e => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                APIErrorEntry::new(&e.to_string())
+                    .code(APIErrorCode::SystemError)
                     .kind(APIErrorKind::MediaError),
             ),
-            MediaServiceError::DuplicateMultipartField(e) => (
-                StatusCode::BAD_REQUEST,
-                APIErrorEntry::new(format!("Duplicate multipart field: {}", e).as_str())
-                    .code(APIErrorCode::MediaDuplicateMultipartField)
-                    .kind(APIErrorKind::MediaError),
-            ),
-            MediaServiceError::TooManyFiles(e) => (
-                StatusCode::BAD_REQUEST,
-                APIErrorEntry::new(&format!(
-                    "Too many files uploaded. Maximum allowed is {}.",
-                    e
-                ))
-                .code(APIErrorCode::MediaTooManyFiles)
-                .kind(APIErrorKind::MediaError),
-            ),
-            MediaServiceError::InvalidCropScale(e) => (
-                StatusCode::BAD_REQUEST,
-                APIErrorEntry::new(&format!("Invalid crop scale value: {}", e))
-                    .code(APIErrorCode::MediaInvalidCropScale)
-                    .kind(APIErrorKind::MediaError),
-            ),
-            MediaServiceError::UnknownMultipartField(e) => (
-                StatusCode::BAD_REQUEST,
-                APIErrorEntry::new(&format!("Unknown multipart field: {}", e))
-                    .code(APIErrorCode::MediaUnknownMultipartField)
-                    .kind(APIErrorKind::MediaError),
-            ),
-            MediaServiceError::FileTooLarge => (
-                StatusCode::PAYLOAD_TOO_LARGE,
-                APIErrorEntry::new("File is too large.")
-                    .code(APIErrorCode::MediaFileTooLarge)
-                    .kind(APIErrorKind::MediaError),
-            ),
-            MediaServiceError::InvalidMediaType => (
-                StatusCode::UNSUPPORTED_MEDIA_TYPE,
-                APIErrorEntry::new("Invalid media type.")
-                    .code(APIErrorCode::MediaInvalidFileType)
-                    .kind(APIErrorKind::MediaError),
-            ),
+        };
+        APIError::from((status, entry))
+    }
+}
+
+impl From<MediaServiceError> for APIError {
+    fn from(error: MediaServiceError) -> Self {
+        let (status, entry) = match error {
             MediaServiceError::TransmissionTooSlow => (
                 StatusCode::REQUEST_TIMEOUT,
                 APIErrorEntry::new("Transmission too slow.")

@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 // * profile guild, banner
 #[derive(Deserialize,Debug)]
-pub struct FullGuildDTO {
+pub struct _FullGuildDTO {
     pub id: String,
     pub name: String,
     pub description: String,

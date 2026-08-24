@@ -1,19 +1,22 @@
 use crate::{
     application::{
         repository::{
-            media::{self as media_repo, row::MediaStatus}, user::{self as user_repo, find::URDQOpts, row::UserProfileRow},
-        }, service::{
+            media::{self as media_repo, row::MediaStatus},
+            user::{self as user_repo, find::URDQOpts, row::UserProfileRow},
+        },
+        service::{
             errors::ProfileServiceError,
             media::{
-                processor::types::{
-                    CropStyle, ImageProcessorType, MediaProcessorFFlags, MediaProcessorOptions,
+                model::{
+                    FileContainer,
+                    container::{ContainerConfig, NamingStrategy},
                 },
-                service::MediaService,
-                service_type::{ContainerConfig, MediaServiceOptions},
-                types::file::MultipartFile,
+                processor::types::{CropStyle, ImageProcessorType, MediaProcessorOptions},
             },
-        }, state::AppState,
-    }, domain::user::types::{Bio, DisplayName, Quotes},
+        },
+        state::AppState,
+    },
+    domain::user::types::{Bio, DisplayName, Quotes},
 };
 pub struct ProfileService;
 
@@ -51,9 +54,9 @@ impl ProfileService {
         display_name: Option<String>,
         bio: Option<String>,
         quote: Option<String>,
-        uploaded_avatar: Option<MultipartFile>,
+        uploaded_avatar: &mut Option<FileContainer>,
         remove_avatar: Option<bool>,
-        uploaded_banner: Option<MultipartFile>,
+        uploaded_banner: &mut Option<FileContainer>,
         remove_banner: Option<bool>,
     ) -> Result<UserProfileRow, ProfileServiceError> {
         // if everything is None, return early
@@ -97,113 +100,91 @@ impl ProfileService {
         // commit fast, static data first, then handle media after commit to avoid long transactions
         tx.commit().await?;
 
-        let media_base_options = MediaServiceOptions {
-            upload_route: String::new(),
-            uploader_id: user_id,
-            container: Some(ContainerConfig {
-                use_hash_names: true,
-                use_animated_image_indicator: true,
-                ..Default::default()
-            }),
-            processor: Some(MediaProcessorOptions {
-                fflags: Some(MediaProcessorFFlags {
-                    image_thumbhash: true,
-                    ..Default::default()
-                }),
-                image_processors: Some(vec![]), // no processing for now, as the position and scale will be handled on the client side
-                video_processors: None,
-                post_processors: None,
-            }),
-        };
+        let media_base_options = ContainerConfig::new()
+            .set_naming_strategy(NamingStrategy::FinalHash)
+            .set_generate_thumbhash(true)
+            .set_animated_image_indicator(true);
 
         // combine avatar and banner media handling into one transaction to avoid multiple transactions
         let mut to_upload = vec![];
 
-        if uploaded_avatar.is_some() {
-            let mut option = media_base_options.clone();
-            option.upload_route = format!("avatars/{}", user_id);
-            option.processor = Some(MediaProcessorOptions {
-                fflags: Some(MediaProcessorFFlags {
-                    image_thumbhash: true,
-                    ..Default::default()
-                }),
-                image_processors: Some(vec![ImageProcessorType::Crop {
-                    style: CropStyle::Ratio {
-                        width: 1,
-                        height: 1,
-                        scale: 1.0,
-                    },
-                    position: Some((0.5, 0.5)),
-                }]),
-                ..Default::default()
-            });
-            to_upload.push((uploaded_avatar, option));
+        if let Some(avatar) = uploaded_avatar {
+            let option = media_base_options.clone();
+
+            avatar
+                .set_uploader_id(user_id)
+                .set_target_path(format!("avatars/{}", user_id))
+                .set_config(option.set_processing_options(
+                    MediaProcessorOptions::new().set_image_processors(vec![
+                        ImageProcessorType::Crop {
+                            style: CropStyle::Ratio {
+                                width: 1,
+                                height: 1,
+                                scale: 1.0,
+                            },
+                            position: Some((0.5, 0.5)),
+                        },
+                    ]),
+                ));
+
+            to_upload.push(avatar);
         }
 
-        if uploaded_banner.is_some() {
-            let mut option = media_base_options.clone();
-            option.upload_route = format!("banners/{}", user_id);
-            option.processor = Some(MediaProcessorOptions {
-                fflags: Some(MediaProcessorFFlags {
-                    image_thumbhash: true,
-                    ..Default::default()
-                }),
-                image_processors: Some(vec![ImageProcessorType::Crop {
-                    style: CropStyle::Ratio {
-                        width: 5,
-                        height: 2,
-                        scale: 1.0,
-                    },
-                    position: Some((0.5, 0.5)),
-                }]),
-                ..Default::default()
-            });
-            to_upload.push((uploaded_banner, option));
+        if let Some(banner) = uploaded_banner {
+            let option = media_base_options.clone();
+            banner
+                .set_uploader_id(user_id)
+                .set_target_path(format!("banners/{}", user_id))
+                .set_config(option.set_processing_options(
+                    MediaProcessorOptions::new().set_image_processors(vec![
+                        ImageProcessorType::Crop {
+                            style: CropStyle::Ratio {
+                                width: 5,
+                                height: 2,
+                                scale: 1.0,
+                            },
+                            position: Some((0.5, 0.5)),
+                        },
+                    ]),
+                ));
+
+            to_upload.push(banner);
         }
 
-        for (uploaded_media, options) in to_upload {
-            if let Some(uploaded_media) = uploaded_media {
-                let media_service = MediaService::new();
-                let uploaded_medias = media_service
-                    .save_media(&state, uploaded_media, options.clone())
-                    .await?;
+        for container in to_upload {
+            state.media_service.save_media(&state, container).await?;
 
-                let mut tx = state.db_pool.begin().await?;
+            let mut tx = state.db_pool.begin().await?;
+
+            let is_avatar = container.target_path()?.contains("avatars");
+
+            for media in container.files_mut() {
                 media_repo::update::media_status(
                     &mut tx,
-                    &uploaded_medias.get_id(),
+                    &media.id().unwrap(),
                     &MediaStatus::Completed,
                 )
                 .await?;
 
-                let media_to_delete = if options.upload_route.contains("avatars") {
-                    user_repo::update::avatar_media_id(
-                        &mut tx,
-                        user_id,
-                        Some(uploaded_medias.get_id()),
-                    )
-                    .await?
+                let media_to_delete = if is_avatar {
+                    user_repo::update::avatar_media_id(&mut tx, user_id, Some(media.id().unwrap()))
+                        .await?
                 } else {
-                    user_repo::update::banner_media_id(
-                        &mut tx,
-                        user_id,
-                        Some(uploaded_medias.get_id()),
-                    )
-                    .await?
+                    user_repo::update::banner_media_id(&mut tx, user_id, Some(media.id().unwrap()))
+                        .await?
                 };
-
                 if let Some(media_id) = media_to_delete {
                     let path =
                         media_repo::delete::hard_delete_media_data(&mut tx, media_id).await?;
                     if path.contains("a_") {
                         let animated_path = path.replace(".png", ".webp");
-                        state.storage.delete(&animated_path).await;
+                        state.persistent_store.delete(&animated_path).await?;
                     }
-                    state.storage.delete(&path).await;
+                    state.persistent_store.delete(&path).await?;
                 }
-
-                tx.commit().await?;
             }
+
+            tx.commit().await?;
         }
 
         let mut tx = state.db_pool.begin().await?;

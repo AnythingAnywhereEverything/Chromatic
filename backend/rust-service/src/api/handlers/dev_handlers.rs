@@ -1,20 +1,24 @@
 use crate::{
-    api::{APIError, RequestAuth, dtos::post_dtos::PostDTO, version}, application::{
-        repository::{media::{self as media_repo, row::MediaStatus}, post::{self as post_repo}}, service::{errors::AuthServiceError, media::{
-            processor::types::{
-                CropStyle, ImageProcessorType, MediaProcessorFFlags, MediaProcessorOptions, PostProcessingType, ResizeStyle, VideoPostProcessorType,
-            }, service::MediaService, service_type::MediaServiceOptions, types::{
-                file::MultipartFile,
-                media_options::{
-                    FieldTypeFilter, MediaType, MultipartExtractorOptions, ValidationOptions,
-                    ValidationType,
-                },
+    api::APIError, application::{
+        service::{
+            errors::MediaServiceError, media::{
+                extractor::{
+                    ExtractorFileOptions,
+                    ValidationOptions,
+                }, inspector::{
+                    FileType,
+                    MediaKind::{Code, Image, Video},
+                }, model::container::{ContainerConfig, NamingStrategy}, processor::types::{
+                    CropStyle, ImageProcessorType, MediaProcessorOptions, ResizeStyle, VideoPostProcessorType,
+                }
             },
-        }}, state::SharedState,
+        }, state::SharedState,
     },
 };
-use axum::{Json, extract::{Multipart, Path, State}};
+use axum::extract::{Multipart, Path, State};
 use multipart_derive::Multipart;
+
+use crate::application::service::media::model::FileContainer;
 
 #[derive(serde::Deserialize, Debug, Multipart)]
 pub struct DevPayload {
@@ -22,108 +26,85 @@ pub struct DevPayload {
     pub test_boolean: bool,
     // upload files
     #[multipart]
-    pub images: Vec<MultipartFile>,
+    pub uploaded_files: FileContainer,
 }
 
 #[axum::debug_handler]
 pub async fn files_upload_handler(
     State(state): State<SharedState>,
-    Path(version): Path<String>,
+    Path(_version): Path<String>,
     multipart: Multipart,
 ) -> Result<(), APIError> {
-    let api_version = version::parse_version(&version)?;
-    tracing::trace!("api version: {}", api_version);
-
-    let options = MultipartExtractorOptions {
-        max_file_size: Some(512_000_000),
-        max_files: Some(5),
-        validation: Some(ValidationOptions {
-            validation_type: ValidationType::Whitelisted,
-            value: vec![MediaType::Image, MediaType::Video],
-        }),
-        filter: Some(vec![FieldTypeFilter {
-            max_file_size: Some(25_000_000),
-            affected_types: Some(vec![MediaType::Image]),
-        }]),
+    let ext_opts = ExtractorFileOptions {
+        max_files: Some(3),
+        max_size: Some(100 * 1024 * 1024),
+        validation: Some(
+            ValidationOptions::new_whitelist()
+                .add_type(FileType::Category(Image))
+                .add_type(FileType::Category(Video))
+                .add_type(FileType::Category(Code)),
+        ),
+        field_options: None,
     };
 
-    let extracted = state
-        .multipart_extractor
-        .extract::<DevPayload>(multipart, options)
+    let mut extracted = state.multi_extractor
+        .extract::<DevPayload>(multipart, Some(ext_opts))
         .await?;
-    tracing::debug!("Extracted payload: {:#?}", extracted);
 
-    let upload_group = &state.snowflake_generator.generate_id()?;
+    let uploaded_files = &mut extracted.uploaded_files;
 
-    let new_media_opts = MediaServiceOptions {
-        upload_route: format!("dev_uploads/{}", upload_group),
-        uploader_id: 1234,
-        container: None,
-        processor: Some(MediaProcessorOptions {
-            fflags: Some(MediaProcessorFFlags {
-                video_thumbnail: true,
-                video_gpu_accel: true,
-                video_transcode: true,
-                image_thumbhash: true,
-                ..Default::default()
-            }),
-            image_processors: Some(vec![
-                ImageProcessorType::Crop { 
-                    style: CropStyle::Ratio { width: 1, height: 1, scale: 1.0 },
-                    position: Some((0.5, 0.5)),
-                },
+    uploaded_files
+        .prepare_ids(&state.snowflake_generator)?
+        .set_uploader_id(84547479869067264)
+        .set_target_path(format!("dev_uploads/{}", state.snowflake_generator.generate_id()?))
+        .set_config(
+        ContainerConfig::new()
+            .set_generate_thumbhash(true)
+            .set_naming_strategy(NamingStrategy::FinalHash)
+            .set_animated_image_indicator(true)
+            .set_processing_options(MediaProcessorOptions::new()
+                .set_image_processors(vec![
                 ImageProcessorType::Resize {
-                    style: ResizeStyle::Absolute {
-                        width: 1024,
-                        height: 1024,
+                    style: ResizeStyle::Normalized {
+                        width: 0.5,
+                        height: 0.5,
                     },
                     upscale: false,
                 },
-            ]),
-            video_processors: None,
-            post_processors: Some(PostProcessingType::Video(vec![
-                VideoPostProcessorType::HLS { segment_time: 10 },
-            ])),
-        }),
-    };
+                ImageProcessorType::Crop {
+                    style: CropStyle::Ratio {
+                        width: 5,
+                        height: 2,
+                        scale: 1.0,
+                    },
+                    position: Some((0.5, 0.5)),
+                },
+            ]).set_post_video_processors( vec![
+                VideoPostProcessorType::HLS { 
+                    segment_time: 6 
+                }
+            ])
+        ),
+    );
 
-    tracing::debug!("Media options for upload: {:#?}", new_media_opts);
+    state.media_service
+        .save_media(&state, uploaded_files)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to save media: {:?}", e);
+            MediaServiceError::ProcessingFailed
+        })?;
 
-    let mut tx = state.db_pool.begin().await?;
+    // Print media information for debugging
+    tracing::info!("Uploaded files: {:#?}", uploaded_files);
 
-    tracing::debug!("Extracted multipart files: {:#?}", extracted.images);
+    // uploaded_files
+    //     .abort(temp_storage.clone())
+    //     .await
+    //     .map_err(|e| {
+    //         tracing::error!("Failed to abort file container: {:?}", e);
+    //         MediaServiceError::ProcessingFailed
+    //     })?;
 
-    let media_service = MediaService::new();
-
-    let all_media = media_service
-        .save_media_group(&state, extracted.images, new_media_opts)
-        .await?;
-
-    tracing::debug!("Saved media group: {:#?}", all_media);
-    for media in all_media {
-        // set to complete the media processing
-        media_repo::update::media_status(&mut tx, &media.get_id(), &MediaStatus::Completed).await?;
-        tracing::debug!("Media processing completed for media ID: {}", media.get_id());
-    }
-
-    tx.commit().await?;
     Ok(())
-}
-
-pub async fn get_specific_post(
-    State(state): State<SharedState>,
-    Path((version, post_id)): Path<(String, i64)>,
-    req_auth: RequestAuth,    
-) -> Result <Json<PostDTO>, APIError> {
-    let api_version = version::parse_version(&version)?;
-    tracing::trace!("api version: {}", api_version);
-
-    let user_id = match req_auth.user {
-        Some(user) => user.user_id,
-        None => return Err(AuthServiceError::InvalidCredentials.into()),
-    };
-
-    let mut tx = state.db_pool.begin().await?;
-    let post: PostDTO = post_repo::post::get_post_by_id(&mut tx, post_id, user_id).await?.into();
-    Ok(Json(post))
 }

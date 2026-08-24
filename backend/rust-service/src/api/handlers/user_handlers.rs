@@ -12,14 +12,7 @@ use crate::{
         version,
     }, application::{
         repository::user::{self as user_repo, find::URDQOpts}, service::{
-            errors::AuthServiceError,
-            media::types::{
-                file::MultipartFile,
-                media_options::{
-                    MediaType, MultipartExtractorOptions, ValidationOptions, ValidationType,
-                },
-            },
-            profile_service::ProfileService,
+            errors::AuthServiceError, media::{extractor::{ExtractorFileOptions, ValidationOptions}, inspector::{FileType, MediaKind}, model::FileContainer}, profile_service::ProfileService,
         }, state::SharedState,
     },
 };
@@ -73,10 +66,10 @@ struct UpdateUserProfilePayload {
     pub bio: Option<String>,
     pub quote: Option<String>,
     #[multipart]
-    pub uploaded_avatar: Option<MultipartFile>,
+    pub uploaded_avatar: Option<FileContainer>,
     pub remove_avatar: Option<bool>,
     #[multipart]
-    pub uploaded_banner: Option<MultipartFile>,
+    pub uploaded_banner: Option<FileContainer>,
     pub remove_banner: Option<bool>,
 }
 
@@ -95,21 +88,18 @@ pub async fn update_current_user_profile_handler(
     };
 
     // extract multipart data
-    let ext_opts = MultipartExtractorOptions {
-        max_file_size: Some(10_000_000), // 10 MB
+    let ext_opts = ExtractorFileOptions {
+        max_size: Some(10_000_000), // 10 MB
         max_files: Some(5),
-        validation: Some(ValidationOptions {
-            validation_type: ValidationType::Whitelisted,
-            value: vec![
-                MediaType::Image, // any image type
-            ],
-        }),
+        validation: Some(
+            ValidationOptions::new_whitelist().add_type(FileType::Category(MediaKind::Image)),
+        ),
         ..Default::default()
     };
 
-    let extracted = state
-        .multipart_extractor
-        .extract::<UpdateUserProfilePayload>(multipart, ext_opts)
+    let mut extracted = state
+        .multi_extractor
+        .extract::<UpdateUserProfilePayload>(multipart, Some(ext_opts))
         .await?;
 
     let uploaded_profile = ProfileService::update_profile(
@@ -118,9 +108,9 @@ pub async fn update_current_user_profile_handler(
         extracted.display_name,
         extracted.bio,
         extracted.quote,
-        extracted.uploaded_avatar,
+        &mut extracted.uploaded_avatar,
         extracted.remove_avatar,
-        extracted.uploaded_banner,
+        &mut extracted.uploaded_banner,
         extracted.remove_banner,
     )
     .await?;

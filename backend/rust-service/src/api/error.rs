@@ -48,6 +48,8 @@ pub enum APIErrorCode {
     MediaSnowflakeError,
     MediaLibvipsError,
     MediaInvalidScale,
+    MediaInitializationFailed,
+    MediaUnsupportedContainer,
     MediaInvalidMultipartField,
     MediaDuplicateMultipartField,
     MediaTransmissionTooSlow,
@@ -56,6 +58,9 @@ pub enum APIErrorCode {
     MediaUnknownMultipartField,
     MediaInvalidCropScale,
     MediaFileIsEmpty,
+    MediaContainerError,
+
+    MediaMisconfigured,
 
     // Post
     TextTooLarge,

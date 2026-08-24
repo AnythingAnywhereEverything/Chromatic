@@ -1,5 +1,6 @@
 use axum::{
-    Json, extract::{Multipart, Path, Query, State},
+    Json,
+    extract::{Multipart, Path, Query, State},
 };
 use hyper::StatusCode;
 use multipart_derive::Multipart;
@@ -18,18 +19,11 @@ use crate::{
         service::{
             errors::{AuthServiceError, PostServiceError},
             media::{
+                self,
+                extractor::{ExtractorFileOptions, ValidationOptions},
+                model::{FileContainer, container::ContainerConfig},
                 processor::types::{
-                    ImageProcessorType, MediaProcessorFFlags, MediaProcessorOptions,
-                    PostProcessingType, ResizeStyle, VideoPostProcessorType,
-                },
-                service::MediaService,
-                service_type::{ContainerConfig, MediaServiceOptions},
-                types::{
-                    file::MultipartFile,
-                    media_options::{
-                        FieldTypeFilter, MediaType, MultipartExtractorOptions, ValidationOptions,
-                        ValidationType,
-                    },
+                    ImageProcessorType, MediaProcessorOptions, ResizeStyle, VideoPostProcessorType,
                 },
             },
         },
@@ -85,7 +79,7 @@ impl MediaTypeAttachment {
 pub struct CreatePostRequest {
     pub content: String,
     #[multipart]
-    pub media_src: Option<Vec<MultipartFile>>,
+    pub media_src: Option<FileContainer>,
     pub repost_from: Option<i64>,
     pub visibility: PostVisibility,
     pub media_tags: Option<Vec<i64>>,
@@ -155,55 +149,70 @@ pub async fn create_new_post_handler(
         // None => 81727418892554240,
     };
 
-    let options = MultipartExtractorOptions {
-        max_file_size: Some(512_000_000),
+    // let options = MultipartExtractorOptions {
+    //     max_file_size: Some(512_000_000),
+    //     max_files: Some(5),
+    //     validation: Some(ValidationOptions {
+    //         validation_type: ValidationType::Whitelisted,
+    //         value: vec![MediaType::Image, MediaType::Video],
+    //     }),
+    //     filter: Some(vec![FieldTypeFilter {
+    //         max_file_size: Some(25_000_000),
+    //         affected_types: Some(vec![MediaType::Image]),
+    //     }]),
+    // };
+
+    let ext_opts = ExtractorFileOptions {
+        max_size: Some(512_000_000),
         max_files: Some(5),
-        validation: Some(ValidationOptions {
-            validation_type: ValidationType::Whitelisted,
-            value: vec![MediaType::Image, MediaType::Video],
-        }),
-        filter: Some(vec![FieldTypeFilter {
-            max_file_size: Some(25_000_000),
-            affected_types: Some(vec![MediaType::Image]),
-        }]),
+        validation: Some(
+            ValidationOptions::new_whitelist()
+                .add_type(media::inspector::FileType::Category(
+                    media::inspector::MediaKind::Image,
+                ))
+                .add_type(media::inspector::FileType::Category(
+                    media::inspector::MediaKind::Video,
+                )),
+        ),
+        field_options: None,
     };
 
-    let extracted = state
-        .multipart_extractor
-        .extract::<CreatePostRequest>(request, options)
+    let mut extracted = state
+        .multi_extractor
+        .extract::<CreatePostRequest>(request, Some(ext_opts))
         .await?;
 
     let new_post_id = &state.snowflake_generator.generate_id()?;
 
-    let new_media_opts = MediaServiceOptions {
-        upload_route: format!("posts/{}", new_post_id),
-        uploader_id: user_id,
-        container: Some(ContainerConfig {
-            generate_thumbhash: true,
-            use_animated_image_indicator: true,
-            ..Default::default()
-        }),
-        processor: Some(MediaProcessorOptions {
-            fflags: Some(MediaProcessorFFlags {
-                video_thumbnail: true,
-                video_gpu_accel: true,
-                video_transcode: true,
-                image_thumbhash: true,
-                ..Default::default()
-            }),
-            image_processors: Some(vec![ImageProcessorType::Resize {
-                style: ResizeStyle::Absolute {
-                    width: 1024,
-                    height: 1024,
-                },
-                upscale: false,
-            }]),
-            video_processors: None,
-            post_processors: Some(PostProcessingType::Video(vec![
-                VideoPostProcessorType::HLS { segment_time: 10 },
-            ])),
-        }),
-    };
+    // let new_media_opts = MediaServiceOptions {
+    //     upload_route: format!("posts/{}", new_post_id),
+    //     uploader_id: user_id,
+    //     container: Some(ContainerConfig {
+    //         generate_thumbhash: true,
+    //         use_animated_image_indicator: true,
+    //         ..Default::default()
+    //     }),
+    //     processor: Some(MediaProcessorOptions {
+    //         fflags: Some(MediaProcessorFFlags {
+    //             video_thumbnail: true,
+    //             video_gpu_accel: true,
+    //             video_transcode: true,
+    //             image_thumbhash: true,
+    //             ..Default::default()
+    //         }),
+    //         image_processors: Some(vec![ImageProcessorType::Resize {
+    //             style: ResizeStyle::Absolute {
+    //                 width: 1024,
+    //                 height: 1024,
+    //             },
+    //             upscale: false,
+    //         }]),
+    //         video_processors: None,
+    //         post_processors: Some(PostProcessingType::Video(vec![
+    //             VideoPostProcessorType::HLS { segment_time: 10 },
+    //         ])),
+    //     }),
+    // };
 
     let mut tx = state.db_pool.begin().await?;
 
@@ -212,20 +221,43 @@ pub async fn create_new_post_handler(
     }
 
     let content = extracted.content;
-    let media_service = MediaService::new();
 
-    if let Some(ref files) = extracted.media_src {
-        let all_media = media_service
-            .save_media_group(&state, files.to_vec(), new_media_opts)
-            .await?;
-        for media in all_media {
+    if let Some(container) = &mut extracted.media_src {
+        container
+            .set_uploader_id(user_id)
+            .set_target_path(format!("posts/{}", new_post_id))
+            .set_config(
+                ContainerConfig::new()
+                    .set_generate_thumbhash(true)
+                    .set_processing_options(
+                        MediaProcessorOptions::new()
+                            .set_image_processors(vec![ImageProcessorType::Resize {
+                                style: ResizeStyle::Absolute {
+                                    width: 1024,
+                                    height: 1024,
+                                },
+                                upscale: false,
+                            }])
+                            .set_post_video_processors(vec![VideoPostProcessorType::HLS {
+                                segment_time: 10,
+                            }]),
+                    ),
+            );
+
+        state.media_service.save_media(&state, container).await?;
+
+        for media in container.files_mut() {
             // set to complete the media processing
-            media_repo::update::media_status(&mut tx, &media.get_id(), &MediaStatus::Completed)
-                .await?;
+            media_repo::update::media_status(
+                &mut tx,
+                &media.id().unwrap(),
+                &MediaStatus::Completed,
+            )
+            .await?;
             post_repo::post::add_has_attachment(
                 &mut tx,
                 *new_post_id,
-                media.get_id(),
+                media.id().unwrap(),
                 MediaTypeAttachment::Post.as_str().to_string(),
             )
             .await?;
@@ -279,16 +311,9 @@ pub async fn update_post_handler(
         None => return Err(AuthServiceError::InvalidCredentials.into()),
     };
 
-    let options = MultipartExtractorOptions {
-        max_file_size: None,
-        max_files: None,
-        validation: None,
-        filter: None,
-    };
-
     let extracted = state
-        .multipart_extractor
-        .extract::<CreatePostRequest>(media_src, options)
+        .multi_extractor
+        .extract::<CreatePostRequest>(media_src, None)
         .await?;
 
     if extracted.content.len() > 2500 {

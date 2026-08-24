@@ -2,8 +2,7 @@ use axum::extract::multipart::MultipartError;
 use thiserror::Error;
 
 use crate::{
-    application::service::errors::{MediaServiceError, SnowflakeServiceError},
-    domain::user::errors::{BioError, DisplayNameError, QuotesError},
+    application::service::errors::{MediaServiceError, SnowflakeServiceError, media_service::{ContainerError, StorageError}}, domain::user::errors::{BioError, DisplayNameError, QuotesError},
 };
 use rs_vips::error::Error as LibvipsError;
 
@@ -42,6 +41,12 @@ pub enum ProfileServiceError {
 
     #[error(transparent)]
     SqlxError(#[from] sqlx::Error),
+
+    #[error(transparent)]
+    ContainerError(#[from] ContainerError),
+
+    #[error(transparent)]
+    StorageError(#[from] StorageError),
 
     #[error(transparent)]
     TokioJoinError(#[from] tokio::task::JoinError),
