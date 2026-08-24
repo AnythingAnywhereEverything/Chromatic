@@ -132,7 +132,5 @@ const EditableTextArea = ({
 
 // ! main problem is you need to create container and wrapper by yourself.
 
-// ! MIGRATION add color to interest tag REMOVE the interest tag FK in users
-// ! switch display name 
 
 export default EditableTextArea;
