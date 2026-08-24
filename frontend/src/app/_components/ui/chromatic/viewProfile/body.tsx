@@ -325,24 +325,7 @@ const ViewProfileBody = ({
             {recentPost.slice(0, 2).map((post) => (
               <Post
                 key={post.id}
-                id={post.id}
-                user_id={post.user_id}
-                username={post.username}
-                content={post.content}
-                total_comment={post.total_comment}
-                total_likes={post.total_likes}
-                visibility={post.visibility}
-                repost_from={post.repost_from}
-                is_repost={post.is_repost}
-                has_attachment={post.has_attachment}
-                created_at={post.created_at}
-                updated_at={post.updated_at}
-                bookmark={post.bookmark}
-                tag={post.tag}
-                media={post.media}
-                is_liked={post.is_liked}
-                current_user_id={post.current_user_id}
-              />
+                {...post}/>
             ))}
           </div>
         </div>
