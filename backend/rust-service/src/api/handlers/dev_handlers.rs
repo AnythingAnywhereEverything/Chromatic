@@ -63,6 +63,7 @@ pub async fn files_upload_handler(
             .set_naming_strategy(NamingStrategy::FinalHash)
             .set_animated_image_indicator(true)
             .set_processing_options(MediaProcessorOptions::new()
+                .set_fflags_video_gpu_accel(true)
                 .set_image_processors(vec![
                 ImageProcessorType::Resize {
                     style: ResizeStyle::Normalized {

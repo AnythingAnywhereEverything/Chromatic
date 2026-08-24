@@ -7,12 +7,12 @@ pub mod hwaccel;
 pub mod video;
 
 pub struct VideoProcessor {
-    _gpu_accel: bool, // TODO: implement GPU acceleration for video processing
+    gpu_accel: bool, // TODO: implement GPU acceleration for video processing
 }
 
 impl VideoProcessor {
     pub fn new(gpu_accel: bool) -> Self {
-        Self { _gpu_accel: gpu_accel }
+        Self { gpu_accel: gpu_accel }
     }
 
     pub async fn get_thumbnail(
@@ -61,7 +61,7 @@ impl VideoProcessor {
                     "Output directory for HLS processing: {}",
                     output_dir.display()
                 );
-                video::process_video_hls(segment_time as f32, output_dir, source_path.clone()).await?;
+                video::process_video_hls(segment_time as f32, output_dir, source_path.clone(), self.gpu_accel).await?;
                 Ok(())
             }
             _ => Ok(()),

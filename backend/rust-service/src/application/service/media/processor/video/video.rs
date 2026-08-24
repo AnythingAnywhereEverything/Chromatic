@@ -5,7 +5,13 @@ use std::{
 
 use tokio::process::Command;
 
-use crate::application::service::{errors::media_service::MediaProcessorError, media::model::File};
+use crate::application::service::{
+    errors::media_service::MediaProcessorError,
+    media::{
+        model::File,
+        processor::video::hwaccel::{self, HardwareAccel},
+    },
+};
 
 #[derive(Debug, Clone, Copy)]
 pub enum ResolutionSide {
@@ -17,100 +23,6 @@ pub enum ResolutionSide {
 pub struct Resolution {
     pub length: u32,
     pub side: ResolutionSide,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum HardwareAccel {
-    Auto,
-    Software,
-
-    Cuda,
-    Nvenc,
-    Qsv,
-    V4l2m2m,
-    Vaapi,
-    Vdpau,
-    Opencl,
-    Amf,
-    Videotoolbox,
-}
-
-pub async fn get_available_hardware_accels() -> Result<Vec<HardwareAccel>, MediaProcessorError> {
-    let output = Command::new("ffmpeg")
-        .args(&["-hide_banner", "-hwaccels"])
-        .output()
-        .await?;
-
-    if !output.status.success() {
-        return Err(MediaProcessorError::ProcessingFailed);
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let mut accels = Vec::new();
-
-    for line in stdout.lines() {
-        let trimmed_line = line.trim();
-        match trimmed_line {
-            "nvenc" => accels.push(HardwareAccel::Nvenc),
-            "qsv" => accels.push(HardwareAccel::Qsv),
-            "v4l2m2m" => accels.push(HardwareAccel::V4l2m2m),
-            "vaapi" => accels.push(HardwareAccel::Vaapi),
-            "vdpau" => accels.push(HardwareAccel::Vdpau),
-            "cuda" => accels.push(HardwareAccel::Cuda),
-            "opencl" => accels.push(HardwareAccel::Opencl),
-            "amf" => accels.push(HardwareAccel::Amf),
-            "videotoolbox" => accels.push(HardwareAccel::Videotoolbox),
-            _ => {}
-        }
-    }
-
-    Ok(accels)
-}
-
-pub async fn get_available_video_encoders_for_accel(
-    accel: &str,
-) -> Result<Vec<String>, MediaProcessorError> {
-    let output = Command::new("ffmpeg")
-        .args(&["-hide_banner", "-encoders"])
-        .output()
-        .await?;
-
-    if !output.status.success() {
-        return Err(MediaProcessorError::ProcessingFailed);
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let mut encoders = Vec::new();
-    let accel_lower = accel.to_lowercase(); // Convert accel to lowercase for case-insensitive matching
-
-    // Skip header lines until we find the actual encoder list.
-    // Encoders start after the "------" line, or when lines begin with V, A, or S.
-    let lines = stdout.lines().skip_while(|line| {
-        !line.starts_with("V") && !line.starts_with("A") && !line.starts_with("S")
-    });
-
-    for line in lines {
-        let trimmed_line = line.trim();
-        // We're looking specifically for video encoders, which start with 'V'
-        if trimmed_line.starts_with("V") {
-            // Split the line to get the encoder name
-            // Example line: "V....D hevc_nvenc NVIDIA NVENC hevc encoder (codec hevc)"
-            let parts: Vec<&str> = trimmed_line.split_whitespace().collect();
-
-            // Ensure there's at least a flag and an encoder name
-            if parts.len() >= 2 {
-                let encoder_name = parts[1]; // The encoder name is the second part
-
-                // Check if the encoder name contains the hardware acceleration string
-                // e.g., "hevc_nvenc" contains "nvenc"
-                if encoder_name.to_lowercase().contains(&accel_lower) {
-                    encoders.push(encoder_name.to_string());
-                }
-            }
-        }
-    }
-
-    Ok(encoders)
 }
 
 async fn has_audio_stream(source_path: &PathBuf) -> Result<bool, MediaProcessorError> {
@@ -383,27 +295,15 @@ pub async fn process_video_trim(
 
 pub async fn process_video_hls(
     segment_duration: f32,
-
-    // job directory path for temporary processing
     job_dir_path: PathBuf,
     source_path: PathBuf,
+    gpu_accel: bool,
 ) -> Result<(), MediaProcessorError> {
     tokio::fs::create_dir_all(&job_dir_path).await?;
 
-    // Get the original video dimensions to determine viable resolutions for HLS
     let (width, height) = get_video_dimensions(&source_path).await?;
-
-    // Check whether the source contains an audio stream.
-    let has_audio = has_audio_stream(&source_path).await?;
-
-    tracing::debug!("HLS source: {}x{}, audio: {}", width, height, has_audio);
-
-    // Mutable vectors to hold ffmpeg filter and variant information
-    let mut filters = Vec::new();
-    let mut var_map = Vec::new();
-
-    // Determine viable resolutions based on the original video dimensions
     let resolutions = get_viable_resolutions(width, height).await;
+    let has_audio = has_audio_stream(&source_path).await?;
 
     tracing::debug!(
         "Original video dimensions: {}x{}, viable resolutions: {:?}",
@@ -412,97 +312,333 @@ pub async fn process_video_hls(
         resolutions
     );
 
-    let mut index = 0;
+    tracing::info!(
+        "\nStarting HLS processing for video file: {}\nwith segment time: {} seconds\n has video acceleration: {}\n",
+        source_path.display(),
+        segment_duration,
+        gpu_accel
+    );
 
-    // Create one video variant for every viable resolution.
-    for &res in &resolutions {
-        if res.length <= height as u32 {
-            match res.side {
-                ResolutionSide::Width => {
-                    filters.push(format!("[0:v]scale=w={}:h=-2[v{}];", res.length, index));
-                }
+    let encoder = if gpu_accel {
+        let available = hwaccel::get_available_hwaccels().await?;
+        let selected = hwaccel::select_best_hardware_accel(&available);
 
-                ResolutionSide::Height => {
-                    filters.push(format!("[0:v]scale=w=-2:h={}[v{}];", res.length, index));
-                }
+        tracing::info!(
+            "Available hardware acceleration: {:?}, selected: {:?}",
+            available,
+            selected
+        );
+
+        selected
+    } else {
+        HardwareAccel::Software
+    };
+
+    let mut variants = Vec::new();
+
+    for (index, res) in resolutions.iter().enumerate() {
+        let playlist_name = format!("v{}.m3u8", index);
+        let segment_pattern = job_dir_path.join(format!("v{}_seg_%03d.ts", index));
+        let playlist_path = job_dir_path.join(&playlist_name);
+
+        let (variant_width, variant_height) = match res.side {
+            ResolutionSide::Width => {
+                let variant_width = res.length;
+                let variant_height =
+                    ((height as f64 / width as f64) * variant_width as f64)
+                        .round() as u32;
+
+                // * Keep dimensions even for H.264.
+                (variant_width, variant_height & !1)
             }
 
-            // * When audio exists, each variant gets its corresponding audio stream.
-            // * Without audio, the variant contains video only.
-            if has_audio {
-                var_map.push(format!("v:{},a:{}", index, index));
-            } else {
-                var_map.push(format!("v:{}", index));
+            ResolutionSide::Height => {
+                let variant_height = res.length;
+                let variant_width =
+                    ((width as f64 / height as f64) * variant_height as f64)
+                        .round() as u32;
+
+                // * Keep dimensions even for H.264.
+                (variant_width & !1, variant_height)
             }
+        };
 
-            index += 1;
-        }
-    }
+        let scale = format!(
+            "scale=w={}:h={}",
+            variant_width,
+            variant_height
+        );
 
-    // If no resolutions were added, use the original resolution as a fallback.
-    if index == 0 {
-        filters.push(format!("[0:v]scale=w=-2:h={}[v0];", height));
-
-        if has_audio {
-            var_map.push("v:0,a:0".to_string());
+        // * Hardware encoding is selected per variant because some GPUs
+        // * cannot encode very small resolutions.
+        let variant_encoder = if encoder.supports_resolution(
+            variant_width,
+            variant_height,
+        ) {
+            encoder
         } else {
-            var_map.push("v:0".to_string());
-        }
+            tracing::info!(
+                "Hardware encoder {:?} does not support {}x{}, using software encoder",
+                encoder,
+                variant_width,
+                variant_height
+            );
 
-        index = 1;
-    }
+            HardwareAccel::Software
+        };
 
-    let filter_complex = filters.join(" ");
+        tracing::info!(
+            "Processing HLS variant {}: {}x{} using {:?}",
+            index,
+            variant_width,
+            variant_height,
+            variant_encoder
+        );
 
-    let mut cmd = Command::new("ffmpeg");
+        let mut cmd = Command::new("ffmpeg");
 
-    cmd.arg("-i")
-        .arg(&source_path)
-        .arg("-filter_complex")
-        .arg(&filter_complex);
+        // * Hardware acceleration arguments must come before the input.
+        cmd.args(variant_encoder.hwaccel_args());
 
-    // Map the generated video streams.
-    for i in 0..index {
-        cmd.arg("-map").arg(format!("[v{}]", i));
+        cmd.arg("-i")
+            .arg(&source_path)
+            .arg("-vf")
+            .arg(&scale)
+            .arg("-map")
+            .arg("0:v:0");
 
-        // * Only map audio when the source actually has audio.
         if has_audio {
-            cmd.arg("-map").arg("0:a:0");
+            cmd.arg("-map")
+                .arg("0:a:0");
         }
+
+        cmd.arg("-c:v");
+
+        if let Some(video_encoder) = variant_encoder.encoder() {
+            cmd.arg(video_encoder);
+        } else {
+            cmd.arg("libx264");
+        }
+
+        if has_audio {
+            cmd.arg("-c:a")
+                .arg("aac");
+        }
+
+        cmd.arg("-f")
+            .arg("hls")
+            .arg("-hls_time")
+            .arg(segment_duration.to_string())
+            .arg("-hls_playlist_type")
+            .arg("vod")
+            .arg("-hls_segment_filename")
+            .arg(&segment_pattern)
+            .arg(&playlist_path);
+
+        let output = cmd.output().await?;
+
+        if !output.status.success() {
+            tracing::error!(
+                "ffmpeg failed for {}{}:\n{}",
+                res.length,
+                match res.side {
+                    ResolutionSide::Width => "w",
+                    ResolutionSide::Height => "h",
+                },
+                String::from_utf8_lossy(&output.stderr)
+            );
+
+            return Err(MediaProcessorError::ProcessingFailed);
+        }
+
+        let metadata = probe_hls_variant(&playlist_path).await?;
+
+        tracing::debug!(
+            "HLS variant {} metadata: {:?}",
+            index,
+            metadata
+        );
+
+        variants.push((index, playlist_name, metadata));
     }
 
-    cmd.args([
-        "-c:v",
-        "libx264",
-        "-c:a",
-        "aac",
-        "-f",
-        "hls",
-        "-hls_time",
-        &segment_duration.to_string(),
-        "-hls_playlist_type",
-        "vod",
-        "-hls_segment_filename",
-    ])
-    .arg(job_dir_path.join("v%v_seg_%03d.ts"))
-    .args([
-        "-master_pl_name",
-        "master.m3u8",
-        "-var_stream_map",
-        &var_map.join(" "),
-    ])
-    .arg(job_dir_path.join("v%v.m3u8"));
+    // * All encoders have finished and every variant has been probed.
+    let mut master = String::from("#EXTM3U\n#EXT-X-VERSION:3\n");
 
-    let output = cmd.output().await?;
+    for (_index, playlist_name, metadata) in &variants {
+        master.push_str(&format!(
+            "#EXT-X-STREAM-INF:BANDWIDTH={},AVERAGE-BANDWIDTH={},RESOLUTION={}x{},CODECS=\"{}\"\n",
+            metadata.bandwidth,
+            metadata.average_bandwidth,
+            metadata.width,
+            metadata.height,
+            metadata.codecs,
+        ));
+
+        master.push_str(&format!("{}\n\n", playlist_name));
+    }
+
+    tokio::fs::write(
+        job_dir_path.join("master.m3u8"),
+        master,
+    )
+    .await?;
+
+    Ok(())
+}
+
+#[derive(Debug, Clone)]
+struct HlsVariantMetadata {
+    width: u32,
+    height: u32,
+    bandwidth: u64,
+    average_bandwidth: u64,
+    codecs: String,
+}
+
+async fn probe_hls_variant(
+    playlist_path: &PathBuf,
+) -> Result<HlsVariantMetadata, MediaProcessorError> {
+    let output = Command::new("ffprobe")
+        .args([
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=width,height,codec_name,profile,level",
+            "-of",
+            "default=noprint_wrappers=1",
+        ])
+        .arg(playlist_path)
+        .output()
+        .await?;
 
     if !output.status.success() {
         tracing::error!(
-            "ffmpeg failed:\n{}",
+            "ffprobe failed for {}:\n{}",
+            playlist_path.display(),
             String::from_utf8_lossy(&output.stderr)
         );
 
         return Err(MediaProcessorError::ProcessingFailed);
     }
 
-    Ok(())
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    let mut width = None;
+    let mut height = None;
+    let mut codec_name = None;
+    let mut profile = None;
+    let mut level = None;
+
+    for line in stdout.lines() {
+        let Some((key, value)) = line.split_once('=') else {
+            continue;
+        };
+
+        match key {
+            "width" => width = value.parse::<u32>().ok(),
+            "height" => height = value.parse::<u32>().ok(),
+            "codec_name" => codec_name = Some(value.to_string()),
+            "profile" => profile = Some(value.to_string()),
+            "level" => level = value.parse::<u32>().ok(),
+            _ => {}
+        }
+    }
+
+    let width = width.ok_or(MediaProcessorError::ProcessingFailed)?;
+    let height = height.ok_or(MediaProcessorError::ProcessingFailed)?;
+    let codec_name = codec_name.ok_or(MediaProcessorError::ProcessingFailed)?;
+
+    let video_codec = match codec_name.as_str() {
+        "h264" => {
+            let profile_idc = match profile.as_deref() {
+                Some("Baseline") => "42",
+                Some("Main") => "4D",
+                Some("High") => "64",
+                Some("High 10") => "6E",
+                Some("High 4:2:2") => "7A",
+                Some("High 4:4:4 Predictive") => "F4",
+                _ => "64",
+            };
+
+            let level = level.unwrap_or(31);
+            let level_hex = format!("{:02X}", level);
+
+            format!("avc1.{}00{}", profile_idc, level_hex)
+        }
+
+        "hevc" => "hvc1".to_string(),
+        "av1" => "av01".to_string(),
+        "vp9" => "vp09".to_string(),
+        other => other.to_string(),
+    };
+
+    // * Read the generated HLS playlist to calculate actual segment bitrates.
+    let playlist = tokio::fs::read_to_string(playlist_path).await?;
+
+    let mut total_bytes = 0u64;
+    let mut total_duration = 0f64;
+    let mut peak_bandwidth = 0u64;
+    let mut current_duration = None;
+
+    let playlist_dir = playlist_path
+        .parent()
+        .ok_or(MediaProcessorError::ProcessingFailed)?;
+
+    for line in playlist.lines() {
+        if let Some(duration) = line.strip_prefix("#EXTINF:") {
+            let duration = duration
+                .split(',')
+                .next()
+                .and_then(|value| value.parse::<f64>().ok());
+
+            current_duration = duration;
+            continue;
+        }
+
+        if line.starts_with('#') || line.trim().is_empty() {
+            continue;
+        }
+
+        let segment_path = playlist_dir.join(line.trim());
+
+        let metadata = tokio::fs::metadata(&segment_path).await?;
+        let bytes = metadata.len();
+
+        if let Some(duration) = current_duration.take() {
+            if duration > 0.0 {
+                let bandwidth = ((bytes as f64 * 8.0) / duration) as u64;
+
+                peak_bandwidth = peak_bandwidth.max(bandwidth);
+                total_bytes += bytes;
+                total_duration += duration;
+            }
+        }
+    }
+
+    let average_bandwidth = if total_duration > 0.0 {
+        ((total_bytes as f64 * 8.0) / total_duration) as u64
+    } else {
+        peak_bandwidth
+    };
+
+    // * HLS BANDWIDTH represents the peak segment bitrate.
+    let bandwidth = peak_bandwidth.max(average_bandwidth);
+
+    // * Add AAC-LC when the generated variant contains audio.
+    let codecs = if has_audio_stream(playlist_path).await? {
+        format!("{},mp4a.40.2", video_codec)
+    } else {
+        video_codec
+    };
+
+    Ok(HlsVariantMetadata {
+        width,
+        height,
+        bandwidth,
+        average_bandwidth,
+        codecs,
+    })
 }

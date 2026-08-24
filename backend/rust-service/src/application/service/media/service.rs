@@ -238,8 +238,9 @@ impl MediaService {
                             .cloned()
                             .unwrap_or_default();
                         let pvpo = processing_options.get_post_video_processors().cloned();
+                        let fflages = processing_options.get_fflags().cloned().unwrap_or_default();
 
-                        let video_processor = VideoProcessor::new(false);
+                        let video_processor = VideoProcessor::new(fflages.video_gpu_accel);
 
                         if let Some(video_processes) = pvpo {
                             tracing::info!(
