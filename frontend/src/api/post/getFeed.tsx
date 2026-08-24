@@ -1,4 +1,4 @@
-import { fetchWithAuth, getCacheUserId, getToken } from "@/handler/token_handler"
+import { fetchWithAuth, fetchWithOptionAuth, getCacheUserId, getToken } from "@/handler/token_handler"
 import { getUser } from "../user";
 
 export interface MediaReponse {
@@ -26,6 +26,40 @@ export interface mediaPostProps {
     media: mediaPostAttechment[]
     is_liked: boolean
     current_user_id: string
+    display_name: string
+
+    avatar_path: string
+    avatar_mime: string
+    avatar_thumbhash: string
+
+    banner_path: string
+    banner_mime: string
+    banner_thumbhash: string
+
+    followers_count: number
+    following_count: number
+}
+
+export interface commentProps{
+    id: string
+    post_id: string
+    user_id: string
+    has_attachment: boolean
+    created_at: string
+    updated_at: string
+    media: mediaPostAttechment[]
+    display_name: string
+    avatar_path: string
+    avatar_mime: string
+    avatar_thumbhash: string
+    banner_path: string
+    banner_mime: string
+    banner_thumbhash: string
+    followers_count: number
+    following_count: number
+    
+    current_user_id: string
+    is_liked: boolean
 }
 
 export interface mediaPostAttechment {
@@ -46,7 +80,8 @@ export interface mediaPostAttechment {
 interface PostTag {
     tag_id : string
     tag_name: string
-    target_id :string
+    tag_color: string
+    target_id : string
 }
 
 const LIMIT = 8;
@@ -58,6 +93,20 @@ export const getUserFeed = async(
     const data = await res.json();
     console.log(data);
 
+    return data;
+}
+
+export const getFocusedPost = async(postId: string):Promise<mediaPostProps> => {
+    const res = await fetchWithOptionAuth(`v2/posts/${postId}`);
+    if (!res.ok) throw new Error("Failed to get post data")
+    const data = await res.json();
+    return data;
+}
+
+export const getCommentsOnPost = async(postId: string):Promise<commentProps> => {
+    const res = await fetchWithOptionAuth(`v2/${postId}/comments`)
+    if (!res.ok) throw new Error("Failed to get post data")
+    const data = await res.json();
     return data;
 }
 
