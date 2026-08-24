@@ -25,7 +25,7 @@ impl Quotes {
     /// let long_quotes = "a".repeat(257);
     /// let quotes = Quotes::new(&long_quotes);
     /// assert!(quotes.is_err());
-    /// assert_eq!(quotes.err().unwrap(), QuotesError::TooLong(MAX_QUOTES_LENGTH));
+    /// assert_eq!(quotes.err().unwrap(), QuotesError::TooLong(256));
     /// ```
     pub fn new(input: &str) -> Result<Self, QuotesError> {
         let trimmed = input.trim();

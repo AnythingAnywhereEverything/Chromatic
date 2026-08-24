@@ -24,7 +24,7 @@ impl DisplayName {
     /// let long_name = "a".repeat(33);
     /// let name = DisplayName::new(&long_name);
     /// assert!(name.is_err());
-    /// assert_eq!(name.err().unwrap(), DisplayNameError::TooLong(MAX_DISPLAY_NAME_LENGTH));
+    /// assert_eq!(name.err().unwrap(), DisplayNameError::TooLong(32));
     /// ```
     pub fn new(input: &str) -> Result<Self, DisplayNameError> {
         let trimmed = input.trim();
