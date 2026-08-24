@@ -4,45 +4,58 @@ import { Post } from "@/app/_components/ui/chromatic/post";
 import { useEffect, useState } from "react";
 import { getUserFeed } from "@/api/post/getFeed";
 import type { mediaPostProps, MediaReponse } from "@/api/post/getFeed";
-import style from "./style.module.scss"
+import style from "./style.module.scss";
+import PostPopup from "./postPopup";
+
 export default function PostGroup() {
-    const [feed, setFeed] = useState<mediaPostProps[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+  const [feed, setFeed] = useState<mediaPostProps[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [popupPostId, setPopupPostId] = useState<string | null>(null);
+
+  // todo: onClick the post Push? to 
+//   const changePathname = (id: string) => {
+//         const currentUrl =
+//             window.location.pathname +
+//             window.location.search +
+//             window.location.hash;
+
+//         const newUrl = `/post/f/${id}`;
+
+//         window.history.replaceState(
+//             {
+//                 ...window.history.state,
+//                 previousUrl: currentUrl,
+//             },
+//             "",
+//             newUrl
+//         );
+//             setPopupPostId(id);
+//     };
 
     useEffect(() => {
         async function fetchFeed() {
             const res = await getUserFeed();
-            console.log(res)
+
             setFeed(res);
+            setIsLoading(false);
         }
 
         fetchFeed();
     }, []);
 
-    return (
-        <div className={style["feedLayout"]}>
-            {feed?.map((post) => (
-                <Post
-                    key={post.id}
-                    id={post.id}
-                    user_id={post.user_id}
-                    username={post.username}
-                    content={post.content}
-                    current_user_id={post.current_user_id}
-                    total_comment={post.total_comment}
-                    total_likes={post.total_likes}
-                    visibility={post.visibility}
-                    repost_from={post.repost_from}
-                    is_repost={post.is_repost}
-                    has_attachment={post.has_attachment}
-                    created_at={post.created_at}
-                    updated_at={post.updated_at}
-                    tag={post.tag}
-                    media={post.media}
-                    bookmark={post.bookmark}
-                    is_liked={post.is_liked}
-                />
-            ))}
-        </div>
-    );
+    // todo: fix the popup, I should go do other thing, i'll back clear this nigga..
+  return (
+    <div className={style["feed-layout"]}>
+      {feed?.map((post) => (
+        <div key={post.id}
+        // onClick={() => changePathname(post.id)}
+        >
+        <Post
+          key={post.id}
+          {...post}
+          />
+          </div>
+      ))}
+    </div>
+  );
 }
