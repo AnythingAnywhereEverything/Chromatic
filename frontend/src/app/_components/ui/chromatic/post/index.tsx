@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import style from "./style.module.scss";
 import { LuThumbsUp } from "react-icons/lu";
-import { GoComment } from "react-icons/go";
+import { GoComment, GoDotFill } from "react-icons/go";
 import { IoMdShare } from "react-icons/io";
 import {
     IoBookmarkOutline,
@@ -29,11 +29,13 @@ import {
     DropdownTrigger,
 } from "../dropdown";
 import { MediaGroup } from "./mediagroup";
+import { PostAvatar } from "./profile";
+import { useRouter } from "next/navigation";
 
 // todo: community will be add soon
 const Post: React.FC<mediaPostProps> = ({
     id,
-    user_id, //owner
+    user_id, // owner
     username,
     content,
     total_comment,
@@ -48,6 +50,15 @@ const Post: React.FC<mediaPostProps> = ({
     tag = [],
     is_liked,
     current_user_id,
+    display_name,
+    avatar_path,
+    avatar_mime,
+    avatar_thumbhash,
+    banner_path,
+    banner_mime,
+    banner_thumbhash,
+    followers_count,
+    following_count,
 }) => {
     const [open, setOpen] = useState(false);
     const [showReadMoreButton, setShowReadMoreButton] = useState(false);
@@ -57,7 +68,9 @@ const Post: React.FC<mediaPostProps> = ({
     const [likeCount, setLikeCount] = useState(total_likes);
     const [hoveredMediaId, setHoveredMediaId] = useState<string | null>(null);
     const [mediaSrc, setMediaSrc] = useState<string | null>(null);
+    const rootRef = useRef<HTMLDivElement>(null);
 
+    const hasDisplayName = display_name || null;
     const handleDeletePost = async () => {
         try {
             console.log("Deleting post with ID:", id);
@@ -80,19 +93,35 @@ const Post: React.FC<mediaPostProps> = ({
     }, []);
     // mediaSrc is set on hover per-item; no global effect needed
     return (
-        <section className={style["container"]} key={id}>
+        <section className={style["container"]} 
+        key={id}
+        >
             <div className={style["header"]}>
-                <section className={style["profile"]}>
+                <section className={style["profile"]} >
                     <div className={style["avatar"]} key={user_id}>
-                        <img src="https://placehold.co/400" alt="" />
+                        <PostAvatar 
+                        userId={user_id} 
+                        username={username} 
+                        displayName={display_name} 
+                        avatar={avatar_path} 
+                        thumbhash={avatar_thumbhash}
+                        containerRef={rootRef}
+                        />
                     </div>
                     <div className={style["user-info"]}>
                         <div className={style["username"]}>
                             <p>
-                                {(username ?? username) ? username : "Username"}
+                                {display_name || username}
                             </p>
                         </div>
                         <div className={style["post-date"]}>
+                            <p>
+                                {hasDisplayName && (
+                                    <>
+                                         {username} <GoDotFill style={{fontSize: "var(--text-small)"}} />
+                                    </>
+                                )}
+                            </p>
                             <p>{formatSocialMediaDate(created_at)}</p>
                         </div>
                     </div>
@@ -238,7 +267,7 @@ const Post: React.FC<mediaPostProps> = ({
 
 export { Post };
 
-function DialogSharePost() {
+export function DialogSharePost() {
     const [linkToCopy, setLinkToCopy] = useState(
         "asidnsadjasodaijdiajsidjasidjajdoiasjidjsadjiasjdiaj",
     );
