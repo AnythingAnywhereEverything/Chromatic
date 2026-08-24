@@ -37,6 +37,15 @@ interface BannerPreviewProps {
     bannerContainerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
+function parseStaticImage (url: string ) {
+    // remove the extension from the url
+    if (url.startsWith("a_")) {
+        const urlWithoutExtension = url.replace(/\.[^/.]+$/, "");
+        return `${urlWithoutExtension}.png`;
+    }
+    return url;
+}
+
 const BannerPreview = ({
     userId,
     banner,
@@ -206,7 +215,7 @@ const Banner = ({
             <div className={style["banner"]}>
                 <BannerPreview
                     userId={userId}
-                    banner={banner}
+                    banner={parseStaticImage(banner ? banner : "")}
                     blobUrl={blobUrl}
                     thumbhash={thumbhash}
                     bannerContainerRef={bannerContainerRef}

@@ -17,6 +17,15 @@ export type AvatarPayload = {
     remove?: boolean;
 };
 
+function parseStaticImage (url: string ): string {
+    // remove the extension from the url
+    if (url.startsWith("a_")) {
+        const urlWithoutExtension = url.replace(/\.[^/.]+$/, "");
+        return `${urlWithoutExtension}.png`;
+    }
+    return url;
+}
+
 interface AvatarProps {
     username: string;
     userId: string;
@@ -98,9 +107,10 @@ const AvatarPreview = ({
             />
         );
     } else if (avatar) {
-        const avatarSrc = `avatars/${userId}/${avatar}`;
+        const parsed = parseStaticImage(avatar);
+        const avatarSrc = `avatars/${userId}/${parsed}`;
         const animatedSrc = () => {
-            if (avatar.startsWith("a_")) {
+            if (parsed.startsWith("a_")) {
                 return avatarSrc.replace(".png", ".webp");
             }
             return undefined;

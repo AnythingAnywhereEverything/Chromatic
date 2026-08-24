@@ -9,6 +9,15 @@ interface BannerProps {
     thumbhash: string | null;
 }
 
+function parseStaticImage (url: string ) {
+    // remove the extension from the url
+    if (url.startsWith("a_")) {
+        const urlWithoutExtension = url.replace(/\.[^/.]+$/, "");
+        return `${urlWithoutExtension}.png`;
+    }
+    return url;
+}
+
 const BannerBackdrop = ({
     userId,
     banner,
@@ -73,7 +82,7 @@ const BannerBackdrop = ({
             ) : (
                 <Image
                     className={style["backdrop-banner"]}
-                    src={`banners/${userId}/${banner}`}
+                    src={`banners/${userId}/${parseStaticImage(banner ? banner : "")}`}
                     width={bannerInitWidth}
                     height={bannerInitHeight}
                     containerWidth={bannerContainerWidth}

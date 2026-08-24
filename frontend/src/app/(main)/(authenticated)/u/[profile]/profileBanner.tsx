@@ -36,9 +36,13 @@ interface AvatarUploadItem {
     avatar: string;
 }
 
-function isAvatarAnimated(avatar: string): boolean {
-    // prefix with "a_" indicates animated avatar
-    return avatar.startsWith("a_");
+function parseStaticImage (url: string ) {
+    // remove the extension from the url
+    if (url.startsWith("a_")) {
+        const urlWithoutExtension = url.replace(/\.[^/.]+$/, "");
+        return `${urlWithoutExtension}.png`;
+    }
+    return url;
 }
 
 function ProfileBanner({ params }: { params: { profile: string } }) {
@@ -80,7 +84,7 @@ function ProfileBanner({ params }: { params: { profile: string } }) {
                 <>
                     <Banner
                         userId={profile.id}
-                        banner={profile.banner}
+                        banner={parseStaticImage(profile.banner ? profile.banner : "")}
                         banner_thumbhash={profile.banner_thumbhash}
                         is_owner={is_owner}
                         setProfile={setProfile}

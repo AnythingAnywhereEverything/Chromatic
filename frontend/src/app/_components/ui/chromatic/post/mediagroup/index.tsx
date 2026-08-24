@@ -36,14 +36,10 @@ function GetAllMediaDimensions(
 
     let fittedMedias = calculateMediaRow(calculatorProps);
 
-    console.log("fittedMedias:", fittedMedias);
-
     media.forEach((item, i) => {
         item.width = fittedMedias[i].w;
         item.height = fittedMedias[i].h;
     });
-
-    console.log("GetAllMediaDimensions:", media);
 
     return media;
 }
@@ -72,6 +68,7 @@ function ImageGroup({ media }: { media: mediaPostAttechment[] }) {
             const height =
                 width * (CONTAINER_HEIGHT_RATIO / CONTAINER_WIDTH_RATIO);
 
+            console.log("Updating images with width:", width, "height:", height);
             setImages(GetAllMediaDimensions(media, width, height));
             setActiveIndex(0);
             setTranslateX(0);
@@ -186,7 +183,7 @@ function ImageGroup({ media }: { media: mediaPostAttechment[] }) {
                                     isAnimated(item)
                                         ? "animated_in_viewport"
                                         : "static"
-                                    }
+                                }
                                 viewportThreshold={0.2}
                             />
                         );
