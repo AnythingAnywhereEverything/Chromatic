@@ -1,5 +1,5 @@
-# Polyglot Template
-This project is a template for a polyglot project, which can be used to create projects that support multiple programming languages. The template includes a basic structure for organizing code and resources, as well as a sample implementation in Rust, Elixir, Python, and Next+React with Docker and NGINX.
+# Chromatic
+Chromatic is a social media platform made for students (academically), though originally intended for a broader audience. The project is built using a polyglot approach, leveraging multiple programming languages and frameworks to create a scalable application.
 
 ## Project Structure
 The project is organized into the following directories:
@@ -16,7 +16,6 @@ Before you can run the project, make sure you have the following installed on yo
 - Node.js and npm: You can download and install Node.js and npm from [here](https://nodejs.org/).
 - Rust: You can download and install Rust from [here](https://www.rust-lang.org/tools/install).
 - Elixir: You can download and install Elixir from [here](https://elixir-lang.org/install.html).
-- Python: You can download and install Python from [here](https://www.python.org/downloads/).
 - PostgreSQL: You can download and install PostgreSQL from [here](https://www.postgresql.org/download/).
 - NGINX: You can download and install NGINX from [here](https://nginx.org/en/download.html).
 
@@ -24,10 +23,12 @@ Before you can run the project, make sure you have the following installed on yo
 To get started with the project, follow these steps:
 ``` shell
 # Clone the repository:
-   git clone <repository-url>
+   git clone https://github.com/AnythingAnywhereEverything/Chromatic
 
 # Navigate to the project directory:
-   cd polyglot-template
+   cd chromatic
+
+# Please configure your environment variables in the .env file before running the application. You can copy the .env.example file and rename it to .env, then fill in the necessary values.
 
 # Build and run docker compose:
     docker compose up --build
@@ -42,10 +43,54 @@ To get started with the project, follow these steps:
     # Run the docker compose full command to start the application with PostgreSQL, Redis, and NGINX:
     docker compose -f docker-compose-full.yml up
 ```
-Access the application by navigating to `http://localhost` in your web browser. You should see the frontend interface, and you can interact with the backend services implemented in Rust, Elixir, and Python.
+Access the application by navigating to `http://localhost` in your web browser. You should see the frontend interface, and you can interact with the backend services implemented in Rust, and Elixir.
 
 ## Contributing
 Contributions to this project are welcome! If you have any improvements or new features to add, please feel free to submit a pull request. Make sure to follow the existing code style and include tests for any new functionality.
 
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
+
+## Project Owners
+
+<ul style="
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+">
+    <li style="
+        display: flex;
+        flex-direction: row;
+        list-style-type: none;
+        gap: 10px;
+        align-items: center;
+    ">
+        <a href="https://github.com/ZartexVertagen">
+            <img
+            style="border-radius: 50%;"
+            src="https://github.com/ZartexVertagen.png" width="64px;" alt="ZartexVertagen Profile Picture"/><br />
+        </a><br />
+        <div>
+            <a href="https://github.com/ZartexVertagen"><b>@ZartexVertagen</b></a>
+            <p>Leading Developer and Project Owner</p>
+        </div>
+    </li>
+  <li style="
+        display: flex;
+        flex-direction: row;
+        list-style-type: none;
+        gap: 10px;
+        align-items: center;
+    ">
+      <a href="https://github.com/K-Hongkaew">
+        <img 
+        style="border-radius: 50%;"
+        src="https://github.com/K-Hongkaew.png" width="64px;" alt="K-Hongkaew Profile Picture"/><br />
+      </a><br />
+        <div>
+            <a href="https://github.com/K-Hongkaew"><b>@K-Hongkaew</b></a>
+            <p>Co-Developer and Project Owner</p>
+        </div>
+  </li>
+</ul>
