@@ -187,7 +187,7 @@ function ImageGroup({ media }: { media: mediaPostAttechment[] }) {
                                         ? "animated_in_viewport"
                                         : "static"
                                     }
-                                viewportThreshold={0.0}
+                                viewportThreshold={0.2}
                             />
                         );
                     })}
