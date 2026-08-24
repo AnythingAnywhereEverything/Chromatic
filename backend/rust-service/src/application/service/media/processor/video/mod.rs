@@ -1,7 +1,6 @@
 use crate::application::service::{
-    errors::MediaServiceError,
-    media::{
-        processor::types::VideoPostProcessorType, types::file::MultipartFile,
+    errors::media_service::MediaProcessorError, media::{
+        model::File, processor::types::VideoPostProcessorType,
     },
 };
 pub mod hwaccel;
@@ -18,12 +17,12 @@ impl VideoProcessor {
 
     pub async fn get_thumbnail(
         &self,
-        file: &MultipartFile,
+        file: &File,
         time: u32,
         format: &str,
-    ) -> Result<Vec<u8>, MediaServiceError> {
+    ) -> Result<Vec<u8>, MediaProcessorError> {
         let output = video::extract_thumbnail(
-            &file.get_full_path(),
+            &file.file_full_path().to_string_lossy(),
             format,
             time
         )
@@ -33,20 +32,35 @@ impl VideoProcessor {
 
     pub async fn run_post(
         &self,
-        file: &MultipartFile,
+        file: &File,
         processes: VideoPostProcessorType,
-    ) -> Result<(), MediaServiceError> {
-        let job_dir_path = file.get_job().get_dir().unwrap();
+    ) -> Result<(), MediaProcessorError> {
+        let job_dir_path = file.file_full_directory();
 
-        let source_path = file.get_job().get_source_file().unwrap();
+        let source_path = file.file_full_path();
+
+        tracing::info!(
+            "Running post processing for video file: {} with processes: {:?}",
+            source_path.display(),
+            processes
+        );
 
         if !job_dir_path.exists() || !source_path.exists() {
-            return Err(MediaServiceError::ProcessingFailed);
+            return Err(MediaProcessorError::ProcessingFailed);
         }
 
         match processes {
             VideoPostProcessorType::HLS { segment_time } => {
+                tracing::info!(
+                    "Starting HLS processing for video file: {} with segment time: {} seconds",
+                    source_path.display(),
+                    segment_time
+                );
                 let output_dir = job_dir_path.join("hls");
+                tracing::info!(
+                    "Output directory for HLS processing: {}",
+                    output_dir.display()
+                );
                 video::process_video_hls(segment_time as f32, output_dir, source_path.clone()).await?;
                 Ok(())
             }

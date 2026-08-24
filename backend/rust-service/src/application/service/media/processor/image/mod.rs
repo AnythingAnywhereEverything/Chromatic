@@ -1,5 +1,5 @@
 use rs_vips::{VipsImage, voption::{Setter, VOption}};
-use crate::application::service::{errors::MediaServiceError, media::processor::types::{CropStyle, ImageProcessorType, ResizeStyle}};
+use crate::application::service::{errors::media_service::MediaProcessorError, media::{processor::types::{CropStyle, ImageProcessorType, ResizeStyle}}};
 
 pub mod crop;
 
@@ -29,7 +29,7 @@ impl ImageProcessor {
         image: VipsImage,
         style: CropStyle,
         position: Option<(f32, f32)>,
-    ) -> Result<VipsImage, MediaServiceError> {
+    ) -> Result<VipsImage, MediaProcessorError> {
         // * Cache the final crop rectangle so every GIF frame uses identical geometry.
         let crop = match &self.calculated_crop {
             Some(crop) => crop.clone(),
@@ -56,7 +56,7 @@ impl ImageProcessor {
         image: VipsImage,
         style: ResizeStyle,
         upscale: bool,
-    ) -> Result<VipsImage, MediaServiceError> {
+    ) -> Result<VipsImage, MediaProcessorError> {
         // * Calculate once so every GIF frame uses the exact same scale.
         let scale = match self.calculated_resize_scale {
             Some(scale) => scale,
@@ -95,7 +95,7 @@ impl ImageProcessor {
         &mut self,
         image: VipsImage,
         types: Vec<ImageProcessorType>,
-    ) -> Result<VipsImage, MediaServiceError> {
+    ) -> Result<VipsImage, MediaProcessorError> {
         let mut image = image;
 
         for processor_type in types {
@@ -127,7 +127,7 @@ impl ImageProcessor {
         &mut self,
         image: VipsImage,
         types: Vec<ImageProcessorType>,
-    ) -> Result<VipsImage, MediaServiceError> {
+    ) -> Result<VipsImage, MediaProcessorError> {
         let mut image = image;
         let mut frames = Vec::new();
 
@@ -169,7 +169,7 @@ impl ImageProcessor {
         image: VipsImage,
         types: Option<Vec<ImageProcessorType>>,
         animated: bool,
-    ) -> Result<VipsImage, MediaServiceError> {
+    ) -> Result<VipsImage, MediaProcessorError> {
 
         let types = match types {
             Some(types) => types,

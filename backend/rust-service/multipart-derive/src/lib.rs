@@ -51,18 +51,18 @@ pub fn derive_multipart(input: TokenStream) -> TokenStream {
 
         let kind = if has_multipart_attribute(&field.attrs) {
             quote! {
-                crate::application::service::media::types::media_options::MultipartFieldKind::File
+                crate::application::service::media::extractor::MultipartFieldKind::File
             }
         } else {
             quote! {
-                crate::application::service::media::types::media_options::MultipartFieldKind::Text
+                crate::application::service::media::extractor::MultipartFieldKind::Text
             }
         };
 
         let cardinality = cardinality_for_type(&field.ty);
 
         quote! {
-            crate::application::service::media::types::media_options::MultipartField {
+            crate::application::service::media::extractor::MultipartField {
                 name: #field_name,
                 kind: #kind,
                 cardinality: #cardinality,
@@ -71,12 +71,12 @@ pub fn derive_multipart(input: TokenStream) -> TokenStream {
     });
 
     let expanded = quote! {
-        impl crate::application::service::media::types::media_options::MultipartSchema
+        impl crate::application::service::media::extractor::MultipartSchema
             for #struct_name
         {
             fn multipart_fields()
                 -> &'static [
-                    crate::application::service::media::types::media_options::MultipartField
+                    crate::application::service::media::extractor::MultipartField
                 ]
             {
                 &[
@@ -98,7 +98,7 @@ fn has_multipart_attribute(attributes: &[Attribute]) -> bool {
 fn cardinality_for_type(ty: &Type) -> proc_macro2::TokenStream {
     if is_vec(ty) {
         quote! {
-            crate::application::service::media::types::media_options::MultipartFieldCardinality::Many
+            crate::application::service::media::extractor::MultipartFieldCardinality::Many
         }
     } else if is_option(ty) {
         // check if it's an Option<Vec<T>>
@@ -109,7 +109,7 @@ fn cardinality_for_type(ty: &Type) -> proc_macro2::TokenStream {
                         if let Some(syn::GenericArgument::Type(inner_ty)) = angle_bracketed.args.first() {
                             if is_vec(inner_ty) {
                                 return quote! {
-                                    crate::application::service::media::types::media_options::MultipartFieldCardinality::OptionalMany
+                                    crate::application::service::media::extractor::MultipartFieldCardinality::OptionalMany
                                 };
                             }
                         }
@@ -118,11 +118,11 @@ fn cardinality_for_type(ty: &Type) -> proc_macro2::TokenStream {
             }
         }
         quote! {
-            crate::application::service::media::types::media_options::MultipartFieldCardinality::Optional
+            crate::application::service::media::extractor::MultipartFieldCardinality::Optional
         }
     } else {
         quote! {
-            crate::application::service::media::types::media_options::MultipartFieldCardinality::Single
+            crate::application::service::media::extractor::MultipartFieldCardinality::Single
         }
     }
 }

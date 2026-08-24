@@ -24,7 +24,7 @@ struct State {
 #[repr(u8)]
 pub enum SnowflakeKind {
     Api = 0,
-    Image = 1,
+    Media = 1,
 }
 
 pub struct SnowflakeGenerator {

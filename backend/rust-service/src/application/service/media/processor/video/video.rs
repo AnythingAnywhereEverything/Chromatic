@@ -1,13 +1,11 @@
-use std::{path::{Path, PathBuf}, process::Stdio, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    process::Stdio,
+};
 
 use tokio::process::Command;
 
-use crate::application::service::{
-    errors::MediaServiceError,
-    media::{
-        storage::MediaStorage,
-    },
-};
+use crate::application::service::{errors::media_service::MediaProcessorError, media::model::File};
 
 #[derive(Debug, Clone, Copy)]
 pub enum ResolutionSide {
@@ -37,14 +35,14 @@ pub enum HardwareAccel {
     Videotoolbox,
 }
 
-pub async fn get_available_hardware_accels() -> Result<Vec<HardwareAccel>, MediaServiceError> {
+pub async fn get_available_hardware_accels() -> Result<Vec<HardwareAccel>, MediaProcessorError> {
     let output = Command::new("ffmpeg")
         .args(&["-hide_banner", "-hwaccels"])
         .output()
         .await?;
 
     if !output.status.success() {
-        return Err(MediaServiceError::ProcessingFailed);
+        return Err(MediaProcessorError::ProcessingFailed);
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -69,15 +67,16 @@ pub async fn get_available_hardware_accels() -> Result<Vec<HardwareAccel>, Media
     Ok(accels)
 }
 
-
-pub async fn get_available_video_encoders_for_accel(accel: &str) -> Result<Vec<String>, MediaServiceError> {
+pub async fn get_available_video_encoders_for_accel(
+    accel: &str,
+) -> Result<Vec<String>, MediaProcessorError> {
     let output = Command::new("ffmpeg")
         .args(&["-hide_banner", "-encoders"])
         .output()
         .await?;
 
     if !output.status.success() {
-        return Err(MediaServiceError::ProcessingFailed);
+        return Err(MediaProcessorError::ProcessingFailed);
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -114,14 +113,40 @@ pub async fn get_available_video_encoders_for_accel(accel: &str) -> Result<Vec<S
     Ok(encoders)
 }
 
-
-async fn get_video_height(path: &Path) -> Result<i32, MediaServiceError> {
+async fn has_audio_stream(source_path: &PathBuf) -> Result<bool, MediaProcessorError> {
     let output = Command::new("ffprobe")
         .args([
-            "-v", "error",
-            "-select_streams", "v:0",
-            "-show_entries", "stream=height",
-            "-of", "csv=p=0",
+            "-v",
+            "error",
+            "-select_streams",
+            "a",
+            "-show_entries",
+            "stream=index",
+            "-of",
+            "csv=p=0",
+        ])
+        .arg(source_path)
+        .output()
+        .await?;
+
+    if !output.status.success() {
+        return Err(MediaProcessorError::ProcessingFailed);
+    }
+
+    Ok(!output.stdout.is_empty())
+}
+
+async fn get_video_height(path: &Path) -> Result<i32, MediaProcessorError> {
+    let output = Command::new("ffprobe")
+        .args([
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=height",
+            "-of",
+            "csv=p=0",
         ])
         .arg(path)
         .output()
@@ -130,18 +155,22 @@ async fn get_video_height(path: &Path) -> Result<i32, MediaServiceError> {
     let height = String::from_utf8_lossy(&output.stdout)
         .trim()
         .parse::<i32>()
-        .map_err(|_| MediaServiceError::ProcessingFailed)?;
+        .map_err(|_| MediaProcessorError::ProcessingFailed)?;
 
     Ok(height)
 }
 
-async fn get_video_width(path: &Path) -> Result<i32, MediaServiceError> {
+async fn get_video_width(path: &Path) -> Result<i32, MediaProcessorError> {
     let output = Command::new("ffprobe")
         .args([
-            "-v", "error",
-            "-select_streams", "v:0",
-            "-show_entries", "stream=width",
-            "-of", "csv=p=0",
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=width",
+            "-of",
+            "csv=p=0",
         ])
         .arg(path)
         .output()
@@ -150,12 +179,12 @@ async fn get_video_width(path: &Path) -> Result<i32, MediaServiceError> {
     let width = String::from_utf8_lossy(&output.stdout)
         .trim()
         .parse::<i32>()
-        .map_err(|_| MediaServiceError::ProcessingFailed)?;
+        .map_err(|_| MediaProcessorError::ProcessingFailed)?;
 
     Ok(width)
 }
 
-pub async fn get_video_duration(path: &str) -> Result<f32, MediaServiceError> {
+pub async fn get_video_duration(path: &str) -> Result<f32, MediaProcessorError> {
     tracing::debug!("Getting video duration for path: {}", path);
     let output = Command::new("ffprobe")
         .args([
@@ -179,88 +208,129 @@ pub async fn get_video_duration(path: &str) -> Result<f32, MediaServiceError> {
     let duration = String::from_utf8_lossy(&output.stdout)
         .trim()
         .parse::<f32>()
-        .map_err(|_| MediaServiceError::ProcessingFailed)?;
+        .map_err(|_| MediaProcessorError::ProcessingFailed)?;
 
     tracing::debug!("Extracted video duration: {} seconds", duration);
 
     Ok(duration)
 }
 
-async fn get_video_dimensions(path: &Path) -> Result<(i32, i32), MediaServiceError> {
+async fn get_video_dimensions(path: &Path) -> Result<(i32, i32), MediaProcessorError> {
     let height = get_video_height(path).await?;
     let width = get_video_width(path).await?;
     Ok((width, height))
 }
 
 async fn get_viable_resolutions(src_width: i32, src_height: i32) -> Vec<Resolution> {
-    let shortest_side = src_width.min(src_height) as u32;
     let mut resolutions = Vec::new();
-    
+
+    let is_vertical = src_height > src_width;
+
+    let quality_dimension = if is_vertical {
+        src_width as u32
+    } else {
+        src_height as u32
+    };
+
     let accepted_resolutions = crate::constant::AVAILABLE_RESOLUTIONS;
 
     for res in accepted_resolutions {
-        if res <= shortest_side {
-            let side = if src_width < src_height {
-                ResolutionSide::Width
-            } else {
-                ResolutionSide::Height
-            };
-            resolutions.push(Resolution { length: res, side });
+        if res <= quality_dimension {
+            resolutions.push(Resolution {
+                length: res,
+                side: if is_vertical {
+                    ResolutionSide::Width
+                } else {
+                    ResolutionSide::Height
+                },
+            });
         }
     }
 
-    // check if res contains the original resolution, if not, add it to the list
-    // we add a buffer of 100 to the shortest side to account for any rounding errors or slight differences in resolution
-    if !resolutions.iter().any(|r| r.length == shortest_side && r.length + 100 >= shortest_side) {
-        let side = if src_width < src_height {
-            ResolutionSide::Width
-        } else {
-            ResolutionSide::Height
-        };
-        resolutions.push(Resolution { length: shortest_side, side });
+    tracing::debug!(
+        "Source dimensions: {}x{}, quality dimension: {}, viable resolutions: {:?}",
+        src_width,
+        src_height,
+        quality_dimension,
+        resolutions
+    );
+
+    // * Preserve the source's native quality dimension when it isn't
+    // * already represented by AVAILABLE_RESOLUTIONS.
+    if !resolutions.iter().any(|r| r.length == quality_dimension) {
+        resolutions.push(Resolution {
+            length: quality_dimension,
+            side: if is_vertical {
+                ResolutionSide::Width
+            } else {
+                ResolutionSide::Height
+            },
+        });
     }
 
     resolutions
 }
 
-pub async fn strip_metadata(input_path: String, storage: Arc<dyn MediaStorage>) -> Result<(), MediaServiceError> {
-    let temp_source_input = storage.temp_full_path(&input_path);
+pub async fn strip_metadata(file: File) -> Result<(), MediaProcessorError> {
+    let temp_source_input = file.file_full_path(); // Assuming the input_path is already a temporary path
 
+    let temp_dir = file.file_full_directory(); // Get the directory of the input file
     // create temp file name for output
-    let temp_output = storage.temp_full_path(&format!("{}_stripped", input_path));
+    let temp_output = temp_dir.join(format!("{}_stripped", file.file_name()));
 
     // Use ffmpeg to strip metadata
     let status = Command::new("ffmpeg")
         .args(&[
-            "-i", &temp_source_input.to_string_lossy(),
-            "-map_metadata", "-1",
-            "-c:v", "copy",
-            "-c:a", "copy",
+            "-i",
+            &temp_source_input.to_string_lossy(),
+            "-map_metadata",
+            "-1",
+            "-c:v",
+            "copy",
+            "-c:a",
+            "copy",
             &temp_output.to_string_lossy(),
         ])
         .status()
         .await?;
 
     // Replace the original file with the stripped version
-    storage.move_file(&temp_output, &temp_source_input).await?;
+    tokio::fs::rename(&temp_output, &temp_source_input).await?;
 
     if !status.success() {
-        return Err(MediaServiceError::MetadataStripFailed);
+        return Err(MediaProcessorError::MetadataStripFailed);
     }
 
     Ok(())
 }
 
 /// Generates a thumbnail from the video at `input_path` and saves it to `output_path`.
-pub async fn extract_thumbnail(input_path: &str, codec: &str, second: u32) -> Result<Vec<u8>, MediaServiceError> {    
+pub async fn extract_thumbnail(
+    input_path: &str,
+    codec: &str,
+    second: u32,
+) -> Result<Vec<u8>, MediaProcessorError> {
     // Use ffmpeg to generate thumbnail
+
+    tracing::debug!(
+        "Extracting thumbnail from video: {}, codec: {}, second: {}",
+        input_path,
+        codec,
+        second
+    );
+
     let output = Command::new("ffmpeg")
         .args(&[
-            "-i", input_path,
-            "-ss", second.to_string().as_str(),
-            "-vframes", "1",
-            "-f", "image2pipe",
-            "-vcodec", codec,
+            "-i",
+            input_path,
+            "-ss",
+            second.to_string().as_str(),
+            "-vframes",
+            "1",
+            "-f",
+            "image2pipe",
+            "-vcodec",
+            codec,
             "-",
         ])
         .stdout(Stdio::piped())
@@ -269,60 +339,68 @@ pub async fn extract_thumbnail(input_path: &str, codec: &str, second: u32) -> Re
         .await?;
 
     if !output.status.success() {
-        return Err(MediaServiceError::ThumbnailGenerationFailed);
+        return Err(MediaProcessorError::ThumbnailGenerationFailed);
     }
 
     Ok(output.stdout)
 }
 
 pub async fn process_video_trim(
-    input_path: String,
     start_time: f32,
     end_time: f32,
-    output_path: String,
-    storage: Arc<dyn MediaStorage>,
-) -> Result<(), MediaServiceError> {
-    let temp_source_input = storage.temp_full_path(&input_path);
-    let temp_output = storage.temp_full_path(&output_path);
+    file: &File,
+) -> Result<(), MediaProcessorError> {
+    let temp_source_input = file.file_full_path();
+    let temp_output = file
+        .file_full_directory()
+        .join(format!("{}_trimmed", file.file_name()));
 
     // Use ffmpeg to trim the video
     let status = Command::new("ffmpeg")
         .args(&[
-            "-i", &temp_source_input.to_string_lossy(),
-            "-ss", &start_time.to_string(),
-            "-to", &end_time.to_string(),
-            "-c", "copy",
+            "-i",
+            &temp_source_input.to_string_lossy(),
+            "-ss",
+            &start_time.to_string(),
+            "-to",
+            &end_time.to_string(),
+            "-c",
+            "copy",
             &temp_output.to_string_lossy(),
         ])
         .status()
         .await?;
 
     if !status.success() {
-        return Err(MediaServiceError::VideoTrimFailed);
+        return Err(MediaProcessorError::VideoTrimFailed);
     }
 
     // Move the trimmed video to the original input path
-    storage.move_file(&temp_output, &temp_source_input).await?;
+    tokio::fs::rename(&temp_output, &temp_source_input).await?;
 
     Ok(())
 }
 
-
 pub async fn process_video_hls(
     segment_duration: f32,
+
     // job directory path for temporary processing
     job_dir_path: PathBuf,
     source_path: PathBuf,
-) -> Result<(), MediaServiceError> {
+) -> Result<(), MediaProcessorError> {
     tokio::fs::create_dir_all(&job_dir_path).await?;
 
     // Get the original video dimensions to determine viable resolutions for HLS
     let (width, height) = get_video_dimensions(&source_path).await?;
 
-    // mutatable vectors to hold `ffmpeg` filter and map commands, as well as variant information
+    // Check whether the source contains an audio stream.
+    let has_audio = has_audio_stream(&source_path).await?;
+
+    tracing::debug!("HLS source: {}x{}, audio: {}", width, height, has_audio);
+
+    // Mutable vectors to hold ffmpeg filter and variant information
     let mut filters = Vec::new();
     let mut var_map = Vec::new();
-    let mut index = 0;
 
     // Determine viable resolutions based on the original video dimensions
     let resolutions = get_viable_resolutions(width, height).await;
@@ -334,73 +412,96 @@ pub async fn process_video_hls(
         resolutions
     );
 
-    // Iterate through the viable resolutions and create HLS variants for each resolution that is less than or equal to the original video height.
+    let mut index = 0;
+
+    // Create one video variant for every viable resolution.
     for &res in &resolutions {
         if res.length <= height as u32 {
             match res.side {
                 ResolutionSide::Width => {
                     filters.push(format!("[0:v]scale=w={}:h=-2[v{}];", res.length, index));
                 }
+
                 ResolutionSide::Height => {
                     filters.push(format!("[0:v]scale=w=-2:h={}[v{}];", res.length, index));
                 }
             }
-            // Add the variant stream mapping for the current resolution
-            // v means video stream, a means audio stream, and index is the variant index
-            var_map.push(format!("v:{},a:{}", index, index));
+
+            // * When audio exists, each variant gets its corresponding audio stream.
+            // * Without audio, the variant contains video only.
+            if has_audio {
+                var_map.push(format!("v:{},a:{}", index, index));
+            } else {
+                var_map.push(format!("v:{}", index));
+            }
 
             index += 1;
         }
     }
 
-    // If no resolutions were added, we should at least add the original resolution as a fallback
+    // If no resolutions were added, use the original resolution as a fallback.
     if index == 0 {
         filters.push(format!("[0:v]scale=w=-2:h={}[v0];", height));
-        var_map.push("v:0,a:0".to_string());
+
+        if has_audio {
+            var_map.push("v:0,a:0".to_string());
+        } else {
+            var_map.push("v:0".to_string());
+        }
+
+        index = 1;
     }
 
-    // Build the filter_complex string for ffmpeg
     let filter_complex = filters.join(" ");
 
-    // Prepare the ffmpeg command to generate HLS segments and playlists
     let mut cmd = Command::new("ffmpeg");
+
     cmd.arg("-i")
         .arg(&source_path)
         .arg("-filter_complex")
         .arg(&filter_complex);
 
+    // Map the generated video streams.
     for i in 0..index {
-        cmd.arg("-map")
-            .arg(format!("[v{}]", i))
-            .arg("-map")
-            .arg("a?");
+        cmd.arg("-map").arg(format!("[v{}]", i));
+
+        // * Only map audio when the source actually has audio.
+        if has_audio {
+            cmd.arg("-map").arg("0:a:0");
+        }
     }
-    
+
     cmd.args([
-        "-f", "hls",
-        "-hls_time", &segment_duration.to_string(),
-        "-hls_playlist_type", "vod",
+        "-c:v",
+        "libx264",
+        "-c:a",
+        "aac",
+        "-f",
+        "hls",
+        "-hls_time",
+        &segment_duration.to_string(),
+        "-hls_playlist_type",
+        "vod",
         "-hls_segment_filename",
     ])
     .arg(job_dir_path.join("v%v_seg_%03d.ts"))
     .args([
-        "-master_pl_name", "master.m3u8",
+        "-master_pl_name",
+        "master.m3u8",
         "-var_stream_map",
         &var_map.join(" "),
     ])
     .arg(job_dir_path.join("v%v.m3u8"));
 
-    // Execute the ffmpeg command and wait for it to finish
     let output = cmd.output().await?;
 
-    // If the ffmpeg command failed, clean up the temporary job directory and return an error
     if !output.status.success() {
         tracing::error!(
             "ffmpeg failed:\n{}",
             String::from_utf8_lossy(&output.stderr)
         );
 
-        return Err(MediaServiceError::ProcessingFailed);
+        return Err(MediaProcessorError::ProcessingFailed);
     }
 
     Ok(())

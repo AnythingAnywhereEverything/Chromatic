@@ -1,4 +1,4 @@
-use crate::application::service::errors::MediaServiceError;
+use crate::application::service::errors::media_service::MediaProcessorError;
 use crate::application::service::media::processor::image::{CropStyle, PreCalculatedCrop};
 
 fn compute_normalize(width: f32, height: f32, image_width: u32, image_height: u32) -> (u32, u32) {
@@ -14,9 +14,9 @@ fn compute_ratio(
     scale: f32,
     image_width: u32,
     image_height: u32,
-) -> Result<(u32, u32), MediaServiceError> {
+) -> Result<(u32, u32), MediaProcessorError> {
     if scale <= 0.0 {
-        return Err(MediaServiceError::InvalidCropScale(scale));
+        return Err(MediaProcessorError::InvalidCropScale(scale));
     }
 
     // * Calculate the maximum crop dimensions that fit within the source image while maintaining the desired aspect ratio.
@@ -46,7 +46,7 @@ pub fn compute_crop_dimensions(
     image_height: u32,
     style: CropStyle,
     position: Option<(f32, f32)>,
-) -> Result<PreCalculatedCrop, MediaServiceError> {
+) -> Result<PreCalculatedCrop, MediaProcessorError> {
     let (crop_width, crop_height) = match style {
         CropStyle::Absolute { width, height } => (width, height),
 

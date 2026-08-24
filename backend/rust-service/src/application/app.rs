@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use crate::{
-    api::server, application::{config, service::{media::{multipart_ex::MultipartExtractor, storage::{MediaStorage, local::LocalStorage, r2::R2Storage}}, snowflake_service::{SnowflakeGenerator, SnowflakeKind}}, state::AppState}, infrastructure::{database::Database, redis},
+    api::server, application::{config, service::{media::{extractor::MultipartExtractor, service::MediaService, storage::{LocalStorage, PersistentStore, TempStore}}, snowflake_service::{SnowflakeGenerator, SnowflakeKind}}, state::AppState}, infrastructure::{database::Database, redis},
 };
 
 pub async fn build_state(config: config::Config, db_pool: Option<sqlx::PgPool>) -> Arc<AppState> {
@@ -32,19 +32,41 @@ pub async fn build_state(config: config::Config, db_pool: Option<sqlx::PgPool>) 
     // initialize Medai service
 
     let driver = config.clone().media_driver;
-    let storage: Arc<dyn MediaStorage> = match driver.as_str() {
+    let persistent_store: Arc<dyn PersistentStore> = match driver.as_str() {
         "r2" => {
-            let r2 = R2Storage::new();
-            Arc::new(r2)
+            panic!("R2 storage is not yet implemented.");
         }
         _ => {
             let root = config.clone().media_root;
             let temp_root = config.clone().media_temp_root;
-            Arc::new(LocalStorage::new(root, temp_root))
+            Arc::new(LocalStorage::new(&temp_root, &root))
         }
     };
 
-    let multipart_extractor = MultipartExtractor::new(storage.clone());
+    let temporary_store: Arc<dyn TempStore> = match driver.as_str() {
+        "r2" => {
+            panic!("R2 storage is not yet implemented.");
+        }
+        _ => {
+
+            let root = config.clone().media_root;
+            let temp_root = config.clone().media_temp_root;
+            Arc::new(LocalStorage::new(&temp_root, &root)) as Arc<dyn TempStore>
+        }
+    };
+
+    let media_service_snowflake = SnowflakeGenerator::new(
+        config.server_worker_id,
+        SnowflakeKind::Media,
+    ).expect("Failed to create media service snowflake generator.");
+
+    let media_service = MediaService::new(
+        media_service_snowflake,
+        temporary_store.clone(),
+        persistent_store.clone(),
+    );
+
+    let multi_extractor = MultipartExtractor::new(temporary_store.clone());
 
     // Build the application state.
     Arc::new(AppState {
@@ -52,8 +74,10 @@ pub async fn build_state(config: config::Config, db_pool: Option<sqlx::PgPool>) 
         db_pool,
         redis,
         snowflake_generator,
-        multipart_extractor,
-        storage,
+        multi_extractor,
+        persistent_store,
+        temporary_store,
+        media_service,
     })
 }
 
