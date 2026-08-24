@@ -53,44 +53,20 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Project Owners
 
-<ul style="
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    align-items: flex-start;
-">
-    <li style="
-        display: flex;
-        flex-direction: row;
-        list-style-type: none;
-        gap: 10px;
-        align-items: center;
-    ">
-        <a href="https://github.com/ZartexVertagen">
-            <img
-            style="border-radius: 50%;"
-            src="https://github.com/ZartexVertagen.png" width="64px;" alt="ZartexVertagen Profile Picture"/><br />
-        </a><br />
-        <div>
-            <a href="https://github.com/ZartexVertagen"><b>@ZartexVertagen</b></a>
-            <p>Leading Developer and Project Owner</p>
-        </div>
-    </li>
-  <li style="
-        display: flex;
-        flex-direction: row;
-        list-style-type: none;
-        gap: 10px;
-        align-items: center;
-    ">
-      <a href="https://github.com/K-Hongkaew">
-        <img 
-        style="border-radius: 50%;"
-        src="https://github.com/K-Hongkaew.png" width="64px;" alt="K-Hongkaew Profile Picture"/><br />
-      </a><br />
-        <div>
-            <a href="https://github.com/K-Hongkaew"><b>@K-Hongkaew</b></a>
-            <p>Co-Developer and Project Owner</p>
-        </div>
-  </li>
-</ul>
+<p align="left">
+  <a href="https://github.com/ZartexVertagen">
+    <img src="https://github.com/ZartexVertagen.png" width="64px" style="border-radius: 50%;" align="left" alt="ZartexVertagen"/>
+  </a>
+  &nbsp; <a href="https://github.com/ZartexVertagen"><b>@ZartexVertagen</b></a>
+  <br />&nbsp; Leading Developer and Project Owner
+</p>
+<br clear="left"/>
+
+<p align="left">
+  <a href="https://github.com/K-Hongkaew">
+    <img src="https://github.com/K-Hongkaew.png" width="64px" style="border-radius: 50%;" align="left" alt="K-Hongkaew"/>
+  </a>
+  &nbsp; <a href="https://github.com/K-Hongkaew"><b>@K-Hongkaew</b></a>
+  <br />&nbsp; Co-Developer and Project Owner
+</p>
+<br clear="left"/>
