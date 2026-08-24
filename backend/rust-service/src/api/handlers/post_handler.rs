@@ -7,16 +7,11 @@ use multipart_derive::Multipart;
 
 use crate::{
     api::{
-        APIError, RequestAuth,
-        dtos::post_dtos::{LikeDTO, PostDTO},
-        version,
-    },
-    application::{
+        APIError, RequestAuth, dtos::post_dtos::{CommentDTO, LikeDTO, PostDTO}, version,
+    }, application::{
         repository::{
-            media::{self as media_repo, row::MediaStatus},
-            post::{self as post_repo},
-        },
-        service::{
+            media::{self as media_repo, row::MediaStatus}, post::{self as post_repo, find::PostQOpts, post},
+        }, service::{
             errors::{AuthServiceError, PostServiceError},
             media::{
                 self,
@@ -26,8 +21,7 @@ use crate::{
                     ImageProcessorType, MediaProcessorOptions, ResizeStyle, VideoPostProcessorType,
                 },
             },
-        },
-        state::SharedState,
+        }, state::SharedState,
     },
 };
 #[derive(serde::Deserialize, sqlx::Type, Debug)]
@@ -43,6 +37,30 @@ pub enum PostVisibility {
     Everyone,
     Friend,
     Private,
+}
+
+#[derive(
+    serde::Deserialize,
+    serde::Serialize,
+    sqlx::Type,
+    Debug,
+)]
+#[sqlx(type_name = "tag_attachment_types", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
+pub enum TagTarget {
+    User,
+    Post,
+    Guild,
+}
+
+impl ToString for TagTarget {
+   fn to_string(&self) -> String {
+       match self {
+           TagTarget::User => "user".to_string(),
+           TagTarget::Post => "post".to_string(),
+           TagTarget::Guild => "guild".to_string(),
+       }
+   }
 }
 
 impl ToString for PostVisibility {
@@ -131,6 +149,56 @@ pub async fn get_feed_post_handler(
         post.current_user_id = user_id.map(|id| id.to_string());
     }
     Ok(Json(post_vec))
+}
+
+pub async fn get_info_post_handler(
+    State(state): State<SharedState>,
+    Path((version, post_id)): Path<(String, i64)>,
+    req_auth: RequestAuth,
+) -> Result<Json<PostDTO>, APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+
+    let user_id = match req_auth.user {
+        Some(user) => Some(user.user_id),
+        None => None,
+    };
+
+    let mut tx = state.db_pool.begin().await?;
+
+    let opts = PostQOpts {
+        target_id: Some(post_id),
+        requester: user_id,
+        get_avatar: true,
+        get_media: true,
+        ..PostQOpts::full()
+    };
+
+    let post = post_repo::find::get_post_by_id_experiment(&mut tx, opts).await?;
+    
+    Ok(Json(post.into()))
+}
+
+pub async fn get_post_comments_handler(
+    State(state): State<SharedState>,
+    Path((version, post_id)): Path<(String, i64)>,
+    req_auth: RequestAuth,
+    
+) -> Result<Json<Vec<CommentDTO>>, APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+
+    let _user_id = match req_auth.user {
+        Some(user) => Some(user.user_id),
+        None => return Err(AuthServiceError::InvalidCredentials.into()),
+    };
+
+    let mut tx = state.db_pool.begin().await?;
+
+    let comments = post_repo::comment::get_comment(&mut tx, post_id).await?;
+    let comments_vec: Vec<CommentDTO> = comments.into_iter().map(|post| post.into()).collect(); 
+    
+    Ok(Json(comments_vec))
 }
 
 pub async fn create_new_post_handler(
@@ -281,7 +349,7 @@ pub async fn create_new_post_handler(
     if !post_tags.is_empty() {
         tracing::trace!("Entering add tags stage");
         for tag in post_tags {
-            post_repo::post::add_tags_target(&mut tx, *new_post_id, "post".to_string(), tag)
+            post_repo::post::add_tags_target(&mut tx, *new_post_id, TagTarget::Post, tag)
                 .await?;
         }
     }
@@ -305,7 +373,6 @@ pub async fn update_post_handler(
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
 
-    // ! Temporary testing ID
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
         None => return Err(AuthServiceError::InvalidCredentials.into()),
@@ -343,7 +410,7 @@ pub async fn update_post_handler(
         // * Add new tags that weren't already attached.
         for tag_id in new_tags {
             if !old_tag_ids.contains(&tag_id) {
-                post_repo::post::add_tags_target(&mut tx, post_id, "post".to_string(), tag_id)
+                post_repo::post::add_tags_target(&mut tx, post_id, TagTarget::Post, tag_id)
                     .await?;
             }
         }

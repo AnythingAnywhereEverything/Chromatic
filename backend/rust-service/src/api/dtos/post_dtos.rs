@@ -1,7 +1,7 @@
 use serde::Serialize;
 use sqlx::prelude::FromRow;
 
-use crate::{api::dtos::user_dtos::MediaFullDTO, application::repository::post::row::PostRow};
+use crate::{api::dtos::user_dtos::MediaFullDTO, application::repository::post::row::{CommentRow, PostRow}};
 
 
 #[derive(Debug, Serialize,FromRow)]
@@ -9,6 +9,7 @@ pub struct PostDTO {
     pub id:String,
     pub user_id: String,
     pub username: String,
+    pub display_name: String,
     pub content: String,
     pub total_likes: i32,
     pub total_comments: i32,
@@ -22,6 +23,13 @@ pub struct PostDTO {
     pub media: Vec<MediaFullDTO>,
     pub tag: Vec<TagDTO>,
     pub is_liked: bool,
+
+    pub avatar_path : Option<String>,
+    pub avatar_mime : Option<String>,
+    pub avatar_thumbhash : Option<String>,
+
+    pub followers_count: i32,
+    pub following_count: i32,
     #[sqlx(skip)]
     pub current_user_id: Option<String>, // Will default to None
 }
@@ -31,7 +39,8 @@ impl Into<PostDTO> for PostRow {
         PostDTO {
             id: self.id.to_string(),
             user_id: self.user_id.to_string(),
-            username: self.username.unwrap_or_default(),
+            username: self.username,
+            display_name: self.display_name.unwrap_or_default(),
             content: self.content,
             total_likes: self.total_likes,
             total_comments: self.total_comments,
@@ -60,7 +69,12 @@ impl Into<PostDTO> for PostRow {
                 tag_id: tag.tag_id.to_string()
             }).collect(),
             is_liked: self.is_liked,
-            current_user_id : None
+            current_user_id : None,
+            avatar_path: self.avatar_path,
+            avatar_mime: self.avatar_mime,
+            avatar_thumbhash: self.avatar_thumbhash,
+            followers_count: self.followers_count,
+            following_count: self.following_count,
         }
     }
 }
@@ -82,7 +96,6 @@ pub struct CommentDTO {
     pub has_attachment: bool,
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
-
     pub media: Vec<MediaFullDTO>
 }
 
@@ -90,4 +103,32 @@ pub struct CommentDTO {
 pub struct LikeDTO {
     pub id: String,
     pub total_liked: i32,
+}
+
+impl Into<CommentDTO> for CommentRow {
+    fn into(self) -> CommentDTO {
+        CommentDTO {
+            id: self.id.to_string(),
+            post_id: self.post_id.to_string(),
+            user_id: self.user_id.to_string(),
+            content: self.content,
+            total_likes: self.total_likes,
+            has_attachment: self.has_attachment,
+            created_at: Some(self.created_at.to_string()),
+            updated_at: Some(self.updated_at.to_string()),
+            media: self.media_attachment.0.into_iter().map(|media| MediaFullDTO {
+                id: media.id.to_string(),
+                path: media.path,
+                name: media.name,
+                thumbhash: media.thumbhash,
+                status: media.status,
+                created_at: media.created_at,
+                file_size: media.file_size,
+                mime_type: media.mime_type,
+                width: media.width,
+                height: media.height,
+                duration: media.duration,
+            }).collect(),
+        }
+    }
 }

@@ -1,19 +1,31 @@
 use sqlx::{Postgres, Transaction};
 
-use crate::{api::handlers::post_handler::PostVisibility, application::{repository::{media::row::MediaDataWithMetadataRow, post::row::{ CreatePostRow, HasAttachmentRow, PostLikesRow, PostRow, TagAttachmentFull, TagAttachmentRow, TotalLikesRow}}, service::errors::PostServiceError}};
+use crate::{
+    api::handlers::post_handler::{PostVisibility, TagTarget}, application::{
+        repository::{
+            media::row::MediaDataWithMetadataRow,
+            post::row::{
+                CreatePostRow, HasAttachmentRow, PostLikesRow, PostRow, TagAttachmentFull,
+                TagAttachmentRow, TotalLikesRow,
+            },
+        },
+        service::errors::PostServiceError,
+    },
+};
 
 // todo: func get YOUR FRIEND post
 // todo: func get feed comment :d
 
 // ? How am I gonna balanced the feed between friends and normal since there's no ML for the feed
 // * Schuding them for show some of there friends post
-// ? Do feed setting to let user edit the feed to show friend first, no friend, normal 
+// ? Do feed setting to let user edit the feed to show friend first, no friend, normal
 
+// todo: get recent post on pfp.. fetch on profile page???
 pub async fn get_feed_public(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     cursor_id: Option<i64>,
     user_id: Option<i64>,
-    limit: i32
+    limit: i32,
 ) -> Result<Vec<PostRow>, sqlx::Error> {
     sqlx::query_as::<_, PostRow>(
         r#"
@@ -21,6 +33,14 @@ pub async fn get_feed_public(
                 m.id,
                 m.user_id,
                 u.username,
+                up.display_name,
+
+                avatar_md.path AS avatar_path,
+                avatar_mdt.mime_type AS avatar_mime,
+                avatar_md.thumbhash AS avatar_thumbhash,
+
+                up.followers_count,
+                up.following_count,
                 m.content,
                 m.total_comments,
                 m.total_likes,
@@ -37,10 +57,8 @@ pub async fn get_feed_public(
                     WHERE ml.media_post_id = m.id
                       AND ml.user_id = $2
                 ) AS is_liked,
-
                 COALESCE(att.attachments, '[]'::json) AS media_attachment,
                 COALESCE(tag.tags, '[]'::json) AS tags
-
             FROM media_posts m
 
             LEFT JOIN LATERAL (
@@ -63,8 +81,10 @@ pub async fn get_feed_public(
                     ORDER BY md.id
                 ) AS attachments
                 FROM media_attachments a
+
                 JOIN media_data md ON md.id = a.media_id
                 JOIN media_metadata mdt ON mdt.media_id = md.id
+
                 WHERE a.target_id = m.id
                   AND md.status = 'completed'
             ) att ON TRUE
@@ -84,16 +104,24 @@ pub async fn get_feed_public(
                 WHERE ta.target_id = m.id
             ) tag ON TRUE
 
-            LEFT JOIN users u ON m.user_id = u.id
+        LEFT JOIN users u
+            ON m.user_id = u.id
+        LEFT JOIN user_profiles up
+            ON m.user_id = up.user_id
 
-            WHERE
-                m.visibility = 'everyone'
-                AND m.status != 'inactive'
-                AND ($1 IS NULL OR m.id < $1)
+        LEFT JOIN media_data avatar_md
+            ON avatar_md.id = up.avatar_media_id
+        LEFT JOIN media_metadata avatar_mdt
+            ON avatar_mdt.media_id = avatar_md.id
 
-            ORDER BY m.id DESC
-            LIMIT $3
-        "#
+        WHERE
+            m.visibility = 'everyone'
+            AND m.status != 'inactive'
+            AND ($1 IS NULL OR m.id < $1)
+            
+        ORDER BY m.id DESC
+        LIMIT $3;
+        "#,
     )
     .bind(cursor_id)
     .bind(user_id)
@@ -102,27 +130,38 @@ pub async fn get_feed_public(
     .await
 }
 
-
-
 // pub async fn get_friend_post(
 //     tx: &mut Transaction<'_,sqlx::Postgres>,
 //     user_id: i64,
 
 // ) {
-    
+
 // }
 
+// * case the friends is impl completed
 pub async fn get_post_by_id(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     post_id: i64,
-    user_id: i64
+    user_id: i64,
 ) -> Result<PostRow, sqlx::Error> {
     sqlx::query_as::<_, PostRow>(
         r#"
-            SELECT
+             SELECT
                 m.id,
                 m.user_id,
                 u.username,
+                up.display_name,
+
+                avatar_md.path AS avatar_path,
+                avatar_mdt.mime_type AS avatar_mime,
+                avatar_md.thumbhash AS avatar_thumbhash,
+
+                banner_md.path AS banner_path,
+                banner_mdt.mime_type AS banner_mime,
+                banner_md.thumbhash AS banner_thumbhash,
+
+                up.followers_count,
+                up.following_count,
                 m.content,
                 m.total_comments,
                 m.total_likes,
@@ -132,16 +171,17 @@ pub async fn get_post_by_id(
                 m.created_at,
                 m.updated_at,
                 m.visibility,
-                COALESCE(att.attachments, '[]'::json) AS media_attachment,
-                COALESCE(tag.tags, '[]'::json) AS tags,
-                
+
                 EXISTS (
                     SELECT 1
                     FROM media_likes ml
                     WHERE ml.media_post_id = m.id
                       AND ml.user_id = $2
-                ) AS is_liked
+                ) AS is_liked,
+                COALESCE(att.attachments, '[]'::json) AS media_attachment,
+                COALESCE(tag.tags, '[]'::json) AS tags
             FROM media_posts m
+
             LEFT JOIN LATERAL (
                 SELECT json_agg(
                     json_build_object(
@@ -162,11 +202,14 @@ pub async fn get_post_by_id(
                     ORDER BY md.id
                 ) AS attachments
                 FROM media_attachments a
+
                 JOIN media_data md ON md.id = a.media_id
                 JOIN media_metadata mdt ON mdt.media_id = md.id
+
                 WHERE a.target_id = m.id
-                AND md.status = 'completed'
+                  AND md.status = 'completed'
             ) att ON TRUE
+
             LEFT JOIN LATERAL (
                 SELECT json_agg(
                     json_build_object(
@@ -181,12 +224,36 @@ pub async fn get_post_by_id(
                 JOIN interest_tags it ON it.id = ta.tag_id
                 WHERE ta.target_id = m.id
             ) tag ON TRUE
-            LEFT JOIN users u ON m.user_id = u.id
-            WHERE
-                m.id = $1
-                AND m.visibility = 'everyone'
-                AND m.status != 'inactive'
-        "#
+
+        LEFT JOIN users u
+            ON m.user_id = u.id
+        LEFT JOIN user_profiles up
+            ON m.user_id = up.user_id
+
+        LEFT JOIN media_data avatar_md
+            ON avatar_md.id = up.avatar_media_id
+        LEFT JOIN media_metadata avatar_mdt
+            ON avatar_mdt.media_id = avatar_md.id
+
+        LEFT JOIN media_data banner_md
+            ON banner_md.id = up.banner_media_id
+        LEFT JOIN media_metadata banner_mdt
+            ON banner_mdt.media_id = banner_md.id
+            
+        WHERE
+            m.id = $1
+            AND m.status != 'inactive'
+            AND (
+                m.user_id = $2
+                OR m.visibility = 'everyone'
+                OR (
+                    m.visibility = 'friends'
+                    AND EXISTS (
+                        SELECT 1
+                        FROM user_friends uf
+                        WHERE uf.user_id = $2
+                          AND uf.friend_id = m.user_id
+        "#,
     )
     .bind(post_id)
     .bind(user_id)
@@ -272,10 +339,10 @@ pub async fn update_post(
 }
 
 pub async fn delete_post(
-    tx: &mut Transaction<'_,sqlx::Postgres>,
-    id:i64,
-    user_id: i64
-) -> Result<u64, sqlx::Error>{
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    id: i64,
+    user_id: i64,
+) -> Result<u64, sqlx::Error> {
     let delete = sqlx::query(
         r#"
             DELETE FROM media_posts
@@ -296,7 +363,7 @@ pub async fn add_has_attachment(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     target_id: i64,
     media_id: i64,
-    target_type: String
+    target_type: String,
 ) -> Result<Vec<HasAttachmentRow>, sqlx::Error> {
     sqlx::query_as::<_, HasAttachmentRow>(
         r#"
@@ -307,7 +374,7 @@ pub async fn add_has_attachment(
             )
             VALUES ($1, $2, $3)
             RETURNING *
-        "#
+        "#,
     )
     .bind(target_id)
     .bind(media_id)
@@ -316,10 +383,9 @@ pub async fn add_has_attachment(
     .await
 }
 
-
 pub async fn get_post_attachment(
     tx: &mut Transaction<'_, sqlx::Postgres>,
-    post_id: i64
+    post_id: i64,
 ) -> Result<Vec<MediaDataWithMetadataRow>, sqlx::Error> {
     sqlx::query_as::<_, MediaDataWithMetadataRow>(
         r#"
@@ -342,7 +408,7 @@ pub async fn get_post_attachment(
             JOIN media_metadata mdt ON mdt.media_id = md.id
             WHERE ma.target_id = $1
             ORDER BY md.id
-        "#
+        "#,
     )
     .bind(post_id)
     .fetch_all(&mut **tx) // This re-borrowing is correct!
@@ -373,9 +439,9 @@ pub async fn delete_target_attachments(
 pub async fn add_tags_target(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     target_id: i64,
-    target_type: String,
-    tag_id: i64
-) -> Result<TagAttachmentRow, sqlx::Error > {
+    target_type: TagTarget,
+    tag_id: i64,
+) -> Result<TagAttachmentRow, sqlx::Error> {
     sqlx::query_as::<_, TagAttachmentRow>(
         r#"
             INSERT INTO tag_attachments (
@@ -385,7 +451,7 @@ pub async fn add_tags_target(
             )
             VALUES($1, $2, $3)
             RETURNING *
-        "#
+        "#,
     )
     .bind(target_id)
     .bind(target_type)
@@ -396,9 +462,9 @@ pub async fn add_tags_target(
 
 pub async fn get_tag_attachments(
     tx: &mut Transaction<'_, Postgres>,
-    target_id: i64
+    target_id: i64,
 ) -> Result<Vec<TagAttachmentFull>, sqlx::Error> {
-    sqlx::query_as::<_, TagAttachmentFull> (
+    sqlx::query_as::<_, TagAttachmentFull>(
         r#"
             SELECT
                 ta.target_id,
@@ -409,7 +475,7 @@ pub async fn get_tag_attachments(
             JOIN interest_tags it
                 ON it.id = ta.tag_id
             WHERE ta.target_id = $1
-        "#
+        "#,
     )
     .bind(target_id)
     .fetch_all(tx.as_mut())
@@ -442,9 +508,9 @@ pub async fn delete_tag_attachment(
 
 // Pagnigation cursor
 pub async fn get_info_like_person(
-    tx: &mut Transaction<'_,sqlx::Postgres>,
+    tx: &mut Transaction<'_, sqlx::Postgres>,
     post_id: i64,
-    cursor_ts: Option<i64>
+    cursor_ts: Option<i64>,
 ) -> Result<Vec<PostLikesRow>, sqlx::Error> {
     sqlx::query_as(
         r#"
@@ -454,7 +520,7 @@ pub async fn get_info_like_person(
               AND ($2 IS NULL OR created_at < to_timestamp($2))
             ORDER BY created_at DESC
             LIMIT 20
-        "#
+        "#,
     )
     .bind(post_id)
     .bind(cursor_ts)
@@ -463,12 +529,11 @@ pub async fn get_info_like_person(
 }
 
 pub async fn like_post_repo(
-    tx: &mut Transaction<'_,sqlx::Postgres>,
-    user_id:i64,
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    user_id: i64,
     target_id: i64,
-    is_like: bool
- ) -> Result<TotalLikesRow, sqlx::Error>{
-
+    is_like: bool,
+) -> Result<TotalLikesRow, sqlx::Error> {
     sqlx::query_as::<_, TotalLikesRow>(
         r#"
             WITH previous AS (
@@ -517,7 +582,7 @@ pub async fn like_post_repo(
                 END
             WHERE id = $2
             RETURNING id, total_likes
-        "#
+        "#,
     )
     .bind(user_id)
     .bind(target_id)
@@ -531,15 +596,15 @@ pub async fn like_post_repo(
 // * -----------------------------------------------------
 
 pub async fn bookmark_post(
-    tx: &mut Transaction<'_,sqlx::Postgres>,
+    tx: &mut Transaction<'_, sqlx::Postgres>,
     media_id: i64,
-    user_id: i64
+    user_id: i64,
 ) -> Result<(), PostServiceError> {
     let _ = sqlx::query(
         r#"
             INSERT INTO media_bookmarks (post_id, user_id, created_at)
             VALUES ($1, $2 , NOW())
-        "#
+        "#,
     )
     .bind(media_id)
     .bind(user_id)
@@ -550,15 +615,15 @@ pub async fn bookmark_post(
 }
 
 pub async fn remove_bookmark_post(
-    tx: &mut Transaction<'_,sqlx::Postgres>,
+    tx: &mut Transaction<'_, sqlx::Postgres>,
     media_id: i64,
-    user_id: i64
+    user_id: i64,
 ) -> Result<(), PostServiceError> {
     let _ = sqlx::query(
         r#"
             DELETE FROM media_bookmarks
             WHERE post_id = $1 AND user_id = $2
-        "#
+        "#,
     )
     .bind(media_id)
     .bind(user_id)
@@ -567,7 +632,7 @@ pub async fn remove_bookmark_post(
     Ok(())
 }
 
-// if true insert 
+// if true insert
 pub async fn toggle_bookmark(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     media_id: i64,

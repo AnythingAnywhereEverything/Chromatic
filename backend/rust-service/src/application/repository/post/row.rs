@@ -4,6 +4,7 @@ use sqlx::types::Json;
 use chrono::DateTime;
 use chrono::Utc;
 
+use crate::api::handlers::post_handler::TagTarget;
 use crate::{api::handlers::post_handler::PostVisibility, application::repository::media::row::MediaDataRow};
 
 #[derive(sqlx::FromRow, Debug)]
@@ -11,7 +12,8 @@ pub struct PostRow {
     // media_posts tb
     pub id: i64,
     pub user_id: i64,
-    pub username: Option<String>,
+    pub username: String,
+    pub display_name: Option<String>,
     pub content: String,
     pub total_likes: i32,
     pub total_comments: i32,
@@ -24,6 +26,15 @@ pub struct PostRow {
     pub media_attachment: Json<Vec<MediaAttachment>>,
     pub tags: Json<Vec<TagAttachmentFull>>,
     pub is_liked: bool,
+
+    pub avatar_path : Option<String>,
+    pub avatar_mime : Option<String>,
+    pub avatar_thumbhash : Option<String>,
+
+    pub followers_count: i32,
+    pub following_count: i32,
+        #[sqlx(skip)]
+    pub comments: Json<Vec<CommentRow>>
 }
 
 #[derive(sqlx::FromRow, Debug)]
@@ -41,6 +52,8 @@ pub struct CreatePostRow{
     pub visibility: PostVisibility,
     pub media_attachment: Json<Vec<MediaAttachment>>,
     pub tags: Json<Vec<TagAttachmentFull>>,
+    #[sqlx(skip)]
+    pub comments: Json<Vec<CommentRow>>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -100,7 +113,7 @@ pub struct CommentRow{
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
     #[sqlx(skip)]
-    pub media_attachment: Option<Vec<MediaDataRow>>
+    pub media_attachment: Json<Vec<MediaAttachment>>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -118,17 +131,17 @@ pub struct CreateCommentResult {
 
 // Tag attachment
 
-#[derive(sqlx::FromRow)]
+#[derive(sqlx::FromRow,Debug, Serialize)]
 pub struct TagAttachmentRow{
     pub target_id: i64,
-    pub target_type: String,
+    pub target_type: TagTarget,
     pub tag_id: i64
 }
 
 #[derive(sqlx::FromRow, Debug, Serialize, Deserialize)]
 pub struct TagAttachmentFull{
     pub target_id: i64,
-    pub target_type: String,
+    pub target_type: TagTarget,
     pub tag_id: i64,
     pub tag_name: String
 }
