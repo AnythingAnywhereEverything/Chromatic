@@ -10,7 +10,7 @@ export const metadata = {
 export default async function PostPage() {
     return (
     <AuthenticatedLayout>
-        <div className={style["postLayout"]}>
+        <div className={style["post-layout"]}>
             <div className={style["post-left-layout"]}>
                 <PostGroup />
             </div>
