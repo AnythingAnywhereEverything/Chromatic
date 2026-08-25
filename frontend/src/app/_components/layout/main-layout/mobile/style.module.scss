@@ -8,7 +8,6 @@
     --top-bar-height: calc(var(--spacing) * (12 + 1)); // 1 for loading bar
 
     .main-container {
-        padding: calc(var(--spacing) * 2) calc(var(--spacing) * 12);
         flex: 1;
         margin-bottom: var(--bottom-bar-height);
         margin-top: var(--top-bar-height);
