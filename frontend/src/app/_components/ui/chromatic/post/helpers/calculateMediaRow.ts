@@ -121,41 +121,54 @@ function tryFitTwo(
     const [first, second] = medias;
 
     const firstRatio = first.w / first.h;
-
     const secondRatio = second.w / second.h;
 
     const availableWidth = containerWidth - gap;
-
     const combinedRatio = firstRatio + secondRatio;
 
-    /*
-     * Height needed for both images to
-     * exactly fill the available width.
-     */
+    // * This is the largest row that can preserve both aspect ratios
+    // * while fitting exactly inside the available width.
     const rowHeight = availableWidth / combinedRatio;
 
-    const minimumHeight = containerHeight * MIN_HEIGHT_RATIO;
+    const firstWidth = rowHeight * firstRatio;
+    const secondWidth = rowHeight * secondRatio;
 
-    /*
-     * The two-image fit together layout
-     * must be visually useful as well as valid.
-     *
-     * Too tall  -> reject.
-     * Too short -> reject.
-     */
-    if (rowHeight > containerHeight || rowHeight < minimumHeight) {
+    // * The row must fit vertically inside the container.
+    if (rowHeight > containerHeight) {
         return null;
     }
 
-    return medias.map((media) => {
-        const ratio = media.w / media.h;
+    // * Keep the minimum height rule, but never enlarge the row to satisfy it.
+    const minHeight = containerHeight * MIN_HEIGHT_RATIO;
 
-        return {
-            w: Math.round(rowHeight * ratio),
-            h: Math.round(rowHeight),
-            order: media.order,
-        };
-    });
+    if (rowHeight < minHeight) {
+        return null;
+    }
+
+    // * Final fit check. Do not allow rounding to push the row outside
+    // * the container.
+    const fittedWidth = Math.round(firstWidth) + gap + Math.round(secondWidth);
+    const fittedHeight = Math.round(rowHeight);
+
+    if (
+        fittedWidth > containerWidth ||
+        fittedHeight > containerHeight
+    ) {
+        return null;
+    }
+
+    return [
+        {
+            w: Math.round(firstWidth),
+            h: fittedHeight,
+            order: first.order,
+        },
+        {
+            w: Math.round(secondWidth),
+            h: fittedHeight,
+            order: second.order,
+        },
+    ];
 }
 
 export function calculateMediaRow({
@@ -174,7 +187,11 @@ export function calculateMediaRow({
 
     // * Two images may be able to fit together in a visually useful way.
     if (medias.length === 2) {
+        console.log("Trying to fit two images together:", medias);
+        console.log("Container width:", containerWidth, "Container height:", containerHeight, "Gap:", gap);
         const fitted = tryFitTwo(medias, containerWidth, containerHeight, gap);
+
+        console.log("Fitted result:", fitted);
 
         if (fitted) {
             return fitted;
