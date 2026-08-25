@@ -122,18 +122,56 @@ export function formatDateTime(time: string) {
 }
 
 export function useWindowWidth() {
-    const [windowWidth, setWindowWidth] = useState<number | null>(null);
+    const [width, setWidth] = useState<number | null>(null);
 
     useEffect(() => {
-        const update = () => setWindowWidth(window.innerWidth);
+        const updateWidth = () => {
+            setWidth(window.innerWidth);
+        };
 
-        update();
-        window.addEventListener("resize", update);
+        updateWidth();
 
-        return () => window.removeEventListener("resize", update);
+        let timeout: ReturnType<typeof setTimeout>;
+
+        const handleResize = () => {
+            clearTimeout(timeout);
+
+            timeout = setTimeout(() => {
+                updateWidth();
+            }, 100);
+        };
+
+        window.addEventListener("resize", handleResize);
+
+        return () => {
+            clearTimeout(timeout);
+            window.removeEventListener("resize", handleResize);
+        };
     }, []);
 
-    return windowWidth;
+    return width;
+}
+
+export function useIsMobile() {
+    const [isMobile, setIsMobile] = useState<boolean | null>(null);
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia("(max-width: 768px)");
+
+        const update = () => {
+            setIsMobile(mediaQuery.matches);
+        };
+
+        update();
+
+        mediaQuery.addEventListener("change", update);
+
+        return () => {
+            mediaQuery.removeEventListener("change", update);
+        };
+    }, []);
+
+    return isMobile;
 }
 
 
