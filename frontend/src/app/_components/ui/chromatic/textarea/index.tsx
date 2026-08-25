@@ -1,30 +1,26 @@
 import React from "react";
 import { FaQuoteLeft, FaQuoteRight } from "react-icons/fa6";
 import style from "./textarea.module.scss";
-interface EditableTextAreaProps {
-    id: string;
+type EditableTextAreaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
     value: string;
     maxChars: number;
-    placeholder: string;
     isOwner?: boolean;
-    onChange?: (value: string) => void;
+    onUpdateChange?: (value: string) => void;
     minHeight?: string;
-    className?: string;
     showQuoteIcons?: boolean;
     overwriteClassname?: string;
 }
 
 const EditableTextArea = ({
-    id,
     value,
     maxChars,
-    placeholder,
     isOwner,
-    onChange,
+    onUpdateChange,
     minHeight,
     className,
     overwriteClassname,
     showQuoteIcons = false,
+    ...props
 }: EditableTextAreaProps) => {
     const [isEditing, setIsEditing] = React.useState(false);
     const [newValue, setNewValue] = React.useState(value);
@@ -63,7 +59,7 @@ const EditableTextArea = ({
         const trimmedValue = newValue.trim();
 
         setNewValue(trimmedValue);
-        onChange?.(trimmedValue);
+        onUpdateChange?.(trimmedValue);
         setIsEditing(false);
     };
 
@@ -93,7 +89,7 @@ const EditableTextArea = ({
 
             <div className={wrapperClassName}>
                 <textarea
-                    id={id}
+                    {...props}
                     ref={textareaRef}
                     autoComplete="off"
                     value={newValue}
@@ -101,7 +97,6 @@ const EditableTextArea = ({
                     onChange={handleInputChange}
                     onBlur={handleInputBlur}
                     maxLength={maxChars}
-                    placeholder={placeholder}
                     className={inputClassName}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") {
@@ -141,7 +136,7 @@ const EditableTextArea = ({
                 }
                 onClick={handleEditClick}
             >
-                {value || placeholder}
+                {value || props.placeholder}
             </span>
 
             {showQuoteIcons && (

@@ -291,7 +291,7 @@ const ViewProfileBody = ({
               maxChars={300}
               placeholder="Enter your bio..."
               isOwner={initialIsOwner}
-              onChange={handleBioChange}
+              onUpdateChange={handleBioChange}
               />
           </div>
         </div>
@@ -303,13 +303,13 @@ const ViewProfileBody = ({
         maxChars={256} 
         placeholder="Enter your quote..."
         isOwner={initialIsOwner}
-        onChange={handleQuoteChange}
+        onUpdateChange={handleQuoteChange}
         showQuoteIcons={true}
         />
 
         <div className={style["profile-activity"]}>
           <p>
-            <strong>{0 /* Need migration */}</strong> Posts
+            <strong>{profile.posts_count}</strong> Posts
           </p>
           <p>
             <strong>{profile.followers_count}</strong> Followers
