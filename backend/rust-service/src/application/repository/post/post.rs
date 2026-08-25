@@ -240,19 +240,23 @@ pub async fn get_post_by_id(
         LEFT JOIN media_metadata banner_mdt
             ON banner_mdt.media_id = banner_md.id
             
-        WHERE
+                WHERE
             m.id = $1
             AND m.status != 'inactive'
             AND (
                 m.user_id = $2
                 OR m.visibility = 'everyone'
                 OR (
-                    m.visibility = 'friends'
+                    m.visibility = 'friend'
                     AND EXISTS (
                         SELECT 1
                         FROM user_friends uf
                         WHERE uf.user_id = $2
                           AND uf.friend_id = m.user_id
+                    ) -- * close EXISTS
+                ) -- * close friends block
+            ) -- * close visibility block
+
         "#,
     )
     .bind(post_id)
