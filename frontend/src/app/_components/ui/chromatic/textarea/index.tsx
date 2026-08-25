@@ -2,6 +2,7 @@ import React from "react";
 import { FaQuoteLeft, FaQuoteRight } from "react-icons/fa6";
 import style from "./textarea.module.scss";
 interface EditableTextAreaProps {
+    id: string;
     value: string;
     maxChars: number;
     placeholder: string;
@@ -10,9 +11,11 @@ interface EditableTextAreaProps {
     minHeight?: string;
     className?: string;
     showQuoteIcons?: boolean;
+    overwriteClassname?: string;
 }
 
 const EditableTextArea = ({
+    id,
     value,
     maxChars,
     placeholder,
@@ -20,12 +23,19 @@ const EditableTextArea = ({
     onChange,
     minHeight,
     className,
+    overwriteClassname,
     showQuoteIcons = false,
 }: EditableTextAreaProps) => {
     const [isEditing, setIsEditing] = React.useState(false);
     const [newValue, setNewValue] = React.useState(value);
 
     const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
+
+    const wrapperClassName =
+        overwriteClassname ?? style["textarea-wrapper"];
+    
+    const inputClassName =
+        overwriteClassname ?? `${style["textarea-input"]} ${className ?? ""}`;
 
     const adjustHeight = () => {
         const textarea = textareaRef.current;
@@ -75,22 +85,24 @@ const EditableTextArea = ({
 
     return isEditing ? (
         <>
-            {showQuoteIcons && 
-            <div className={style["quote-icon-left"]}>
-                <FaQuoteLeft />
-            </div>
-            }
-            <div className={style["textarea-wrapper"]}>
+            {showQuoteIcons && (
+                <div className={style["quote-icon-left"]}>
+                    <FaQuoteLeft />
+                </div>
+            )}
+
+            <div className={wrapperClassName}>
                 <textarea
+                    id={id}
                     ref={textareaRef}
                     autoComplete="off"
-                    autoFocus
                     value={newValue}
+                    autoFocus
                     onChange={handleInputChange}
                     onBlur={handleInputBlur}
                     maxLength={maxChars}
                     placeholder={placeholder}
-                    className={`${style["textarea-input"]} ${className}`}
+                    className={inputClassName}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") {
                             handleInputBlur();
@@ -104,28 +116,39 @@ const EditableTextArea = ({
                         fontSize: "var(--text-base)",
                         outline: "none",
                     }}
-                    />
+                />
             </div>
-        <div className={style["quote-icon-right"]}>
-                {showQuoteIcons && <FaQuoteRight />}
-            </div>
+
+            {showQuoteIcons && (
+                <div className={style["quote-icon-right"]}>
+                    <FaQuoteRight />
+                </div>
+            )}
         </>
     ) : (
         <div className={style["textarea-container"]}>
-            {showQuoteIcons && 
-            <div className={style["quote-icon-left"]}>
-                <FaQuoteLeft />
-            </div>
-            }
-                <span
-                    className={ `${style["editable-textarea"]} ${className}` }
-                    onClick={handleEditClick}
-                >
-                    {value || placeholder}
-                </span>
-            <div className={style["quote-icon-right"]}>
-                {showQuoteIcons && <FaQuoteRight />}
-            </div>
+            {showQuoteIcons && (
+                <div className={style["quote-icon-left"]}>
+                    <FaQuoteLeft />
+                </div>
+            )}
+
+            <span
+                className={
+                    overwriteClassname
+                        ? overwriteClassname
+                        : `${style["editable-textarea"]} ${className ?? ""}`
+                }
+                onClick={handleEditClick}
+            >
+                {value || placeholder}
+            </span>
+
+            {showQuoteIcons && (
+                <div className={style["quote-icon-right"]}>
+                    <FaQuoteRight />
+                </div>
+            )}
         </div>
     );
 };
