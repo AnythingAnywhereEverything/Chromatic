@@ -13,16 +13,14 @@ import { FaPlus } from "react-icons/fa6";
 import { HiMiniUserGroup, HiOutlineUserGroup } from "react-icons/hi2";
 import style from "./style.module.scss";
 import { usePathname } from "next/navigation";
-import { ChromaImage } from "@/app/_components/ui/chromatic/chromaImage";
 import { useUser } from "@/hooks/useUser";
 import { UserIdAvatar } from "@/app/_components/ui/chromatic/initialAvatar";
+import { Image } from "@/app/_components/ui/chromatic/Image";
 
 export default function BottomBar() {
     const pathname = usePathname();
 
     const firstPathSegment = pathname.split("/").filter(Boolean)[0] || "";
-
-    const username = "username";
 
     return (
         <div className={style["bottom-bar"]}>
@@ -61,9 +59,13 @@ export default function BottomBar() {
     );
 }
 
-function getFirstPathSegment(pathname: string): string {
-    const segments = pathname.split("/").filter(Boolean);
-    return segments.length > 0 ? segments[0] : "";
+function parseStaticImage(url: string): string {
+    // remove the extension from the url
+    if (url.startsWith("a_")) {
+        const urlWithoutExtension = url.replace(/\.[^/.]+$/, "");
+        return `${urlWithoutExtension}.png`;
+    }
+    return url;
 }
 
 function BottomBarProfile() {
@@ -75,18 +77,21 @@ function BottomBarProfile() {
     const { id: userId, username, avatar, avatar_thumbhash } = user.data;
 
     // construct the avatar URL using the userId and avatar hash
-    const avatarUrl = `avatars/${userId}/${avatar}`;
+    const avatarUrl = `avatars/${userId}/${parseStaticImage(avatar || "")}`;
 
     return (
         <Link href={`/u/${username}`} className={style["profile-link"]}>
             {avatar ? (
-                <ChromaImage
+                <Image
                     src={avatarUrl}
+                    animated_src={avatarUrl.replace(".png", ".webp")}
                     alt={`${username}'s profile`}
                     thumbhash={avatar_thumbhash || undefined}
                     className={style["profile-image"]}
                     width={32}
                     height={32}
+                    containerWidth={32}
+                    containerHeight={32}
                 />
             ) : (
                 <UserIdAvatar userId={userId} name={username} size={32} />

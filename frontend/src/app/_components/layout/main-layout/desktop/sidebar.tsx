@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
 import style from "./style.module.scss";
 import {
     IoCompass,
@@ -16,14 +15,14 @@ import { FaBell, FaRegBell } from "react-icons/fa6";
 import { usePathname } from "next/navigation"; // pages router
 import Link from "next/link";
 import { useUser } from "@/hooks/useUser";
-import { ChromaImage } from "@/app/_components/ui/chromatic/chromaImage";
+import { Image } from "@/app/_components/ui/chromatic/Image";
 import { UserIdAvatar } from "@/app/_components/ui/chromatic/initialAvatar";
 // OR usePathname if app router
 
 const SidebarNavigator: React.FC = () => {
     const pathname = usePathname();
     const firstPathSegment = pathname.split("/")[1];
- // Custom hook to get user data
+    // Custom hook to get user data
 
     const handleMouseEnter = (event: React.MouseEvent<HTMLDivElement>) => {
         const item = event.currentTarget;
@@ -36,20 +35,26 @@ const SidebarNavigator: React.FC = () => {
     };
 
     //get user theme for logo
-    const userTheme = typeof window !== "undefined" ? localStorage.getItem("theme") : null;
+    const userTheme =
+        typeof window !== "undefined" ? localStorage.getItem("theme") : null;
 
     return (
-        <nav 
+        <nav
             className={style["sidebar"]}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
         >
             <div className={style["sidebar-logo"]}>
                 <Image
-                    src={userTheme === "dark" ? "/asset/icon-light.png" : "/asset/icon-dark.png"}
+                    src={
+                        userTheme === "dark"
+                            ? "/asset/icon-light.png"
+                            : "/asset/icon-dark.png"
+                    }
+                    no_cdn
                     alt="Absolute Cinema"
-                    width={40}
-                    height={40}
+                    containerWidth={40}
+                    containerHeight={40}
                 />
             </div>
 
@@ -89,18 +94,25 @@ const SidebarNavigator: React.FC = () => {
                     label="Notifications"
                     href="/notifications"
                 />
-
             </div>
 
             <div className={style["sidebar-footer"]}>
-                <SidebarProfile/>
+                <SidebarProfile />
             </div>
         </nav>
     );
 };
 
-function SidebarProfile() {
+function parseStaticImage(url: string): string {
+    // remove the extension from the url
+    if (url.startsWith("a_")) {
+        const urlWithoutExtension = url.replace(/\.[^/.]+$/, "");
+        return `${urlWithoutExtension}.png`;
+    }
+    return url;
+}
 
+function SidebarProfile() {
     const user = useUser();
 
     if (!user || !user.data) {
@@ -109,29 +121,31 @@ function SidebarProfile() {
     const { id: userId, username, avatar, avatar_thumbhash } = user.data;
 
     // construct the avatar URL using the userId and avatar hash
-    const avatarUrl = `avatars/${userId}/${avatar}`
+    const avatarUrl = `avatars/${userId}/${parseStaticImage(avatar || "")}`;
 
     return (
         <div className={style["sidebar-profile"]}>
             <Link href={`/u/${username}`} className={style["profile-link"]}>
                 <div className={style["profile-container"]}>
-                    {
-                        avatar ? (
-                            <ChromaImage
-                                src={avatarUrl}
-                                alt={`${username}'s profile`}
-                                className={style["profile-image"]}
-                                size={44}
-                                thumbhash={avatar_thumbhash || undefined}
-                            />
-                        ) : (
-                            <UserIdAvatar
-                                userId={userId}
-                                name={username}
-                                size={44}
-                            />
-                        )
-                    }
+                    {avatar ? (
+                        <Image
+                            src={avatarUrl}
+                            animated_src={avatarUrl.replace(".png", ".webp")}
+                            alt={`${username}'s profile`}
+                            thumbhash={avatar_thumbhash || undefined}
+                            className={style["profile-image"]}
+                            width={44}
+                            height={44}
+                            containerWidth={44}
+                            containerHeight={44}
+                        />
+                    ) : (
+                        <UserIdAvatar
+                            userId={userId}
+                            name={username}
+                            size={44}
+                        />
+                    )}
                 </div>
                 <span className={style["label"]}>Profile</span>
             </Link>

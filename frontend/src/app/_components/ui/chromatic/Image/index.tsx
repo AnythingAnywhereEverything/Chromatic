@@ -23,6 +23,7 @@ export function Image({
     containerHeight,
     optimizationType = "static",
     viewportThreshold = 0.5,
+    no_cdn,
     ...props
 }: ImageProps) {
     const [loaded, setLoaded] = useState(false);
@@ -34,13 +35,15 @@ export function Image({
     const imageContainerRef = useRef<HTMLDivElement>(null);
 
     const imageUrl = useMemo(
-        () => constructImageUrl(src, width, height, format, size),
-        [src, width, height, format, size],
+        () => (no_cdn ? src : constructImageUrl(src, width, height, format, size)),
+        [src, width, height, format, size, no_cdn],
     );
 
     const animatedImageUrl = useMemo(
         () =>
-            animated_src
+            no_cdn
+                ? animated_src
+                : animated_src
                 ? constructImageUrl(animated_src, width, height, format, size)
                 : undefined,
         [animated_src, width, height, format, size],
