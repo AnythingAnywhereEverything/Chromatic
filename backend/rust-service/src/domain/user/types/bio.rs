@@ -24,7 +24,7 @@ impl Bio {
     /// let long_bio = "a".repeat(321);
     /// let bio = Bio::new(&long_bio);
     /// assert!(bio.is_err());
-    /// assert_eq!(bio.err().unwrap(), BioError::TooLong(MAX_BIO_LENGTH));
+    /// assert_eq!(bio.err().unwrap(), BioError::TooLong(320));
     /// ```
     pub fn new(input: &str) -> Result<Self, BioError> {
         let trimmed = input.trim();
