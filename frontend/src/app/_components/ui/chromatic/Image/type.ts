@@ -30,6 +30,7 @@ type ImageProps = UrlParameters &
         delay?: number;
         optimizationType?: OptimizationType;
         viewportThreshold?: number;
+        no_cdn?: boolean;
     };
     
 export type { ImageProps, OptimizationType, UrlParameters };
