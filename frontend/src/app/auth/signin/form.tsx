@@ -4,10 +4,6 @@ import { useEffect, useState } from "react";
 import style from "@styles/layouts/authLayout.module.scss";
 import field from "@styles/ui/chromatic/field.module.scss";
 import { NextPageWithLayout } from "@/types/global";
-import {
-    FieldError,
-    FieldSeparator,
-} from "@components/ui/chromaticUI";
 import Link from "next/link";
 import Form from "next/form";
 import { useRouter } from "next/navigation";
@@ -62,7 +58,6 @@ const SignInForm: NextPageWithLayout = () => {
         <div className={style.form}>
             <section className={`${field.fieldSet}`}>
                 <h2>Sign In</h2>
-                <FieldSeparator>or</FieldSeparator>
                 <Form action={"#"} onSubmit={handleSubmit}>
                     <section className={`${field.fieldGroup}`}>
                         <section>
@@ -108,7 +103,6 @@ const SignInForm: NextPageWithLayout = () => {
                         </section>
                         <section className={style["btn-field"]}>
                             <button className={style["submit"]} type="submit">Sign In</button>
-                            {error && <FieldError>{error}</FieldError>}
                             <p className={field["fieldDescription"]}>
                                 <Link href={"#"}>Forgot password?</Link>
                             </p>

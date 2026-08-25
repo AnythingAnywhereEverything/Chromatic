@@ -1,5 +1,5 @@
-import style from "@styles/layouts/authLayout.module.scss";
 import SignInForm from "./form";
+import style from "./style.module.scss";
 
 export const metadata = {
     title: "Sign In",
@@ -8,9 +8,10 @@ export const metadata = {
 
 const SignIn = () => {
     return (
-        <div className={style.authContainer}>
+        <main className={style.authContainer}>
+            <h2>Chromatic</h2>
             <SignInForm />
-        </div>
+        </main>
     );
 };
 
