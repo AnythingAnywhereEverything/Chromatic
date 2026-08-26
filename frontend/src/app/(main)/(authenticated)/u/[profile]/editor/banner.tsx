@@ -1,17 +1,12 @@
 import style from "./banner.module.scss";
 import getIdColor from "@lib/getIdColor";
 import React from "react";
-import { PublicUserProfileResponse } from "@/api/user/profile";
 import { Image } from "@/app/_components/ui/chromatic/Image";
 
 interface BannerProps {
     userId: string;
     banner: string | null;
     banner_thumbhash: string | null;
-    is_owner?: boolean; // optional prop to indicate if the user is the owner of the profile
-    setProfile: React.Dispatch<
-        React.SetStateAction<PublicUserProfileResponse | null>
-    >; // optional function to update the profile state
 }
 
 function isBannerAnimated(banner: string): boolean {
@@ -20,49 +15,42 @@ function isBannerAnimated(banner: string): boolean {
 }
 
 export function Banner({ userId, banner, banner_thumbhash }: BannerProps) {
+    const bannerContainerRef = React.useRef<HTMLDivElement>(null);
+
     const [bannerInitWidth, setBannerInitWidth] = React.useState(600);
-    const [isinit, setIsInit] = React.useState(false);
     const [bannerInitHeight, setBannerInitHeight] = React.useState(240);
 
     const [bannerContainerWidth, setBannerContainerWidth] = React.useState(600);
     const [bannerContainerHeight, setBannerContainerHeight] =
         React.useState(240);
-    let bannerContainerRef = React.createRef<HTMLDivElement>();
 
     React.useEffect(() => {
+        const element = bannerContainerRef.current;
+
+        if (!element) return;
+
         const handleResize = () => {
-            if (bannerContainerRef.current) {
-                setBannerContainerWidth(
-                    Math.floor(bannerContainerRef.current.offsetWidth),
-                );
-                setBannerContainerHeight(
-                    // set to int not float to avoid fractional pixels which can cause blurry images
-                    Math.floor(
-                        (bannerContainerRef.current.offsetWidth / 5) * 2,
-                    ),
-                ); // maintain aspect ratio 5 / 2
-            }
+            const width = Math.min(900, Math.floor(element.offsetWidth));
+            const height = Math.min(360, Math.floor((width / 5) * 2));
+
+            setBannerContainerWidth(width);
+            setBannerContainerHeight(height);
+
+            // Only set the initial dimensions once
+            setBannerInitWidth((prev) => (prev === 600 ? width : prev));
+            setBannerInitHeight((prev) => (prev === 240 ? height : prev));
         };
 
-        if (bannerContainerRef.current && !isinit) {
-            setBannerInitWidth(
-                Math.floor(bannerContainerRef.current.offsetWidth),
-            );
-            setBannerInitHeight(
-                Math.floor((bannerContainerRef.current.offsetWidth / 5) * 2),
-            );
-            setIsInit(true);
-        }
-
-        // Initial size
+        // Get initial dimensions
         handleResize();
 
-        window.addEventListener("resize", handleResize);
-        return () => {
-            window.removeEventListener("resize", handleResize);
-        };
-    }, [bannerContainerRef]);
+        const resizeObserver = new ResizeObserver(handleResize);
+        resizeObserver.observe(element);
 
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, []);
     return (
         <div
             ref={bannerContainerRef}
