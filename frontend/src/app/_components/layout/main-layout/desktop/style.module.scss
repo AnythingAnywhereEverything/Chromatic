@@ -117,7 +117,7 @@
     transition: background-color 0.3s ease;
     margin-block: calc(var(--spacing) * 1);
     color: var(--text-natural);
-
+    
     .profile-link {
         display: flex;
         align-items: center;
@@ -126,15 +126,15 @@
         color: inherit;
         width: 100%;
     }
-
+    
     .profile-container {
         margin-bottom: -var(--spacing);
     }
-
+    
     &:hover {
         background-color: var(--muted);
     }
-
+    
     .profile-image {
         border-radius: 50%;
         align-items: center;

@@ -35,7 +35,8 @@ export function Image({
     const imageContainerRef = useRef<HTMLDivElement>(null);
 
     const imageUrl = useMemo(
-        () => (no_cdn ? src : constructImageUrl(src, width, height, format, size)),
+        () =>
+            no_cdn ? src : constructImageUrl(src, width, height, format, size),
         [src, width, height, format, size, no_cdn],
     );
 
@@ -44,8 +45,8 @@ export function Image({
             no_cdn
                 ? animated_src
                 : animated_src
-                ? constructImageUrl(animated_src, width, height, format, size)
-                : undefined,
+                  ? constructImageUrl(animated_src, width, height, format, size)
+                  : undefined,
         [animated_src, width, height, format, size],
     );
 
@@ -133,23 +134,6 @@ export function Image({
                 }
             }}
         >
-            {thumbhashUrl && (
-                <img
-                    src={thumbhashUrl}
-                    aria-hidden
-                    style={{
-                        position: "absolute",
-                        inset: 0,
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                        opacity: loaded ? 0 : 1,
-                        transition: `opacity ${delay}ms ease-out`,
-                        pointerEvents: "none",
-                    }}
-                />
-            )}
-
             <img
                 {...props}
                 src={imageUrl}
@@ -173,6 +157,7 @@ export function Image({
 
             {shouldLoadAnimated && animatedImageUrl && pageActive && (
                 <img
+                    {...props}
                     src={animatedImageUrl}
                     width={containerWidth}
                     height={containerHeight}
@@ -187,6 +172,24 @@ export function Image({
                         height: "100%",
                         objectFit: "cover",
                         opacity: animatedLoaded ? 1 : 0,
+                        transition: `opacity ${delay}ms ease-out`,
+                        pointerEvents: "none",
+                    }}
+                />
+            )}
+
+            {thumbhashUrl && (
+                <img
+                    {...props}
+                    src={thumbhashUrl}
+                    aria-hidden
+                    style={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        opacity: loaded ? 0 : 1,
                         transition: `opacity ${delay}ms ease-out`,
                         pointerEvents: "none",
                     }}
