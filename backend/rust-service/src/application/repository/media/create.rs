@@ -35,14 +35,17 @@ pub async fn media_data(
             uploader_id, 
             name, 
             path, 
-            status, 
+            status,
+            flags,
             thumbhash, 
             lock_hash, 
             created_at, 
             updated_at, 
-            lock_expiration, 
+            lock_expiration,
+            original_name,
+            original_content_type,
             deleted_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         "#,
     )
     .bind(media_data.id)
@@ -50,11 +53,14 @@ pub async fn media_data(
     .bind(&media_data.name)
     .bind(&media_data.path)
     .bind(&media_data.status)
+    .bind(&media_data.flags)
     .bind(&media_data.thumbhash)
     .bind(&media_data.lock_hash)
     .bind(media_data.created_at)
     .bind(media_data.updated_at)
     .bind(media_data.lock_expiration)
+    .bind(&media_data.original_name)
+    .bind(&media_data.original_content_type)
     .bind(media_data.deleted_at)
     .execute(tx.as_mut())
     .await?;

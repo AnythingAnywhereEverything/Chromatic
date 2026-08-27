@@ -5,7 +5,7 @@ use chrono::DateTime;
 use chrono::Utc;
 
 use crate::api::handlers::post_handler::TagTarget;
-use crate::{api::handlers::post_handler::PostVisibility, application::repository::media::row::MediaDataRow};
+use crate::{api::handlers::post_handler::PostVisibility};
 
 #[derive(sqlx::FromRow, Debug)]
 pub struct PostRow {
@@ -63,6 +63,7 @@ pub struct MediaAttachment {
     pub path: String,
     pub created_at: DateTime<Utc>,
     pub thumbhash: Option<String>,
+    pub flags: i64,
     pub name: String,
     pub updated_at: DateTime<Utc>,
     pub status: String,

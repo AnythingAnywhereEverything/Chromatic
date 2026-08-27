@@ -5,12 +5,15 @@ use crate::application::service::{errors::media_service::FileError, media::inspe
 pub enum Flags {
     None = 0,
     // Fist bit indicates whether the file is animated (e.g., GIF, APNG).
+    // bit as numerial = 1
     IsAnimated = 1 << 0,
 
     // Second bit indicates whether the file is an HLS video.
+    // bit as numerial = 2
     IsHLS = 1 << 1,
 
     // For video file
+    // bit as numerial = 4
     HasThumbnail = 1 << 2,
 }
 

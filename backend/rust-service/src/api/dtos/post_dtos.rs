@@ -54,6 +54,7 @@ impl Into<PostDTO> for PostRow {
                 id: media.id.to_string(),
                 path: media.path,
                 name: media.name,
+                flags: media.flags,
                 thumbhash: media.thumbhash,
                 status: media.status,
                 created_at: media.created_at,
@@ -128,6 +129,7 @@ impl Into<CommentDTO> for CommentRow {
                 width: media.width,
                 height: media.height,
                 duration: media.duration,
+                flags: media.flags,
             }).collect(),
         }
     }

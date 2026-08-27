@@ -14,6 +14,7 @@ pub async fn media_full_data(
         SELECT
             md.id,
             md.path,
+            md.flags,
             md.name,
             md.thumbhash,
             md.status,

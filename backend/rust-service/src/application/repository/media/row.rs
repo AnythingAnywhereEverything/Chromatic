@@ -37,6 +37,9 @@ pub struct MediaDataRow {
     pub uploader_id: i64,
     pub name: String,
     pub path: String,
+    pub flags: i64,
+    pub original_name: String,
+    pub original_content_type: String,
     pub status: MediaStatus,
     pub thumbhash: Option<String>,
     pub lock_hash: Option<String>,
@@ -53,6 +56,9 @@ impl Default for MediaDataRow {
             uploader_id: 0,
             name: String::new(),
             path: String::new(),
+            flags: 0,
+            original_name: String::new(),
+            original_content_type: String::new(),
             status: MediaStatus::Processing,
             thumbhash: None,
             lock_hash: None,
@@ -76,6 +82,7 @@ pub struct MediaMetadataRow {
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct MediaDataWithMetadataRow {
+    pub flags: i64,
     pub id: i64,
     pub path: String,
     pub name: String,
