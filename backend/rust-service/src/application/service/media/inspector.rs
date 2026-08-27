@@ -161,20 +161,38 @@ pub async fn probe_video(
             "-select_streams",
             "v:0",
             "-show_entries",
-            "stream=width,height,duration",
+            "stream=width,height",
+            "-show_entries",
+            "format=duration",
             "-of",
-            "csv=p=0",
+            "json",
         ])
         .arg(path)
         .output()
         .map_err(InspectionError::IoError)?;
+
     if !output.status.success() {
         return Err(InspectionError::InspectionFailed);
     }
-    let line = String::from_utf8_lossy(&output.stdout);
-    let mut parts = line.trim().split(',');
-    let w = parts.next().and_then(|x| x.parse().ok());
-    let h = parts.next().and_then(|x| x.parse().ok());
-    let d = parts.next().and_then(|x| x.parse().ok());
+
+    let value: serde_json::Value =
+        serde_json::from_slice(&output.stdout)
+            .map_err(|_| InspectionError::InspectionFailed)?;
+
+    let stream = value["streams"]
+        .get(0);
+
+    let w = stream
+        .and_then(|s| s["width"].as_i64())
+        .map(|v| v as i32);
+
+    let h = stream
+        .and_then(|s| s["height"].as_i64())
+        .map(|v| v as i32);
+
+    let d = value["format"]["duration"]
+        .as_str()
+        .and_then(|v| v.parse::<f64>().ok());
+
     Ok((w, h, d))
 }

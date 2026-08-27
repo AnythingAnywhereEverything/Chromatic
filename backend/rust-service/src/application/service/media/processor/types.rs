@@ -187,7 +187,7 @@ pub enum VideoProcessorType {
     },
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub enum VideoPostProcessorType {
     Transcode {
         // output format, e.g., "mp4", "webm"

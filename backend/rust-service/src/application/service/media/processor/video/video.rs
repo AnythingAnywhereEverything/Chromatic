@@ -25,6 +25,17 @@ pub struct Resolution {
     pub side: ResolutionSide,
 }
 
+fn get_segment_duration(base_duration: f32, resolution: &Resolution) -> f32 {
+    // * Higher resolutions get shorter segments to keep individual fragments smaller.
+    match resolution.length {
+        2160.. => base_duration.min(2.0),
+        1440.. => base_duration.min(3.0),
+        1080.. => base_duration.min(4.0),
+        720.. => base_duration.min(5.0),
+        _ => base_duration,
+    }
+}
+
 async fn has_audio_stream(source_path: &PathBuf) -> Result<bool, MediaProcessorError> {
     let output = Command::new("ffprobe")
         .args([
@@ -341,12 +352,13 @@ pub async fn process_video_hls(
         let segment_pattern = job_dir_path.join(format!("v{}_seg_%03d.ts", index));
         let playlist_path = job_dir_path.join(&playlist_name);
 
+        let variant_segment_duration = get_segment_duration(segment_duration, res);
+
         let (variant_width, variant_height) = match res.side {
             ResolutionSide::Width => {
                 let variant_width = res.length;
                 let variant_height =
-                    ((height as f64 / width as f64) * variant_width as f64)
-                        .round() as u32;
+                    ((height as f64 / width as f64) * variant_width as f64).round() as u32;
 
                 // * Keep dimensions even for H.264.
                 (variant_width, variant_height & !1)
@@ -355,26 +367,18 @@ pub async fn process_video_hls(
             ResolutionSide::Height => {
                 let variant_height = res.length;
                 let variant_width =
-                    ((width as f64 / height as f64) * variant_height as f64)
-                        .round() as u32;
+                    ((width as f64 / height as f64) * variant_height as f64).round() as u32;
 
                 // * Keep dimensions even for H.264.
                 (variant_width & !1, variant_height)
             }
         };
 
-        let scale = format!(
-            "scale=w={}:h={}",
-            variant_width,
-            variant_height
-        );
+        let scale = format!("scale=w={}:h={}", variant_width, variant_height);
 
         // * Hardware encoding is selected per variant because some GPUs
         // * cannot encode very small resolutions.
-        let variant_encoder = if encoder.supports_resolution(
-            variant_width,
-            variant_height,
-        ) {
+        let variant_encoder = if encoder.supports_resolution(variant_width, variant_height) {
             encoder
         } else {
             tracing::info!(
@@ -408,8 +412,7 @@ pub async fn process_video_hls(
             .arg("0:v:0");
 
         if has_audio {
-            cmd.arg("-map")
-                .arg("0:a:0");
+            cmd.arg("-map").arg("0:a:0");
         }
 
         cmd.arg("-c:v");
@@ -420,15 +423,18 @@ pub async fn process_video_hls(
             cmd.arg("libx264");
         }
 
+        for arg in variant_encoder.quality_args() {
+            cmd.arg(arg);
+        }
+
         if has_audio {
-            cmd.arg("-c:a")
-                .arg("aac");
+            cmd.arg("-c:a").arg("aac");
         }
 
         cmd.arg("-f")
             .arg("hls")
             .arg("-hls_time")
-            .arg(segment_duration.to_string())
+            .arg(variant_segment_duration.to_string())
             .arg("-hls_playlist_type")
             .arg("vod")
             .arg("-hls_segment_filename")
@@ -453,11 +459,7 @@ pub async fn process_video_hls(
 
         let metadata = probe_hls_variant(&playlist_path).await?;
 
-        tracing::debug!(
-            "HLS variant {} metadata: {:?}",
-            index,
-            metadata
-        );
+        tracing::debug!("HLS variant {} metadata: {:?}", index, metadata);
 
         variants.push((index, playlist_name, metadata));
     }
@@ -478,11 +480,7 @@ pub async fn process_video_hls(
         master.push_str(&format!("{}\n\n", playlist_name));
     }
 
-    tokio::fs::write(
-        job_dir_path.join("master.m3u8"),
-        master,
-    )
-    .await?;
+    tokio::fs::write(job_dir_path.join("master.m3u8"), master).await?;
 
     Ok(())
 }

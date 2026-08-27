@@ -12,21 +12,14 @@ use crate::application::{
     repository::media::{
         self,
         row::{MediaDataRow, MediaMetadataRow, MediaStatus},
-    },
-    service::{
-        errors::MediaServiceError,
-        media::{
-            inspector::{self, MediaKind},
-            model::{
+    }, service::{
+        errors::MediaServiceError, media::{
+            inspector::{self, MediaKind}, model::{
                 File, FileContainer,
                 container::{ContainerConfig, NamingStrategy},
-            },
-            processor::{image::ImageProcessor, video::VideoProcessor},
-            storage::{PersistentStore, TempStore},
-        },
-        snowflake_service::SnowflakeGenerator,
-    },
-    state::AppState,
+            }, processor::{image::ImageProcessor, types::VideoPostProcessorType, video::VideoProcessor}, storage::{PersistentStore, TempStore},
+        }, snowflake_service::SnowflakeGenerator,
+    }, state::AppState,
 };
 
 pub struct MediaService {
@@ -159,9 +152,10 @@ impl MediaService {
                 name: file.file_name_with_extension().to_string(),
                 status: MediaStatus::Pending,
                 path: file_path,
+                flags: file.flags() as i64,
                 thumbhash: file.placeholder().map(|s| s.to_string()),
-                // next migration
-                // original_name: file.original_name().map(|s| s.to_string()),
+                original_name: file.original_name().map(|s| s.to_string()).unwrap_or_default(),
+                original_content_type: file.original_content_type().map(|s| s.to_string()).unwrap_or_default(),
                 ..Default::default()
             };
 
@@ -608,7 +602,7 @@ impl MediaService {
 
                         // * video processing doesnt support yet, only post processing that got supported.
 
-                        if let Some(_pvpo) = pvpo {
+                        if let Some(pvpo) = pvpo {
                             // create returning file for post processing.
                             let mut post_container =
                                 FileContainer::new("video_processing_job".to_string(), &temp_store)
@@ -641,6 +635,19 @@ impl MediaService {
                                 format!("{}/{}/", file.file_directory(), file.id().unwrap_or(-1))
                             };
                             file.set_key_override(Some(key_override));
+
+                            // set and check HLS EARLY
+                            tracing::debug!("Checking for HLS in video post processors");
+                            if pvpo.iter().any(|p| matches!(p, VideoPostProcessorType::HLS { .. })) {
+                                tracing::debug!("HLS post processor found, setting HLS flag on file");
+                                file.set_hls(true);
+                            }
+
+                            tracing::debug!(
+                                "Returning ProcessResponse with processed file: {:#?} and post container: {:#?}",
+                                file,
+                                post_container
+                            );
 
                             let res = ProcessResponse {
                                 processed_file: file,

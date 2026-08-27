@@ -1,5 +1,5 @@
-use tokio::process::Command;
 use crate::application::service::errors::media_service::MediaProcessorError;
+use tokio::process::Command;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HardwareAccel {
     Auto,
@@ -42,38 +42,21 @@ pub async fn get_available_hwaccels() -> Result<Vec<HardwareAccel>, MediaProcess
     let encoders_stderr = String::from_utf8_lossy(&encoders.stderr);
 
     // * FFmpeg can emit capability information through either stream.
-    let hwaccels_output = format!(
-        "{}\n{}",
-        hwaccels_stdout,
-        hwaccels_stderr
-    );
+    let hwaccels_output = format!("{}\n{}", hwaccels_stdout, hwaccels_stderr);
 
-    let encoders_output = format!(
-        "{}\n{}",
-        encoders_stdout,
-        encoders_stderr
-    );
+    let encoders_output = format!("{}\n{}", encoders_stdout, encoders_stderr);
 
-    let has_hwaccel = |name: &str| {
-        hwaccels_output
-            .lines()
-            .any(|line| line.trim() == name)
-    };
+    let has_hwaccel = |name: &str| hwaccels_output.lines().any(|line| line.trim() == name);
 
     let has_encoder = |name: &str| {
-        encoders_output
-            .lines()
-            .any(|line| {
-                line.split_whitespace()
-                    .nth(1)
-                    .is_some_and(|encoder| encoder == name)
-            })
+        encoders_output.lines().any(|line| {
+            line.split_whitespace()
+                .nth(1)
+                .is_some_and(|encoder| encoder == name)
+        })
     };
 
-    tracing::info!(
-        "Available hardware accelerations: {:?}",
-        hwaccels_output
-    );
+    tracing::info!("Available hardware accelerations: {:?}", hwaccels_output);
 
     let mut available = Vec::new();
 
@@ -90,9 +73,7 @@ pub async fn get_available_hwaccels() -> Result<Vec<HardwareAccel>, MediaProcess
         available.push(HardwareAccel::Amf);
     }
 
-    if has_hwaccel("videotoolbox")
-        && has_encoder("h264_videotoolbox")
-    {
+    if has_hwaccel("videotoolbox") && has_encoder("h264_videotoolbox") {
         available.push(HardwareAccel::Videotoolbox);
     }
 
@@ -112,10 +93,7 @@ pub async fn get_available_hwaccels() -> Result<Vec<HardwareAccel>, MediaProcess
         available.push(HardwareAccel::Opencl);
     }
 
-    tracing::info!(
-        "Detected hardware acceleration: {:?}",
-        available
-    );
+    tracing::info!("Detected hardware acceleration: {:?}", available);
 
     Ok(available)
 }
@@ -138,33 +116,23 @@ pub fn select_best_hardware_accel(available: &[HardwareAccel]) -> HardwareAccel 
 }
 
 impl HardwareAccel {
-    pub fn supports_resolution(
-        self,
-        width: u32,
-        height: u32,
-    ) -> bool {
+    pub fn supports_resolution(self, width: u32, height: u32) -> bool {
         match self {
             // * NVENC H.264 has GPU/driver-dependent minimum dimensions.
             // * Use 145 as the conservative minimum for automatic selection.
-            HardwareAccel::Nvenc => {
-                width >= 145 && height >= 145
-            }
+            HardwareAccel::Nvenc => width >= 145 && height >= 145,
 
             HardwareAccel::Qsv
             | HardwareAccel::Amf
             | HardwareAccel::V4l2m2m
             | HardwareAccel::Vaapi
-            | HardwareAccel::Videotoolbox => {
-                true
-            }
+            | HardwareAccel::Videotoolbox => true,
 
             HardwareAccel::Cuda
             | HardwareAccel::Vdpau
             | HardwareAccel::Opencl
             | HardwareAccel::Auto
-            | HardwareAccel::Software => {
-                true
-            }
+            | HardwareAccel::Software => true,
         }
     }
 
@@ -204,6 +172,45 @@ impl HardwareAccel {
             HardwareAccel::Vdpau => &["-hwaccel", "vdpau"],
 
             HardwareAccel::Opencl | HardwareAccel::Auto | HardwareAccel::Software => &[],
+        }
+    }
+
+    pub fn quality_args(self) -> Vec<String> {
+        match self {
+            HardwareAccel::Nvenc => vec!["-rc".into(), "vbr".into(), "-cq".into(), "23".into()],
+
+            HardwareAccel::Qsv => vec!["-global_quality".into(), "23".into()],
+
+            HardwareAccel::Amf => vec![
+                "-rc".into(),
+                "cqp".into(),
+                "-qp_i".into(),
+                "23".into(),
+                "-qp_p".into(),
+                "23".into(),
+            ],
+
+            HardwareAccel::Vaapi => vec!["-qp".into(), "23".into()],
+
+            HardwareAccel::Videotoolbox => vec!["-q:v".into(), "60".into()],
+
+            HardwareAccel::V4l2m2m => {
+                // * V4L2 encoder quality controls vary by driver.
+                Vec::new()
+            }
+
+            HardwareAccel::Software
+            | HardwareAccel::Cuda
+            | HardwareAccel::Vdpau
+            | HardwareAccel::Opencl
+            | HardwareAccel::Auto => {
+                vec![
+                    "-crf".into(),
+                    "23".into(),
+                    "-preset".into(),
+                    "medium".into(),
+                ]
+            }
         }
     }
 }
