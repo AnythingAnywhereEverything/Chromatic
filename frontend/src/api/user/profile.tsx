@@ -12,6 +12,7 @@ export interface PublicUserProfileResponse {
   is_blocked: boolean;
   is_follower: boolean;
   is_following: boolean;
+  posts_count: number;
   followers_count: number;
   following_count: number;
   active: boolean;

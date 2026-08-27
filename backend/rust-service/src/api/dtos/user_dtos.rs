@@ -40,6 +40,7 @@ pub struct PublicUserProfileDTO {
     pub username: Option<String>,
     pub display_name: Option<String>,
     pub bio: Option<String>,
+    pub quote: Option<String>,
     pub avatar: Option<String>, // hash name
     pub avatar_thumbhash: Option<String>, // thumbhash
     pub banner: Option<String>, // hash name
@@ -47,6 +48,7 @@ pub struct PublicUserProfileDTO {
     pub is_blocked: bool,
     pub is_following: bool,
     pub is_follower: bool,
+    pub posts_count: Option<i32>,
     pub followers_count: Option<i32>,
     pub following_count: Option<i32>,
     pub created_at: String,
@@ -60,6 +62,7 @@ impl Into<PublicUserProfileDTO> for UserProfileRow {
             username: self.username,
             display_name: self.display_name,
             bio: self.bio,
+            quote: self.quote,
             avatar: self.avatar,
             avatar_thumbhash: self.avatar_thumbhash,
             banner: self.banner,
@@ -67,6 +70,7 @@ impl Into<PublicUserProfileDTO> for UserProfileRow {
             is_blocked: false, // This should be set based on the context of the request
             is_following: self.is_following.unwrap_or(false),
             is_follower: self.is_follower.unwrap_or(false),
+            posts_count: self.posts_count,
             followers_count: self.followers_count,
             following_count: self.following_count,
             created_at: self.created_at.to_rfc3339(),

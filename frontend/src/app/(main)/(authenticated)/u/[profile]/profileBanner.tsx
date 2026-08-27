@@ -7,11 +7,17 @@ import {
 import { useEffect, useState } from "react";
 
 import style from "./style.module.scss";
-import { getCacheUserId } from "@/handler/token_handler";
-import { Banner } from "./editor/banner";
-import { Avatar } from "./editor/avatar";
+import { Banner } from "./header/banner";
+import { Avatar } from "./header/avatar";
 import { ViewProfile } from "@/app/_components/ui/chromatic/viewProfile";
 import { useProfile } from "@/hooks/useProfile";
+import {
+    Dropdown,
+    DropdownContent,
+    DropdownItem,
+    DropdownTrigger,
+} from "@/app/_components/ui/chromatic/dropdown";
+import { BsThreeDots } from "react-icons/bs";
 
 function ProfileBannerSkeleton() {
     return (
@@ -36,7 +42,7 @@ interface AvatarUploadItem {
     avatar: string;
 }
 
-function parseStaticImage (url: string ) {
+function parseStaticImage(url: string) {
     // remove the extension from the url
     if (url.startsWith("a_")) {
         const urlWithoutExtension = url.replace(/\.[^/.]+$/, "");
@@ -50,6 +56,8 @@ function ProfileBanner({ params }: { params: { profile: string } }) {
         null,
     );
 
+    const [isOwner, setIsOwner] = useState(false);
+
     const userProfile = useProfile();
 
     useEffect(() => {
@@ -58,9 +66,10 @@ function ProfileBanner({ params }: { params: { profile: string } }) {
             const response = await getPublicUserProfile(profileOf);
 
             // if owner, use profile from user service
-            if (getCacheUserId() === response?.id && userProfile?.data) {
+            if (userProfile?.data?.id === response?.id && userProfile?.data) {
                 console.log("Using profile from user service");
                 setProfile(userProfile.data);
+                setIsOwner(true);
                 return;
             }
 
@@ -70,13 +79,10 @@ function ProfileBanner({ params }: { params: { profile: string } }) {
     }, [params.profile, userProfile?.data]); // refetch when the profile param changes or when the user profile data changes
 
     // create banner container ref
-    
 
     if (!profile) {
         return <ProfileBannerSkeleton />;
     }
-
-    const is_owner = getCacheUserId() === profile?.id;
 
     return (
         <div className={style["profile-header"]}>
@@ -84,39 +90,70 @@ function ProfileBanner({ params }: { params: { profile: string } }) {
                 <>
                     <Banner
                         userId={profile.id}
-                        banner={parseStaticImage(profile.banner ? profile.banner : "")}
+                        banner={parseStaticImage(
+                            profile.banner ? profile.banner : "",
+                        )}
                         banner_thumbhash={profile.banner_thumbhash}
-                        is_owner={is_owner}
-                        setProfile={setProfile}
                     />
                     <div className={style["profile-info"]}>
-                        <Avatar
-                            profile={profile}
-                        />
-                        <div className={style["profile-details"]}>
-                            <h2>{profile.display_name ? profile.display_name : profile.username}</h2>
-                            <p>{profile.username}</p>
-                            <p>{profile.bio}</p>
-                            <div className={style["profile-stats"]}>
-                                <p>
-                                    <strong>{0 /* Need migration */}</strong>{" "}
-                                    Posts
-                                </p>
-                                <p>
-                                    <strong>{profile.followers_count}</strong>{" "}
-                                    Followers
-                                </p>
-                                <p>
-                                    <strong>{profile.following_count}</strong>{" "}
-                                    Following
-                                </p>
+                        <div className={style["profile-details-container"]}>
+                            <Avatar profile={profile} />
+                            <div className={style["profile-details"]}>
+                                <h2>
+                                    {profile.display_name
+                                        ? profile.display_name
+                                        : profile.username}
+                                </h2>
+                                <p>@{profile.username}</p>
+                                <div className={style["profile-stats"]}>
+                                    <p>
+                                        <strong>{profile.posts_count}</strong>{" "}
+                                        Posts
+                                    </p>
+                                    <p>
+                                        <strong>
+                                            {profile.followers_count}
+                                        </strong>{" "}
+                                        Followers
+                                    </p>
+                                    <p>
+                                        <strong>
+                                            {profile.following_count}
+                                        </strong>{" "}
+                                        Following
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                        <ViewProfile username={profile.username}>
-                            <button>
-                                edit profile
-                            </button>
-                        </ViewProfile>
+                        {isOwner ? (
+                            // if owner, show view profile button
+                            <div className={style["profile-actions"]}>
+                                <ViewProfile username={profile.username}>
+                                    <button
+                                        className={style["view-profile-button"]}
+                                    >
+                                        Edit Profile
+                                    </button>
+                                </ViewProfile>
+                            </div>
+                        ) : (
+                            <div className={style["profile-actions"]}>
+                                <Dropdown placement="bottom-end">
+                                    <DropdownTrigger asChild>
+                                        <button
+                                            className={
+                                                style["dropdown-trigger-button"]
+                                            }
+                                        >
+                                            <BsThreeDots />
+                                        </button>
+                                    </DropdownTrigger>
+                                    <DropdownContent>
+                                        <DropdownItem>Report User</DropdownItem>
+                                    </DropdownContent>
+                                </Dropdown>
+                            </div>
+                        )}
                     </div>
                 </>
             ) : (
