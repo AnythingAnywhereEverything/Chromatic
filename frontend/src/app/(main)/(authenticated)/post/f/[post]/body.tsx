@@ -1,6 +1,6 @@
 "use client";
 
-import { getFocusedPost, mediaPostProps } from "@/api/post/getFeed";
+import { commentProps, getFocusedPost, mediaPostProps } from "@/api/post/getFeed";
 import { getCacheUserId } from "@/handler/token_handler";
 import { useEffect, useRef, useState } from "react";
 import style from "./content.module.scss";
@@ -11,6 +11,8 @@ import { TogglePostLike } from "@/api/post/like";
 import { GoComment } from "react-icons/go";
 import { LuThumbsUp } from "react-icons/lu";
 import { DialogSharePost } from "@/app/_components/ui/chromatic/post";
+import BottomPostInteraction from "@/app/_components/ui/chromatic/post/interaction";
+import CommentSection from "./comment";
 
 function PostContentSkeleton() {
   return <div className={style["skeleton-container"]}>loading</div>;
@@ -18,7 +20,12 @@ function PostContentSkeleton() {
 
 function PostContentPage({ params }: { params: { post: string } }) {
   const [post, setPost] = useState<mediaPostProps | null>(null);
-  useEffect(() => {
+    const [likeState, setLikeState] = useState(post?.is_liked || false);
+    const [likeCount, setLikeCount] = useState(post?.total_likes || 0);
+    const ref = useRef<HTMLSpanElement | null>(null);
+    
+    const [comment, setComment] = useState<commentProps | null>(null);
+    useEffect(() => {
     const postFetch = async () => {
       const postOf = params.post;
       const response = await getFocusedPost(postOf);
@@ -29,6 +36,8 @@ function PostContentPage({ params }: { params: { post: string } }) {
         return;
       }
       setPost(response);
+      setLikeState(response?.is_liked);
+      setLikeCount(response?.total_likes);
     };
     postFetch();
   }, [params.post]);
@@ -37,11 +46,6 @@ function PostContentPage({ params }: { params: { post: string } }) {
     return <PostContentSkeleton />;
   }
 
-    const [likeState, setLikeState] = useState(post.is_liked);
-    const [likeCount, setLikeCount] = useState(post.total_likes);
-    const ref = useRef<HTMLSpanElement | null>(null);
-    
-
   console.log(post);
   return (
     <article className={style["layout"]} key={post.id}>
@@ -49,81 +53,40 @@ function PostContentPage({ params }: { params: { post: string } }) {
         <section className={style["main-post-container"]}>
           {/*  */}
           <section className={style["back-button"]}>
-            <button type="button">
-              <IoArrowBackCircleOutline />
+            <button 
+            type="button"
+            style={{cursor: "pointer"}}
+            className={style["leave-btn"]}
+            >
+              <IoArrowBackCircleOutline size={36}/>
             </button>
-            <h3>Post</h3>
+            <h2>Post</h2>
           </section>
           <PostHeader {...post} />
           <section className={style["main"]}>
             <div className={style["context"]}>
-              <span>{post.content}</span>
+              <span style={{fontSize: "var(--text-small)"}}>{post.content}</span>
             </div>
-            <article className={style[""]}>
-              {post.has_attachment && <MediaGroup media={post.media} />}
-              <ul className={style["subject-tag"]}>
-                {post.tag.map((item) => {
-                  return (
-                    <li key={item.tag_id}>
-                      <p>{item.tag_name}</p>
-                    </li>
-                  );
-                })}
-              </ul>
-              <div className={style["bottom-container"]}>
-                <section className={style["interaction"]}>
-                  <div style={{ userSelect: "none" }}>
-                    {/* //todo: Add animation if possible*/}
-                    <button
-                      type="button"
-                      style={{ cursor: "pointer" }}
-                      onClick={async () => {
-                        try {
-                          const nextLikeState = !likeState;
-                          const response = await TogglePostLike(
-                            post.id,
-                            nextLikeState,
-                          );
+            <article className={style["media"]}>
+                {post.has_attachment && <MediaGroup media={post.media} />}
+                <ul className={style["subject-tag"]}>
+                  {post.tag.map((item) => {
+                    return (
+                      <li key={item.tag_id}
+                      style={{backgroundColor: `${item.tag_color}`}}
+                      >
+                        <p>{item.tag_name}</p>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </article>
+              <BottomPostInteraction
+                {...post}
+              />
 
-                          setLikeState(nextLikeState);
-                          setLikeCount(response.total_liked);
-                        } catch (error) {
-                          console.error("Failed to toggle like:", error);
-                        }
-                      }}
-                    >
-                      <LuThumbsUp />
-                    </button>
-                    {/* //todo: onClick get panigation user liked on post */}
-                    <button
-                      className={style["has-hover"]}
-                      style={{ cursor: "pointer" }}
-                      type="button"
-                    >
-                      {likeCount || 0}
-                    </button>
-                  </div>
-                  <div style={{ userSelect: "none", cursor: "pointer" }}>
-                    {/* //todo: onClick pass to specific post and fetch comment */}
-                    <button type="button">
-                      <GoComment />
-                    </button>
-                    {post.total_comment || 0}
-                  </div>
-                </section>
-
-                <section className={style["interaction"]}>
-                  {/* //todo: dialog for share *if possible */}
-                  <button type="button" style={{ cursor: "pointer" }}>
-                    <DialogSharePost />
-                  </button>
-                  {/* //todo: bookmark ofc why not xdddddddddddd */}
-                  <button type="button" style={{ cursor: "pointer" }}>
-                    <IoBookmarkOutline />
-                  </button>
-                </section>
-              </div>
-            </article>
+              <CommentSection 
+              postId={params.post}/>
           </section>
         </section>
       ) : (

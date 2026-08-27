@@ -2,7 +2,7 @@ import { deletePost, mediaPostProps } from "@/api/post/getFeed";
 import style from "./header.module.scss";
 import { PostAvatar } from "@/app/_components/ui/chromatic/post/profile";
 import { useRef } from "react";
-import { formatdatemonthyear } from "@/app/_components/ui/chromatic/post/dataformat";
+import { formatdatemonthyear, formatSocialMediaDate } from "@/app/_components/ui/chromatic/post/dataformat";
 import {
   Dropdown,
   DropdownContent,
@@ -11,6 +11,7 @@ import {
 } from "@/app/_components/ui/chromatic/dropdown";
 import { BsThreeDots } from "react-icons/bs";
 import { getCacheUserId } from "@/handler/token_handler";
+import { GoDotFill } from "react-icons/go";
 
 export default function PostHeader({
   id,
@@ -24,6 +25,7 @@ export default function PostHeader({
 }: mediaPostProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const userId = getCacheUserId();
+  const hasDisplayName = display_name || null;
   const handleDeletePost = async () => {
     try {
       console.log("Deleting post with ID:", id);
@@ -34,47 +36,59 @@ export default function PostHeader({
     }
   };
   return (
-    <section className={style["profile"]} key={user_id}>
-      <div className={style["avatar"]}>
-        <PostAvatar
-          userId={id}
-          username={username}
-          displayName={display_name}
-          avatar={avatar_path}
-          thumbhash={avatar_thumbhash}
-          containerRef={rootRef}
-        />
-      </div>
-      <div className={style["username"]}>
-        <p>
-          {display_name} {username}
-        </p>
-        <span>{formatdatemonthyear(updated_at)}</span>
-      </div>
-      <div className={style["option"]}>
-        <Dropdown>
-          <DropdownTrigger asChild>
-            <BsThreeDots />
-          </DropdownTrigger>
-          {user_id === userId ? (
-            <DropdownContent>
-              <DropdownItem>Edit Post</DropdownItem>
-              <DropdownItem>
-                <button type="button" onClick={handleDeletePost}>
-                  Delete Post
-                </button>
-              </DropdownItem>
-            </DropdownContent>
-          ) : (
-            <DropdownContent>
-              <DropdownItem>Follow @{username}</DropdownItem>
-              <DropdownItem>Add Friend @{username}</DropdownItem>
-              <DropdownItem>Block @{username}</DropdownItem>
-              <DropdownItem>Report</DropdownItem>
-            </DropdownContent>
-          )}
-        </Dropdown>
-      </div>
+    <section className={style["header"]}>
+      <section className={style["profile-header"]} key={user_id}>
+        <div className={style["avatar"]}>
+          <PostAvatar
+            userId={id}
+            username={username}
+            displayName={display_name}
+            avatar={avatar_path}
+            thumbhash={avatar_thumbhash}
+            containerRef={rootRef}
+          />
+        </div>
+        <div className={style["user-info"]}>
+            <div className={style["username"]}>
+              <p style={{fontSize: "var(--text-large)"}}>{display_name || username}</p>
+            </div>
+            <div className={style["post-date"]}>
+              <p>
+                {hasDisplayName && (
+                  <>
+                      <span>{username + " "}</span>
+                      <GoDotFill size={8}  />
+                  </>
+                )}
+              </p>
+              <p style={{fontSize: "var(--text)"}}>{formatSocialMediaDate(updated_at)}</p>
+            </div>
+          </div>
+        <div className={style["option"]}>
+          <Dropdown>
+            <DropdownTrigger asChild>
+              <BsThreeDots />
+            </DropdownTrigger>
+            {user_id === userId ? (
+              <DropdownContent>
+                <DropdownItem>Edit Post</DropdownItem>
+                <DropdownItem>
+                  <button type="button" onClick={handleDeletePost}>
+                    Delete Post
+                  </button>
+                </DropdownItem>
+              </DropdownContent>
+            ) : (
+              <DropdownContent>
+                <DropdownItem>Follow @{username}</DropdownItem>
+                <DropdownItem>Add Friend @{username}</DropdownItem>
+                <DropdownItem>Block @{username}</DropdownItem>
+                <DropdownItem>Report</DropdownItem>
+              </DropdownContent>
+            )}
+          </Dropdown>
+        </div>
+      </section>
     </section>
   );
 }
