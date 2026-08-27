@@ -14,7 +14,7 @@ use crate::{
     }, application::{
         repository::{
             media::{self as media_repo, row::MediaStatus},
-            post::{self as post_repo, comment},
+            post::{self as post_repo},
         }, service::{
             errors::{AuthServiceError, CommentServiceError}, media::{
                 extractor::{ExtractorFileOptions, ValidationOptions},
