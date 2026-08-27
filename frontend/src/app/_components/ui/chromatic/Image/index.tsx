@@ -45,9 +45,9 @@ export function Image({
             no_cdn
                 ? animated_src
                 : animated_src
-                  ? constructImageUrl(animated_src, width, height, format, size)
+                  ? constructImageUrl(animated_src, width, height, undefined, size)
                   : undefined,
-        [animated_src, width, height, format, size],
+        [animated_src, width, height, size],
     );
 
     useEffect(() => {
