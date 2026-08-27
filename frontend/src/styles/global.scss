@@ -18,6 +18,24 @@ button, input, select, optgroup, textarea {
     padding: 0;
 }
 
+html {
+    overflow-y: hidden;
+}
+
+video::-webkit-media-controls,
+video::-webkit-media-controls-panel,
+video::-webkit-media-controls-enclosure {
+    display: none !important;
+}
+
+video::-webkit-media-controls-picture-in-picture-button {
+    display: none !important;
+}
+
+video::-webkit-media-controls-start-playback-button {
+    display: none !important;
+}
+
 html, body {
     overflow-x: hidden;
     background-color: var(--background);
