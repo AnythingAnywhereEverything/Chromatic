@@ -11,7 +11,10 @@
 
 .container-right {
   display: flex;
-  width: 90%;
+  flex-grow: 0;
+  flex-shrink: 0;
+  flex: 1;
+  width: 100%;
   height: 100%;
   align-items: center;
   justify-content: center;
@@ -78,6 +81,9 @@
 
 // -----------------------Left side-----------------------
 .container-left {
+    flex: 1;
+    flex-grow: 0;
+    flex-shrink: 0;
     width: 100%;
     height: 100%;
     padding-inline: calc(var(--spacing) * 20);
@@ -90,32 +96,22 @@
 }
 
 .down-fall {
+  padding-block: calc(var(--spacing) * 12);
   display: flex;
-  position: relative;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  height: 100%;
-  padding-top: calc(var(--spacing) * 12);
-}
-
-.some-cover {
-  display: flex;
-  position: relative;
   flex: 1;
   min-height: 0;
   overflow: hidden;
   height: 100%;
   align-items: center;
   justify-content: space-between;
+  justify-items: center;
+  flex-direction: column;
     .slogan{
       flex: 1;
     }
     .prop {
-        position: absolute;
         inset: 0;
         width: 480px;
-        height: 100%;
         object-fit: contain;
         bottom: 0;
     }

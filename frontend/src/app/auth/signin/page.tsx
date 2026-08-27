@@ -12,7 +12,6 @@ const SignIn = () => {
     <main className={style["auth-container"]}>
       <div className={style["container-left"]}>
         <div className={style["down-fall"]}>
-          <div className={style["some-cover"]}>
             <div className={style["slogan"]}>
               <h2>Some slogan for social media learning style text thingy</h2>
             </div>
@@ -20,7 +19,6 @@ const SignIn = () => {
               className={style["prop"]}
               src={"/asset/image.png"}
             />
-          </div>
         </div>
       </div>
       <SignInForm />
