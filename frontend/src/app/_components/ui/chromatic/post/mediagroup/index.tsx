@@ -16,6 +16,8 @@ const MediaFlags = {
 };
 
 interface MediaGroupProps {
+    containerWidthRatio?: number;
+    containerHeightRatio?: number;
     media: mediaPostAttechment[];
 }
 
@@ -52,8 +54,8 @@ function GetAllMediaDimensions(
     return media;
 }
 
-function MediaDisplayer({ media }: { media: mediaPostAttechment[] }) {
-    const [medias, setMedias] = React.useState<mediaPostAttechment[]>([]);
+function ImageGroup({ media, containerWidthRatio ,containerHeightRatio }: MediaGroupProps ) {
+    const [images, setImages] = React.useState<mediaPostAttechment[]>([]);
     const [activeIndex, setActiveIndex] = React.useState(0);
     const [translateX, setTranslateX] = React.useState(0);
     const [hasOverflow, setHasOverflow] = React.useState(false);
@@ -72,11 +74,11 @@ function MediaDisplayer({ media }: { media: mediaPostAttechment[] }) {
             if (width <= 0) {
                 return;
             }
-
+            
             const height =
-                width * (CONTAINER_HEIGHT_RATIO / CONTAINER_WIDTH_RATIO);
+                width * ((containerHeightRatio || CONTAINER_HEIGHT_RATIO) / (containerWidthRatio|| CONTAINER_WIDTH_RATIO));
 
-            setMedias(GetAllMediaDimensions(media, width, height));
+            setImages(GetAllMediaDimensions(media, width, height));
             setActiveIndex(0);
             setTranslateX(0);
         };
@@ -127,12 +129,12 @@ function MediaDisplayer({ media }: { media: mediaPostAttechment[] }) {
         const targetTranslate = Math.min(item.offsetLeft, maxTranslate);
 
         setTranslateX(targetTranslate);
-    }, [medias, activeIndex]);
+    }, [, activeIndex]);
 
     const scrollMedia = (direction: "left" | "right") => {
         setActiveIndex((currentIndex) => {
             if (direction === "right") {
-                return Math.min(currentIndex + 1, medias.length - 1);
+                return Math.min(currentIndex + 1, images.length - 1);
             }
 
             return Math.max(currentIndex - 1, 0);
@@ -140,7 +142,7 @@ function MediaDisplayer({ media }: { media: mediaPostAttechment[] }) {
     };
 
     const showLeftController = hasOverflow && activeIndex > 0;
-    const showRightController = hasOverflow && activeIndex < medias.length - 1;
+    const showRightController = hasOverflow && activeIndex < images.length - 1;
 
     return (
         <div className={style["image-group-wrapper"]}>
@@ -163,7 +165,7 @@ function MediaDisplayer({ media }: { media: mediaPostAttechment[] }) {
                         transform: `translate3d(-${translateX}px, 0, 0)`,
                     }}
                 >
-                    {medias.map((item) => {
+                    {images.map((item) => {
                         const isHLS = item.flags & MediaFlags.IsHLS;
                         const isAnimated = item.flags & MediaFlags.IsAnimated;
 
@@ -244,18 +246,26 @@ function MediaDisplayer({ media }: { media: mediaPostAttechment[] }) {
     );
 }
 
-export const MediaGroup = ({ media }: MediaGroupProps) => {
+export const MediaGroup = ({ media, containerWidthRatio, containerHeightRatio }: MediaGroupProps) => {
     if (media.length === 0) {
         return null;
     }
 
     return (
-        <>
-            {media.length > 0 && (
-                <div className={style["media-group"]}>
-                    <MediaDisplayer media={media} />
-                </div>
-            )}
-        </>
+        <div className={style["media-group"]}>
+            {media.length > 0 && <ImageGroup media={media} 
+            containerWidthRatio={containerWidthRatio} 
+            containerHeightRatio={containerHeightRatio}
+            />}
+            <ul className={style["video-grid"]}>
+                {media.map((item) => {
+                    return (
+                        <li key={item.id} className={style["media-item"]}>
+                            Waiting
+                        </li>
+                    );
+                })}
+            </ul>
+        </div>
     );
 };
