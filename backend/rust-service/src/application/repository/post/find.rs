@@ -205,6 +205,7 @@ pub async fn get_post_by_id_experiment(
                         'thumbhash', md.thumbhash,
                         'name', md.name,
                         'updated_at', md.updated_at,
+                        'flags', md.flags,
                         'status', md.status,
                         'file_size', mdt.file_size,
                         'mime_type', mdt.mime_type,
