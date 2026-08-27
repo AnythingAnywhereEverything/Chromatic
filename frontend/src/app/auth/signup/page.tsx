@@ -8,7 +8,7 @@ export const metadata = {
 
 const SignUp = () => {
     return (
-        <div className={style.authContainer}>
+        <div className={style['auth-container']}>
             <SignUpForm />
         </div>
     );

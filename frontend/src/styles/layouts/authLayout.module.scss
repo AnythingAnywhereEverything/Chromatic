@@ -1,19 +1,39 @@
-.authContainer{
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    padding: 2rem;
-    box-sizing: border-box;
+.auth-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  gap: calc(var(--spacing) * 2);
+}
+
+
+.container-right {
+  display: flex;
+  width: 90%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--background);
 }
 
 .form {
-    width: 400px;
-    border: 1px var(--border) solid;
-    background-color: color-mix(in oklab, var(--muted) 20%, transparent);
-    padding: calc(var(--spacing) * 6);
-    border-radius: var(--radius-medium);
+  display: flex;
+  flex-direction: column;
+  width: 400px;
+  border-radius: var(--radius);
+  border: 1px solid var(--foreground);
+  padding: calc(var(--spacing) * 4);
+}
+
+.sign-in {
+  padding-inline: calc(var(--spacing) * 2);
+  h2 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 .wrapper {
@@ -21,7 +41,6 @@
     align-items: center;
     width: 100%;
     height: 2rem;
-
     border: 1px solid var(--border);
     border-radius: 0.5rem;
     background-color: transparent;
@@ -32,12 +51,10 @@
     }
 }
 
-
-.inputField {
+.input-field {
     flex: 1;
     min-width: 0;
     height: 100%;
-
     border: none;
     outline: none;
     background: transparent;
@@ -46,25 +63,68 @@
 }
 
 .password-toggle {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
-
-    width: 2rem;
+    width: 2.5rem;
     height: 100%;
-
+    flex-shrink: 0;
     border: none;
-    background: taransparent;
+    background: transparent;
     cursor: pointer;
 }
 
-.btn-field, .submit{
+
+
+// -----------------------Left side-----------------------
+.container-left {
     width: 100%;
-    border-radius: var(--radius);
+    height: 100%;
+    padding-inline: calc(var(--spacing) * 20);
+    display: none;
+
+    @media screen and (min-width: 1025px) {
+        display: block;
+        align-items: center;;
+    }
+}
+
+.down-fall {
+  display: flex;
+  position: relative;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  padding-top: calc(var(--spacing) * 12);
+}
+
+.some-cover {
+  display: flex;
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  height: 100%;
+  align-items: center;
+  justify-content: space-between;
+    .slogan{
+      flex: 1;
+    }
+    .prop {
+        position: absolute;
+        inset: 0;
+        width: 480px;
+        height: 100%;
+        object-fit: contain;
+        bottom: 0;
+    }
 }
 
 .submit {
-    background-color: var(--primary);
-    padding: calc(var(--spacing) * 2);
-    margin-bottom: calc(var(--spacing) *4);
+  background-color: red;
+  width: 100%;
+  padding-block: calc(var(--spacing) * 1.25);
+  border-radius: var(--radius);
+  margin-bottom: calc(var(--spacing) * 3);
 }

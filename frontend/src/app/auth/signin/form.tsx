@@ -55,8 +55,9 @@ const SignInForm: NextPageWithLayout = () => {
     };
 
     return (
-        <div className={style.form}>
-            <section className={`${field.fieldSet}`}>
+        <div className={style["container-right"]}>
+            <div className={style.form}>
+            <section className={`${field.fieldSet} ${style['sign-in']}`}>
                 <h2>Sign In</h2>
                 <Form action={"#"} onSubmit={handleSubmit}>
                     <section className={`${field.fieldGroup}`}>
@@ -67,13 +68,13 @@ const SignInForm: NextPageWithLayout = () => {
                             style={{marginTop: "calc(var(--spacing) * 2)"}} 
                             className={style["wrapper"]}>
                                 <input
-                                    className={style["inputField"]}
+                                    className={style["input-field"]}
                                     aria-invalid={error ? "true" : "false"}
                                     required
                                     name="username"
                                     id="username"
                                     placeholder="example@gmail.com"
-                                />
+                                    />
                                 </div>
                         </section>
                         <section>
@@ -82,7 +83,7 @@ const SignInForm: NextPageWithLayout = () => {
                                 style={{marginTop: "calc(var(--spacing) * 2)"}} 
                                 className={style["wrapper"]}>
                                 <input
-                                    className={style["inputField"]}
+                                    className={style["input-field"]}
                                     aria-invalid={error ? "true" : "false"}
                                     autoComplete="password"
                                     required
@@ -90,13 +91,13 @@ const SignInForm: NextPageWithLayout = () => {
                                     name="password"
                                     id="password"
                                     placeholder="• • • • • • • •"
-                                />
+                                    />
 
                                 <button
                                     className={style["password-toggle"]}
                                     type="button"
                                     onClick={handleReveal}
-                                >
+                                    >
                                     {reveal ? <FaRegEyeSlash /> : <FaRegEye />}
                                 </button>
                             </div>
@@ -114,6 +115,7 @@ const SignInForm: NextPageWithLayout = () => {
                     </section>
                 </Form>
             </section>
+            </div>
         </div>
     );
 };

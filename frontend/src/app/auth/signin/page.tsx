@@ -1,18 +1,33 @@
+import { Image } from "@/app/_components/ui/chromatic/Image";
 import SignInForm from "./form";
-import style from "./style.module.scss";
+import style from "@styles/layouts/authLayout.module.scss";
 
 export const metadata = {
-    title: "Sign In",
-    description: "Sign in to your account",
+  title: "Sign In",
+  description: "Sign in to your account",
 };
 
 const SignIn = () => {
-    return (
-        <main className={style.authContainer}>
-            <h2>Chromatic</h2>
-            <SignInForm />
-        </main>
-    );
+  return (
+    <main className={style["auth-container"]}>
+      <div className={style["container-left"]}>
+        <div className={style["down-fall"]}>
+          <div className={style["some-cover"]}>
+            <div className={style["slogan"]}>
+              <h2>Some slogan for social media learning style text thingy</h2>
+            </div>
+            <img
+              className={style["prop"]}
+              src={"/asset/image.png"}
+            />
+          </div>
+        </div>
+      </div>
+      <SignInForm />
+    </main>
+  );
 };
+
+// ! migration the comment_likes
 
 export default SignIn;

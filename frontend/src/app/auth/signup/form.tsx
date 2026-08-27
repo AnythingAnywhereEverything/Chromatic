@@ -124,7 +124,7 @@ const SignUpForm = () => {
                                 className={style["wrapper"]}
                             >
                                 <input
-                                    className={style["inputField"]}
+                                    className={style["input-field"]}
                                     aria-invalid={errors.username ? "true" : "false"}
                                     required
                                     name="username"
@@ -150,7 +150,7 @@ const SignUpForm = () => {
                                 className={style["wrapper"]}
                             >
                                 <input
-                                    className={style["inputField"]}
+                                    className={style["input-field"]}
                                     aria-invalid={errors.email ? "true" : "false"}
                                     required
                                     type="email"
@@ -177,10 +177,8 @@ const SignUpForm = () => {
                                 className={style["wrapper"]}
                             >
                                 <input
-                                    className={style["inputField"]}
-                                    aria-invalid={
-                                        errors.password ? "true" : "false"
-                                    }
+                                    className={style["input-field"]}
+                                    aria-invalid={errors.password ? "true" : "false"}
                                     autoComplete="new-password"
                                     required
                                     type={revealPassword ? "text" : "password"}
@@ -223,7 +221,7 @@ const SignUpForm = () => {
                                 className={style["wrapper"]}
                             >
                                 <input
-                                    className={style["inputField"]}
+                                    className={style["input-field"]}
                                     aria-invalid={
                                         errors.confirmPassword
                                             ? "true"
