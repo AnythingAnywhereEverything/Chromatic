@@ -33,6 +33,7 @@ interface TooltipOptions {
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
     allowHovering?: boolean;
+    gap?: number;
     parent?: HTMLElement | null;
 }
 
@@ -97,6 +98,7 @@ export function useTooltip({
     onOpenChange: setControlledOpen,
     allowHovering = false,
     parent = null,
+    gap = 5,
 }: TooltipOptions = {}) {
     const [uncontrolledOpen, setUncontrolledOpen] = React.useState(initialOpen);
     const open = controlledOpen ?? uncontrolledOpen;
@@ -114,7 +116,7 @@ export function useTooltip({
         onOpenChange: setOpen,
         whileElementsMounted: autoUpdate,
         middleware: [
-            offset(5),
+            offset(gap),
             flip(),
             shift({
                 mainAxis: true,

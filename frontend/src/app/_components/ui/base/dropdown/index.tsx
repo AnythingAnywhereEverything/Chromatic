@@ -19,6 +19,7 @@ import {
     FloatingPortal,
     useId,
     Placement,
+    shift,
 } from "@floating-ui/react";
 import { useRef } from "react";
 import { Portal } from "@/app/_components/portal";
@@ -30,22 +31,20 @@ interface DropdownOptions {
     overlayClassName?: string;
     outsidePress?: boolean;
     placement?: Placement;
-    containerRef?: React.RefObject<HTMLElement>;
+    containerRef?: React.RefObject<HTMLElement | null>;
     offsetPlacement?: number;
 }
 
-function useDropdown(
-    {
-        initialOpen = false,
-        open: controlledOpen,
-        onOpenChange: setControlledOpen,
-        overlayClassName,
-        outsidePress = true,
-        placement = "bottom-start",
-        containerRef,
-        offsetPlacement = 5,
-    }: DropdownOptions,
-) {
+function useDropdown({
+    initialOpen = false,
+    open: controlledOpen,
+    onOpenChange: setControlledOpen,
+    overlayClassName,
+    outsidePress = true,
+    placement = "bottom-start",
+    containerRef,
+    offsetPlacement = 5,
+}: DropdownOptions) {
     const [uncontrolledOpen, setUncontrolledOpen] = React.useState(initialOpen);
 
     const [labelId, setLabelId] = React.useState<string | undefined>();
@@ -79,10 +78,14 @@ function useDropdown(
                 },
                 padding: 10,
             }),
+            shift({
+                mainAxis: true,
+                padding: 8,
+            }),
             hide({ strategy: "referenceHidden" }),
         ],
     });
-    
+
     const context = data.context;
 
     const click = useClick(context, {
