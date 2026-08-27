@@ -44,11 +44,13 @@ export interface commentProps{
     id: string
     post_id: string
     user_id: string
+    content: string
     has_attachment: boolean
     created_at: string
     updated_at: string
     media: mediaPostAttechment[]
     display_name: string
+    username: string
     avatar_path: string
     avatar_mime: string
     avatar_thumbhash: string
@@ -60,6 +62,7 @@ export interface commentProps{
     
     current_user_id: string
     is_liked: boolean
+    total_likes: number
 }
 
 export interface mediaPostAttechment {
@@ -104,8 +107,8 @@ export const getFocusedPost = async(postId: string):Promise<mediaPostProps> => {
     return data;
 }
 
-export const getCommentsOnPost = async(postId: string):Promise<commentProps> => {
-    const res = await fetchWithOptionAuth(`v2/${postId}/comments`)
+export const getCommentsOnPost = async(postId: string):Promise<commentProps[]> => {
+    const res = await fetchWithOptionAuth(`v2/posts/${postId}/comments`)
     if (!res.ok) throw new Error("Failed to get post data")
     const data = await res.json();
     return data;
