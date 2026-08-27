@@ -6,8 +6,6 @@ import field from "@styles/ui/chromatic/field.module.scss";
 import style from "@styles/layouts/authLayout.module.scss";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
-import { FieldError, FieldSeparator } from "@components/ui/chromaticUI";
-import { Form } from "@base-ui/react";
 import Link from "next/link";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 
@@ -110,9 +108,7 @@ const SignUpForm = () => {
             <section className={field.fieldSet}>
                 <h2>Sign Up</h2>
 
-                <FieldSeparator>or</FieldSeparator>
-
-                <Form action={"#"} onSubmit={handleSubmit}>
+                <form action={"#"} onSubmit={handleSubmit}>
                     <section className={field.fieldGroup}>
                         <section>
                             <label htmlFor="username">Username</label>
@@ -136,7 +132,7 @@ const SignUpForm = () => {
                             </div>
 
                             {errors.username && (
-                                <FieldError>{errors.username}</FieldError>
+                                <p>{errors.username}</p>
                             )}
                         </section>
 
@@ -163,7 +159,7 @@ const SignUpForm = () => {
                             </div>
 
                             {errors.email && (
-                                <FieldError>{errors.email}</FieldError>
+                                <p>{errors.email}</p>
                             )}
                         </section>
 
@@ -205,7 +201,7 @@ const SignUpForm = () => {
                             </div>
 
                             {errors.password && (
-                                <FieldError>{errors.password}</FieldError>
+                                <p>{errors.password}</p>
                             )}
                         </section>
 
@@ -253,9 +249,9 @@ const SignUpForm = () => {
                             </div>
 
                             {errors.confirmPassword && (
-                                <FieldError>
+                                <p>
                                     {errors.confirmPassword}
-                                </FieldError>
+                                </p>
                             )}
                         </section>
 
@@ -273,7 +269,7 @@ const SignUpForm = () => {
                             <Link href={"/auth/signin"}>Sign In.</Link>
                         </p>
                     </section>
-                </Form>
+                </form>
             </section>
         </div>
     );
