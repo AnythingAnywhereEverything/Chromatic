@@ -38,6 +38,29 @@ pub struct PostRow {
 }
 
 #[derive(sqlx::FromRow, Debug)]
+pub struct CommentRow{
+    pub id: i64,
+    pub post_id: i64,
+    pub user_id: i64,
+    pub username : String,
+    pub display_name: String,
+    pub total_likes : i32,
+    pub is_liked: bool,
+
+    pub avatar_path : Option<String>,
+    pub avatar_mime : Option<String>,
+    pub avatar_thumbhash : Option<String>,
+
+    pub followers_count: i32,
+    pub following_count: i32,
+    pub content: String,
+    pub has_attachment: bool,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub media_attachment: Json<Vec<MediaAttachment>>,
+}
+
+#[derive(sqlx::FromRow, Debug)]
 pub struct CreatePostRow{
     pub id: i64,
     pub user_id: i64,
@@ -103,20 +126,6 @@ pub struct PostLikesRow {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(sqlx::FromRow, Debug)]
-pub struct CommentRow{
-    pub id: i64,
-    pub post_id: i64,
-    pub user_id: i64,
-    pub content: String,
-    pub total_likes: i32,
-    pub has_attachment: bool,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    pub updated_at: chrono::DateTime<chrono::Utc>,
-    #[sqlx(skip)]
-    pub media_attachment: Json<Vec<MediaAttachment>>,
-}
-
 #[derive(sqlx::FromRow)]
 pub struct CreateCommentResult {
     pub id: i64,
@@ -144,5 +153,6 @@ pub struct TagAttachmentFull{
     pub target_id: i64,
     pub target_type: TagTarget,
     pub tag_id: i64,
-    pub tag_name: String
+    pub tag_name: String,
+    pub tag_color: String,
 }

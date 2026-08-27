@@ -2,37 +2,36 @@ use sqlx::Transaction;
 
 use crate::application::repository::{RepositoryResult, post::row::PostRow};
 
+pub enum FetchMode {
+    One,
+    All,
+}
 
+pub enum PostQueryResult {
+    One(PostRow),
+    Many(Vec<PostRow>),
+}
 
 pub struct PostQOpts {
-    // The user making the request.
-    // Used for things like `is_liked` and visibility/permission checks.
     pub requester: Option<i64>,
 
-    // Target post.
+    // * Use target_id only for fetching one specific post.
     pub target_id: Option<i64>,
 
-    // Whether to include the post author's avatar.
+    // * None means "start from the newest post".
+    pub cursor_id: Option<i64>,
+
     pub get_avatar: bool,
-
-    // Whether to include media attached to the post.
     pub get_media: bool,
-
-    // Whether to include post tags.
     pub get_tags: bool,
-
-    // Whether to calculate the current requester's like state.
     pub get_is_liked: bool,
-
-    // Whether to fetch the author's follower/following counts.
     pub get_followers_count: bool,
     pub get_following_count: bool,
-
-    // Whether to resolve the original post when this is a repost.
     pub get_reposted_from: bool,
 
-    // Whether to ignore the post's deleted_at field.
     pub ignore_deleted: bool,
+    pub limit: Option<i32>,
+    pub mode: FetchMode,
 }
 
 impl Default for PostQOpts {
@@ -40,6 +39,8 @@ impl Default for PostQOpts {
         Self {
             requester: None,
             target_id: None,
+            cursor_id: None,
+
             get_avatar: false,
             get_media: false,
             get_tags: false,
@@ -47,7 +48,10 @@ impl Default for PostQOpts {
             get_followers_count: false,
             get_following_count: false,
             get_reposted_from: false,
+
             ignore_deleted: false,
+            limit: Some(20),
+            mode: FetchMode::One,
         }
     }
 }
@@ -57,7 +61,8 @@ impl PostQOpts {
         Self {
             requester: None,
             target_id: None,
-
+            cursor_id: None,
+            
             get_avatar: true,
             get_media: true,
             get_tags: true,
@@ -67,6 +72,8 @@ impl PostQOpts {
             get_reposted_from: true,
 
             ignore_deleted: false,
+            limit: None,
+            mode: FetchMode::All
         }
     }
 }
@@ -74,7 +81,7 @@ impl PostQOpts {
 pub async fn get_post_by_id_experiment(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     opts: PostQOpts,
-) -> RepositoryResult<PostRow> {
+) -> RepositoryResult<PostQueryResult> {
     let mut select = vec![
         "m.id".to_string(),
         "m.user_id".to_string(),
@@ -99,12 +106,14 @@ pub async fn get_post_by_id_experiment(
     if opts.get_is_liked {
         select.push(
             r#"
-            EXISTS (
-                SELECT 1
-                FROM media_likes ml
-                WHERE ml.media_post_id = m.id
-                  AND ml.user_id = $2
-            ) AS is_liked
+                EXISTS (
+                    SELECT 1
+                    FROM media_likes ml
+                    WHERE ml.target_id = m.id
+                    AND ml.target_type = 'post'
+                    AND ml.user_id = $2
+                    AND ml.is_like = TRUE
+                ) AS is_liked
             "#
             .into(),
         );
@@ -226,7 +235,8 @@ pub async fn get_post_by_id_experiment(
                         'target_id', ta.target_id,
                         'target_type', ta.target_type,
                         'tag_id', it.id,
-                        'tag_name', it.tag_name
+                        'tag_name', it.tag_name,
+                        'tag_color', it.tag_color
                     )
                     ORDER BY it.tag_name
                 ) AS tags
@@ -239,34 +249,65 @@ pub async fn get_post_by_id_experiment(
         );
     }
 
-    query.push_str("WHERE ");
+    match opts.mode {
+        FetchMode::One => {
+            let target_id = opts.target_id.ok_or_else(|| {
+                sqlx::Error::Protocol("target_id must be provided".into())
+            })?;
 
-    if opts.target_id.is_some() {
-        query.push_str("m.id = $1");
-    } else {
-        return Err(sqlx::Error::Protocol(
-            "target_id must be provided".into(),
-        )
-        .into());
+            query.push_str(" WHERE m.id = $1");
+
+            if !opts.ignore_deleted {
+                query.push_str(" AND m.deleted_at IS NULL");
+            }
+
+            query.push_str(" AND m.status != 'inactive'");
+
+            let limit_idx = if opts.get_is_liked { 3 } else { 2 };
+
+            if opts.limit.is_some() {
+                query.push_str(&format!(" LIMIT ${}::int4", limit_idx));
+            }
+
+            let mut db_query = sqlx::query_as::<_, PostRow>(&query);
+
+            db_query = db_query.bind(target_id);
+
+            if opts.get_is_liked {
+                db_query = db_query.bind(opts.requester);
+            }
+
+            if let Some(limit) = opts.limit {
+                db_query = db_query.bind(limit);
+            }
+
+            let row = db_query.fetch_one(tx.as_mut()).await?;
+
+            Ok(PostQueryResult::One(row))
+        }
+
+        FetchMode::All => {
+            query.push_str(" WHERE ($1::BIGINT IS NULL OR m.id < $1)");
+
+            if !opts.ignore_deleted {
+                query.push_str(" AND m.deleted_at IS NULL");
+            }
+
+            query.push_str(" AND m.status != 'inactive'");
+
+            query.push_str(" ORDER BY m.id DESC");
+
+            // * $2 because $1 is cursor_id.
+            query.push_str(" LIMIT $2::int4");
+
+            let mut db_query = sqlx::query_as::<_, PostRow>(&query);
+
+            db_query = db_query.bind(opts.cursor_id);
+            db_query = db_query.bind(opts.limit.unwrap_or(20));
+
+            let rows = db_query.fetch_all(tx.as_mut()).await?;
+
+            Ok(PostQueryResult::Many(rows))
     }
-
-    if !opts.ignore_deleted {
-        query.push_str(" AND m.deleted_at IS NULL");
     }
-
-    query.push_str(" AND m.status != 'inactive'");
-
-    let mut db_query = sqlx::query_as::<_, PostRow>(&query);
-
-    if let Some(target_id) = opts.target_id {
-        db_query = db_query.bind(target_id);
-    }
-
-    if opts.get_is_liked {
-        db_query = db_query.bind(opts.requester);
-    }
-
-    let row = db_query.fetch_one(tx.as_mut()).await?;
-
-    Ok(row)
 }

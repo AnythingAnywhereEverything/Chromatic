@@ -30,7 +30,9 @@ pub enum PostServiceError {
 
     #[error("Failed to delete post")]
     DeletePostFailed,
-    
+
+    #[error("Too many rows on get one")]
+    UnexpectedMultipleRows,
 }
 
 impl From<sqlx::Error> for PostServiceError {

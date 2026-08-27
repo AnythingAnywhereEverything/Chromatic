@@ -10,7 +10,7 @@ use crate::{
         APIError, RequestAuth, dtos::post_dtos::{CommentDTO, LikeDTO, PostDTO}, version,
     }, application::{
         repository::{
-            media::{self as media_repo, row::MediaStatus}, post::{self as post_repo, find::PostQOpts, post},
+            media::{self as media_repo, row::MediaStatus}, post::{self as post_repo, find::{FetchMode, PostQOpts}, post},
         }, service::{
             errors::{AuthServiceError, PostServiceError},
             media::{
@@ -139,15 +139,29 @@ pub async fn get_feed_post_handler(
         Some(user) => Some(user.user_id),
         None => None,
     };
-    let limit = query.limit.unwrap_or(8);
+    
     let mut tx = state.db_pool.begin().await?;
-    let all_post = post_repo::post::get_feed_public(&mut tx, None, user_id, limit).await?;
+    
+    let opts = PostQOpts {
+        target_id: Some(query.cursor_id.unwrap_or_default()),
+        requester: user_id,
+        get_avatar: true,
+        get_media: true,
+        // limit: query.limit,
+        mode: FetchMode::All,
+        ..PostQOpts::full()
+    };
 
-    let mut post_vec: Vec<PostDTO> = all_post.into_iter().map(|post| post.into()).collect();
+    let all_post = post_repo::find::get_post_by_id_experiment(&mut tx, opts).await?;
+
+    let mut post_vec: Vec<PostDTO> = all_post.into();
 
     for post in &mut post_vec {
         post.current_user_id = user_id.map(|id| id.to_string());
     }
+
+    tracing::trace!("Json Item {:#?}", post_vec);
+
     Ok(Json(post_vec))
 }
 
@@ -171,35 +185,16 @@ pub async fn get_info_post_handler(
         requester: user_id,
         get_avatar: true,
         get_media: true,
+        mode: FetchMode::One,
         ..PostQOpts::full()
     };
 
     let post = post_repo::find::get_post_by_id_experiment(&mut tx, opts).await?;
     
-    Ok(Json(post.into()))
+    Ok(Json(post.try_into()?))
 }
 
-pub async fn get_post_comments_handler(
-    State(state): State<SharedState>,
-    Path((version, post_id)): Path<(String, i64)>,
-    req_auth: RequestAuth,
-    
-) -> Result<Json<Vec<CommentDTO>>, APIError> {
-    let api_version = version::parse_version(&version)?;
-    tracing::trace!("api version: {}", api_version);
 
-    let _user_id = match req_auth.user {
-        Some(user) => Some(user.user_id),
-        None => return Err(AuthServiceError::InvalidCredentials.into()),
-    };
-
-    let mut tx = state.db_pool.begin().await?;
-
-    let comments = post_repo::comment::get_comment(&mut tx, post_id).await?;
-    let comments_vec: Vec<CommentDTO> = comments.into_iter().map(|post| post.into()).collect(); 
-    
-    Ok(Json(comments_vec))
-}
 
 pub async fn create_new_post_handler(
     State(state): State<SharedState>,
@@ -216,19 +211,6 @@ pub async fn create_new_post_handler(
         None => return Err(AuthServiceError::InvalidCredentials.into()),
         // None => 81727418892554240,
     };
-
-    // let options = MultipartExtractorOptions {
-    //     max_file_size: Some(512_000_000),
-    //     max_files: Some(5),
-    //     validation: Some(ValidationOptions {
-    //         validation_type: ValidationType::Whitelisted,
-    //         value: vec![MediaType::Image, MediaType::Video],
-    //     }),
-    //     filter: Some(vec![FieldTypeFilter {
-    //         max_file_size: Some(25_000_000),
-    //         affected_types: Some(vec![MediaType::Image]),
-    //     }]),
-    // };
 
     let ext_opts = ExtractorFileOptions {
         max_size: Some(512_000_000),
@@ -252,36 +234,6 @@ pub async fn create_new_post_handler(
 
     let new_post_id = &state.snowflake_generator.generate_id()?;
 
-    // let new_media_opts = MediaServiceOptions {
-    //     upload_route: format!("posts/{}", new_post_id),
-    //     uploader_id: user_id,
-    //     container: Some(ContainerConfig {
-    //         generate_thumbhash: true,
-    //         use_animated_image_indicator: true,
-    //         ..Default::default()
-    //     }),
-    //     processor: Some(MediaProcessorOptions {
-    //         fflags: Some(MediaProcessorFFlags {
-    //             video_thumbnail: true,
-    //             video_gpu_accel: true,
-    //             video_transcode: true,
-    //             image_thumbhash: true,
-    //             ..Default::default()
-    //         }),
-    //         image_processors: Some(vec![ImageProcessorType::Resize {
-    //             style: ResizeStyle::Absolute {
-    //                 width: 1024,
-    //                 height: 1024,
-    //             },
-    //             upscale: false,
-    //         }]),
-    //         video_processors: None,
-    //         post_processors: Some(PostProcessingType::Video(vec![
-    //             VideoPostProcessorType::HLS { segment_time: 10 },
-    //         ])),
-    //     }),
-    // };
-
     let mut tx = state.db_pool.begin().await?;
 
     if extracted.content.len() > 2500 {
@@ -298,7 +250,8 @@ pub async fn create_new_post_handler(
                 ContainerConfig::new()
                     .set_generate_thumbhash(true)
                     .set_processing_options(
-                        MediaProcessorOptions::new()
+                        MediaProcessorOptions::new().set_fflags_video_gpu_accel(true)
+                        .set_fflags_video_thumbnail(true)
                             .set_image_processors(vec![ImageProcessorType::Resize {
                                 style: ResizeStyle::Absolute {
                                     width: 1024,
@@ -470,7 +423,7 @@ pub async fn delete_post_handler(
 
 // }
 
-pub async fn liked_handler(
+pub async fn post_liked_handler(
     State(state): State<SharedState>,
     Path((version, target_id)): Path<(String, i64)>,
     req_auth: RequestAuth,
@@ -487,7 +440,7 @@ pub async fn liked_handler(
     let mut tx = state.db_pool.begin().await?;
     tracing::info!(user_id, target_id, req.is_like, "liking post");
     let post_like =
-        post_repo::post::like_post_repo(&mut tx, user_id, target_id, req.is_like).await?;
+        post_repo::post::like_post_repo(&mut tx, user_id, target_id, req.is_like, &"post".to_string()).await?;
 
     tx.commit().await?;
 

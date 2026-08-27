@@ -1,7 +1,7 @@
 use serde::Serialize;
 use sqlx::prelude::FromRow;
 
-use crate::{api::dtos::user_dtos::MediaFullDTO, application::repository::post::row::{CommentRow, PostRow}};
+use crate::{api::dtos::user_dtos::MediaFullDTO, application::{repository::post::{find::PostQueryResult, row::{CommentRow, PostRow}}, service::errors::PostServiceError}};
 
 
 #[derive(Debug, Serialize,FromRow)]
@@ -67,7 +67,8 @@ impl Into<PostDTO> for PostRow {
             tag: self.tags.0.into_iter().map(|tag| TagDTO {
                 target_id: tag.target_id.to_string(),
                 tag_name: tag.tag_name,
-                tag_id: tag.tag_id.to_string()
+                tag_id: tag.tag_id.to_string(),
+                tag_color: tag.tag_color,
             }).collect(),
             is_liked: self.is_liked,
             current_user_id : None,
@@ -80,24 +81,63 @@ impl Into<PostDTO> for PostRow {
     }
 }
 
+impl TryFrom<PostQueryResult> for PostDTO {
+    type Error = PostServiceError;
+
+    fn try_from(value: PostQueryResult) -> Result<Self, Self::Error> {
+        match value {
+            PostQueryResult::One(row) => Ok(row.into()),
+            PostQueryResult::Many(_) => Err(PostServiceError::UnexpectedMultipleRows),
+        }
+    }
+}
+
+impl From<PostQueryResult> for Vec<PostDTO> {
+    fn from(value: PostQueryResult) -> Self {
+        match value {
+            PostQueryResult::One(row) => vec![row.into()],
+            PostQueryResult::Many(rows) => rows.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+
 #[derive(Debug, Serialize)]
 pub struct TagDTO {
     pub target_id: String,
     pub tag_name: String,
-    pub tag_id: String
+    pub tag_id: String,
+    pub tag_color: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, FromRow)]
 pub struct CommentDTO {
     pub id: String,
     pub post_id: String,
     pub user_id: String,
+
+    pub username: String,
+    pub display_name: String,
+
+    pub avatar_path: Option<String>,
+    pub avatar_mime: Option<String>,
+    pub avatar_thumbhash: Option<String>,
+
+    pub followers_count: i32,
+    pub following_count: i32,
+
     pub content: String,
     pub total_likes: i32,
+    pub is_liked: bool,
     pub has_attachment: bool,
+
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
-    pub media: Vec<MediaFullDTO>
+
+    pub media: Vec<MediaFullDTO>,
+    
+    #[sqlx(skip)]
+    pub current_user_id: Option<String>
 }
 
 #[derive(Debug, Serialize)]
@@ -112,9 +152,22 @@ impl Into<CommentDTO> for CommentRow {
             id: self.id.to_string(),
             post_id: self.post_id.to_string(),
             user_id: self.user_id.to_string(),
+
+            username: self.username,
+            display_name: self.display_name,
+
+            avatar_path: self.avatar_path,
+            avatar_mime: self.avatar_mime,
+            avatar_thumbhash: self.avatar_thumbhash,
+
+            followers_count: self.followers_count,
+            following_count: self.following_count,
+
             content: self.content,
             total_likes: self.total_likes,
+            is_liked: self.is_liked,
             has_attachment: self.has_attachment,
+
             created_at: Some(self.created_at.to_string()),
             updated_at: Some(self.updated_at.to_string()),
             media: self.media_attachment.0.into_iter().map(|media| MediaFullDTO {
@@ -131,6 +184,7 @@ impl Into<CommentDTO> for CommentRow {
                 duration: media.duration,
                 flags: media.flags,
             }).collect(),
+                current_user_id : None,
         }
     }
 }

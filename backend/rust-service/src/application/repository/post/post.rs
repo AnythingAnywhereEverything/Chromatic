@@ -51,11 +51,13 @@ pub async fn get_feed_public(
                 m.updated_at,
                 m.visibility,
 
-                EXISTS (
+                 EXISTS (
                     SELECT 1
                     FROM media_likes ml
-                    WHERE ml.media_post_id = m.id
-                      AND ml.user_id = $2
+                    WHERE ml.target_id = m.id
+                    AND ml.target_type = 'post'
+                    AND ml.user_id = $2
+                    AND ml.is_like = TRUE
                 ) AS is_liked,
                 COALESCE(att.attachments, '[]'::json) AS media_attachment,
                 COALESCE(tag.tags, '[]'::json) AS tags
@@ -176,8 +178,10 @@ pub async fn get_post_by_id(
                 EXISTS (
                     SELECT 1
                     FROM media_likes ml
-                    WHERE ml.media_post_id = m.id
-                      AND ml.user_id = $2
+                    WHERE ml.target_id = m.id
+                    AND ml.target_type = 'post'
+                    AND ml.user_id = $2
+                    AND ml.is_like = TRUE
                 ) AS is_liked,
                 COALESCE(att.attachments, '[]'::json) AS media_attachment,
                 COALESCE(tag.tags, '[]'::json) AS tags
@@ -539,60 +543,65 @@ pub async fn like_post_repo(
     user_id: i64,
     target_id: i64,
     is_like: bool,
+    target_type: &str
 ) -> Result<TotalLikesRow, sqlx::Error> {
     sqlx::query_as::<_, TotalLikesRow>(
-        r#"
-            WITH previous AS (
-                SELECT is_liked
-                FROM media_likes
-                WHERE user_id = $1
-                  AND media_post_id = $2
-            ),
-            upsert AS (
-                INSERT INTO media_likes (
-                    user_id,
-                    media_post_id,
-                    created_at,
-                    updated_at,
-                    is_liked
-                )
-                VALUES (
-                    $1,
-                    $2,
-                    NOW(),
-                    NOW(),
-                    $3
-                )
-                ON CONFLICT (user_id, media_post_id)
-                DO UPDATE SET
-                    is_liked = EXCLUDED.is_liked,
-                    updated_at = NOW()
-                RETURNING is_liked
-            )
-            UPDATE media_posts
-            SET total_likes = total_likes +
-                CASE
-                    WHEN NOT EXISTS (SELECT 1 FROM previous)
-                         AND $3 = TRUE
-                        THEN 1
+r#"
+    WITH previous AS (
+        SELECT is_like
+        FROM media_likes
+        WHERE user_id = $1
+          AND target_id = $2
+          AND target_type = $4
+    ),
+    upsert AS (
+        INSERT INTO media_likes (
+            user_id,
+            target_id,
+            target_type,
+            created_at,
+            updated_at,
+            is_like
+        )
+        VALUES (
+            $1,
+            $2,
+            'post',
+            NOW(),
+            NOW(),
+            $3
+        )
+        ON CONFLICT (target_id, user_id, target_type)
+        DO UPDATE SET
+            is_like = EXCLUDED.is_like,
+            updated_at = NOW()
+        RETURNING is_like
+    )
+    UPDATE media_posts
+    SET total_likes = total_likes +
+        CASE
+            WHEN NOT EXISTS (SELECT 1 FROM previous)
+                 AND $3 = TRUE
+                THEN 1
 
-                    WHEN (SELECT is_liked FROM previous) = FALSE
-                         AND $3 = TRUE
-                        THEN 1
+            WHEN (SELECT is_like FROM previous) = FALSE
+                 AND $3 = TRUE
+                THEN 1
 
-                    WHEN (SELECT is_liked FROM previous) = TRUE
-                         AND $3 = FALSE
-                        THEN -1
+            WHEN (SELECT is_like FROM previous) = TRUE
+                 AND $3 = FALSE
+                THEN -1
 
-                    ELSE 0
-                END
-            WHERE id = $2
-            RETURNING id, total_likes
-        "#,
+            ELSE 0
+        END
+    WHERE id = $2
+    RETURNING id, total_likes
+"#
     )
     .bind(user_id)
     .bind(target_id)
     .bind(is_like)
+    .bind(target_type)
     .fetch_one(tx.as_mut())
     .await
 }
