@@ -54,47 +54,76 @@ pub async fn create_comment(
 pub async fn get_comment(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     post_id: i64,
+    user_id: Option<i64>,
 ) -> Result<Vec<CommentRow>, sqlx::Error> {
     sqlx::query_as::<_, CommentRow>(
         r#"
-        SELECT
-            cm.id,
-            cm.post_id,
-            cm.user_id,
-            cm.content,
-            cm.has_attachment,
-            cm.total_likes,
-            cm.created_at,
-            cm.updated_at,
-            COALESCE(att.attachments, '[]'::json) AS attachments
-        FROM media_comments cm
+        select 
+        	mc.id ,
+        	mc.post_id ,
+        	mc.user_id ,
+        	mc."content" ,
+        	mc.total_likes ,
+        	mc.has_attachment ,
+        	mc.created_at ,
+        	mc.updated_at,
+        	u.username ,
+        	up.display_name,
+        	avatar_md.path AS avatar_path,
+            avatar_mdt.mime_type AS avatar_mime,
+            avatar_md.thumbhash AS avatar_thumbhash,
+            up.followers_count,
+            up.following_count,
+            EXISTS (
+                    SELECT 1
+                    FROM media_likes ml
+                    WHERE ml.target_id = mc.id
+                    AND ml.target_type = 'comment'
+                    AND ml.user_id = $2
+                    AND ml.is_like = TRUE
+                ) AS is_liked,
+        	COALESCE(att.attachments, '[]'::json) AS media_attachment
+        from media_comments mc 
         LEFT JOIN LATERAL (
             SELECT json_agg(
                 json_build_object(
-                    'id', md.id,
+                    'id', md.id::text,
                     'user_id', md.uploader_id,
-                    'media_url', md.path,
-                    'media_preview_url', md.path,
-                    'media_category', md.name,
-                    'media_status', md.status,
-                    'created_at', md.created_at
+                    'path', md.path,
+                    'created_at', md.created_at,
+                    'thumbhash', md.thumbhash,
+                    'name', md.name,
+                    'updated_at', md.updated_at,
+                    'status', md.status,
+                    'file_size', mdt.file_size,
+                    'mime_type', mdt.mime_type,
+                    'width', mdt.width,
+                    'height', mdt.height,
+                    'duration', mdt.duration
                 )
                 ORDER BY md.id
             ) AS attachments
             FROM media_attachments a
-            JOIN media_data md
-                ON md.id = a.media_id
-            WHERE
-                a.target_id = cm.id
-                AND md.status != 'pending'
+            JOIN media_data md ON md.id = a.media_id
+            JOIN media_metadata mdt ON mdt.media_id = md.id
+            WHERE a.target_id = mc.id
+              AND md.status = 'completed'
         ) att ON TRUE
-        WHERE
-            cm.post_id = $1
-            AND cm.status != 'inactive'
-        ORDER BY cm.total_likes DESC
+        left join users u 
+        	on mc.user_id = u.id
+        LEFT JOIN user_profiles up
+             ON mc.user_id = up.user_id
+        LEFT JOIN media_data avatar_md
+        	ON avatar_md.id = up.avatar_media_id
+        LEFT JOIN media_metadata avatar_mdt
+        	ON avatar_mdt.media_id = avatar_md.id
+        where mc.post_id = $1
+        AND mc.status != 'inactive'
+        ORDER BY mc.total_likes DESC
         "#,
     )
     .bind(post_id)
+    .bind(user_id)
     .fetch_all(tx.as_mut())
     .await
 }
@@ -125,16 +154,78 @@ pub async fn update_comment(
 
 pub async fn get_specific_comment(
     tx : &mut Transaction<'_,sqlx::Postgres>,
-    comment_id: i64
+    comment_id: i64,
+    user_id: i64,
 ) -> Result<CommentRow, sqlx::Error> {
     sqlx::query_as::<_,CommentRow>(
         r#"
-            SELECT *
-            FROM media_comments
-            WHERE id = $1
+            SELECT
+                mc.id,
+                mc.post_id,
+                mc.user_id,
+                u.username,
+                up.display_name,
+                avatar_md.path AS avatar_path,
+                avatar_mdt.mime_type AS avatar_mime,
+                avatar_md.thumbhash AS avatar_thumbhash,
+                up.followers_count,
+                up.following_count,
+                mc.content,
+                mc.total_likes,
+                mc.has_attachment,
+                mc.created_at,
+                mc.updated_at,
+                EXISTS (
+                    SELECT 1
+                    FROM media_likes ml
+                    WHERE ml.target_id = mc.id
+                    AND ml.target_type = 'comment'
+                    AND ml.user_id = $2
+                    AND ml.is_like = TRUE
+                ) AS is_liked,
+                COALESCE(att.attachments, '[]'::json) AS media_attachment
+                FROM media_comments mc
+                 LEFT JOIN LATERAL (
+                    SELECT json_agg(
+                        json_build_object(
+                            'id', md.id::text,
+                            'user_id', md.uploader_id,
+                            'path', md.path,
+                            'created_at', md.created_at,
+                            'thumbhash', md.thumbhash,
+                            'name', md.name,
+                            'updated_at', md.updated_at,
+                            'status', md.status,
+                            'file_size', mdt.file_size,
+                            'mime_type', mdt.mime_type,
+                            'width', mdt.width,
+                            'height', mdt.height,
+                            'duration', mdt.duration
+                        )
+                        ORDER BY md.id
+                    ) AS attachments
+                    FROM media_attachments a
+                    JOIN media_data md ON md.id = a.media_id
+                    JOIN media_metadata mdt ON mdt.media_id = md.id
+                    WHERE a.target_id = mc.id
+                      AND md.status = 'completed'
+                ) att ON TRUE
+                LEFT JOIN users u
+                    ON mc.user_id = u.id
+                LEFT JOIN user_profiles up
+                    ON mc.user_id = up.user_id
+                LEFT JOIN media_data avatar_md
+                    ON avatar_md.id = up.avatar_media_id
+                LEFT JOIN media_metadata avatar_mdt
+                    ON avatar_mdt.media_id = avatar_md.id
+                WHERE
+                    mc.id = $1
+                AND mc.status != 'inactive'
+                ORDER BY mc.id DESC
         "#  
     )
     .bind(comment_id)
+    .bind(user_id)
     .fetch_one(&mut **tx)
     .await
 }
