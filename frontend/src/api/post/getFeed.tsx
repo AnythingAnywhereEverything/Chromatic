@@ -64,6 +64,7 @@ export interface commentProps{
 
 export interface mediaPostAttechment {
     id: string // * media from media_data
+    flags: number
     uploader_id: string
     name: string
     path: string
