@@ -54,8 +54,8 @@ function GetAllMediaDimensions(
     return media;
 }
 
-function ImageGroup({ media, containerWidthRatio ,containerHeightRatio }: MediaGroupProps ) {
-    const [images, setImages] = React.useState<mediaPostAttechment[]>([]);
+function MediaLayout({ media, containerWidthRatio ,containerHeightRatio }: MediaGroupProps ) {
+    const [medias, setMedia] = React.useState<mediaPostAttechment[]>([]);
     const [activeIndex, setActiveIndex] = React.useState(0);
     const [translateX, setTranslateX] = React.useState(0);
     const [hasOverflow, setHasOverflow] = React.useState(false);
@@ -78,7 +78,7 @@ function ImageGroup({ media, containerWidthRatio ,containerHeightRatio }: MediaG
             const height =
                 width * ((containerHeightRatio || CONTAINER_HEIGHT_RATIO) / (containerWidthRatio|| CONTAINER_WIDTH_RATIO));
 
-            setImages(GetAllMediaDimensions(media, width, height));
+            setMedia(GetAllMediaDimensions(media, width, height));
             setActiveIndex(0);
             setTranslateX(0);
         };
@@ -129,12 +129,12 @@ function ImageGroup({ media, containerWidthRatio ,containerHeightRatio }: MediaG
         const targetTranslate = Math.min(item.offsetLeft, maxTranslate);
 
         setTranslateX(targetTranslate);
-    }, [, activeIndex]);
+    }, [medias, activeIndex]);
 
     const scrollMedia = (direction: "left" | "right") => {
         setActiveIndex((currentIndex) => {
             if (direction === "right") {
-                return Math.min(currentIndex + 1, images.length - 1);
+                return Math.min(currentIndex + 1, medias.length - 1);
             }
 
             return Math.max(currentIndex - 1, 0);
@@ -142,7 +142,7 @@ function ImageGroup({ media, containerWidthRatio ,containerHeightRatio }: MediaG
     };
 
     const showLeftController = hasOverflow && activeIndex > 0;
-    const showRightController = hasOverflow && activeIndex < images.length - 1;
+    const showRightController = hasOverflow && activeIndex < medias.length - 1;
 
     return (
         <div className={style["image-group-wrapper"]}>
@@ -165,7 +165,7 @@ function ImageGroup({ media, containerWidthRatio ,containerHeightRatio }: MediaG
                         transform: `translate3d(-${translateX}px, 0, 0)`,
                     }}
                 >
-                    {images.map((item) => {
+                    {medias.map((item) => {
                         const isHLS = item.flags & MediaFlags.IsHLS;
                         const isAnimated = item.flags & MediaFlags.IsAnimated;
 
@@ -253,19 +253,10 @@ export const MediaGroup = ({ media, containerWidthRatio, containerHeightRatio }:
 
     return (
         <div className={style["media-group"]}>
-            {media.length > 0 && <ImageGroup media={media} 
+            <MediaLayout media={media} 
             containerWidthRatio={containerWidthRatio} 
             containerHeightRatio={containerHeightRatio}
-            />}
-            <ul className={style["video-grid"]}>
-                {media.map((item) => {
-                    return (
-                        <li key={item.id} className={style["media-item"]}>
-                            Waiting
-                        </li>
-                    );
-                })}
-            </ul>
+            />
         </div>
     );
 };
