@@ -30,7 +30,7 @@ pub struct PostQOpts {
     pub get_reposted_from: bool,
 
     pub ignore_deleted: bool,
-    pub limit: Option<i32>,
+    pub limit: Option<i64>,
     pub mode: FetchMode,
 }
 
@@ -50,7 +50,7 @@ impl Default for PostQOpts {
             get_reposted_from: false,
 
             ignore_deleted: false,
-            limit: Some(20),
+            limit: Some(8),
             mode: FetchMode::One,
         }
     }
@@ -304,7 +304,7 @@ pub async fn get_post_by_id_experiment(
             let mut db_query = sqlx::query_as::<_, PostRow>(&query);
 
             db_query = db_query.bind(opts.cursor_id);
-            db_query = db_query.bind(opts.limit.unwrap_or(20));
+            db_query = db_query.bind(opts.limit.unwrap_or(8));
 
             let rows = db_query.fetch_all(tx.as_mut()).await?;
 

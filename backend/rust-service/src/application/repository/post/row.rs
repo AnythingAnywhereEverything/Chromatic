@@ -154,5 +154,5 @@ pub struct TagAttachmentFull{
     pub target_type: TagTarget,
     pub tag_id: i64,
     pub tag_name: String,
-    pub tag_color: String,
+    pub tag_color:  Option<String>,
 }

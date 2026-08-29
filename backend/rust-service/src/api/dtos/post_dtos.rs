@@ -107,7 +107,7 @@ pub struct TagDTO {
     pub target_id: String,
     pub tag_name: String,
     pub tag_id: String,
-    pub tag_color: String,
+    pub tag_color: Option<String>,
 }
 
 #[derive(Debug, Serialize, FromRow)]

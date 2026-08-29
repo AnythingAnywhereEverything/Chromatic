@@ -105,7 +105,7 @@ pub struct CreatePostRequest {
 
 #[derive(serde::Deserialize)]
 pub struct FeedQuery {
-    pub limit: Option<i32>,
+    pub limit: Option<i64>,
     pub cursor_id: Option<i64>,
 }
 #[derive(Debug, serde::Deserialize)]
@@ -147,7 +147,7 @@ pub async fn get_feed_post_handler(
         requester: user_id,
         get_avatar: true,
         get_media: true,
-        // limit: query.limit,
+        limit: query.limit,
         mode: FetchMode::All,
         ..PostQOpts::full()
     };
@@ -159,8 +159,6 @@ pub async fn get_feed_post_handler(
     for post in &mut post_vec {
         post.current_user_id = user_id.map(|id| id.to_string());
     }
-
-    tracing::trace!("Json Item {:#?}", post_vec);
 
     Ok(Json(post_vec))
 }

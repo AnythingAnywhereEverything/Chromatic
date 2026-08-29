@@ -93,6 +93,7 @@ pub async fn get_comment(
                     'created_at', md.created_at,
                     'thumbhash', md.thumbhash,
                     'name', md.name,
+                    'flags', md.flags,
                     'updated_at', md.updated_at,
                     'status', md.status,
                     'file_size', mdt.file_size,
@@ -193,6 +194,7 @@ pub async fn get_specific_comment(
                             'path', md.path,
                             'created_at', md.created_at,
                             'thumbhash', md.thumbhash,
+                            'flags', md.flags,
                             'name', md.name,
                             'updated_at', md.updated_at,
                             'status', md.status,
@@ -237,9 +239,20 @@ pub async fn delete_comment(
 ) -> Result<u64, sqlx::Error> {
     let result = sqlx::query(
         r#"
-        DELETE FROM media_comments
-        WHERE id = $1 AND user_id = $2
-        "#
+        WITH deleted AS (
+            UPDATE media_comments
+            SET deleted_at = NOW(),
+                updated_at = NOW(),
+                status = "inactive"
+            WHERE id = $1
+              AND user_id = $2
+              AND deleted_at IS NULL
+            RETURNING post_id
+        )
+        UPDATE media_posts
+        SET total_comments = GREATEST(total_comments - 1, 0)
+        WHERE id = (SELECT post_id FROM deleted)
+        "#,
     )
     .bind(comment_id)
     .bind(user_id)
