@@ -41,6 +41,7 @@ export const HlsPlayer = ({
     autoPlay,
     width,
     height,
+    duration: initialDuration = 0,
 }: HlsPlayerProps) => {
     const thumbnailSrc = `${base_src}t_${id}.png`;
     const src = makeFullURL(base_src, "hls/master.m3u8").trim();
@@ -53,7 +54,7 @@ export const HlsPlayer = ({
     const [selectedLevel, setSelectedLevel] = useState(-1);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
+    const [duration, setDuration] = useState(initialDuration);
     const [volume, setVolume] = useState(1);
     const [isMuted, setIsMuted] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);

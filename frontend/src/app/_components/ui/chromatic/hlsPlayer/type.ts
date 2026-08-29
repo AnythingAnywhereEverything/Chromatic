@@ -7,6 +7,7 @@ type HlsPlayerProps = {
     controls?: boolean;
     width?: number;
     height?: number;
+    duration?: number;
 };
 
 export type { HlsPlayerProps };

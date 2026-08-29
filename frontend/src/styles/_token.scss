@@ -9,6 +9,84 @@
 // TODO: change the base color
 
 :root {
+    --radius-none: 0px;
+    --radius-xs: 4px;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --radius-xxl: 32px;
+    --radius-round: 2147483647px;
+}
+
+:root {
+    --size-0: 0px;
+    --size-4: 4px;
+    --size-8: 8px;
+    --size-12: 12px;
+    --size-16: 16px;
+    --size-20: 20px;
+    --size-24: 24px;
+    --size-32: 32px;
+    --size-48: 48px;
+    --size-64: 64px;
+    --size-80: 80px;
+    --size-96: 96px;
+    --size-128: 128px;
+    --size-160: 160px;
+    --size-192: 192px;
+    --size-xxs: var(--size-4);
+    --size-xs: var(--size-8);
+    --size-sm: var(--size-12);
+    --size-md: var(--size-16);
+    --size-lg: var(--size-20);
+    --size-xl: var(--size-24);
+    --size-xxl: var(--size-32);
+    --breakpoint-480: 480px;
+    --breakpoint-640: 640px;
+    --breakpoint-768: 768px;
+    --breakpoint-1024: 1024px;
+    --breakpoint-1280: 1280px;
+    --breakpoint-1536: 1536px;
+    --breakpoint-1800: 1800px;
+    --breakpoint-2500: 2500px;
+    --breakpoint-xxs: 480px;
+    --breakpoint-xs: 640px;
+    --breakpoint-sm: 768px;
+    --breakpoint-md: 1024px;
+    --breakpoint-lg: 1280px;
+    --breakpoint-xl: 1536px;
+    --breakpoint-xxl: 1800px;
+    --breakpoint-max: 2500px;
+    --space-0: 0px;
+    --space-4: 4px;
+    --space-6: 6px;
+    --space-8: 8px;
+    --space-10: 10px;
+    --space-12: 12px;
+    --space-16: 16px;
+    --space-20: 20px;
+    --space-24: 24px;
+    --space-26: 26px;
+    --space-30: 30px;
+    --space-32: 32px;
+    --space-40: 40px;
+    --space-48: 48px;
+    --space-64: 64px;
+    --space-80: 80px;
+    --space-96: 96px;
+    --space-128: 128px;
+    --space-160: 160px;
+    --space-192: 192px;
+    --space-xs: var(--space-8);
+    --space-sm: var(--space-12);
+    --space-md: var(--space-16);
+    --space-lg: var(--space-20);
+    --space-xl: var(--space-24);
+    --space-xxl: var(--space-32);
+}
+
+:root {
     // Base values
     --background: #fafafa;
     --foreground: #0a0a0a;

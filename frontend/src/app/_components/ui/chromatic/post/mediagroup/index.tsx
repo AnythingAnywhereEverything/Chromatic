@@ -198,6 +198,7 @@ function MediaLayout({ media, containerWidthRatio ,containerHeightRatio }: Media
                                         controls={true}
                                         width={item.width}
                                         height={item.height}
+                                        duration={item.duration}
                                     />
                                 </li>
                             );
