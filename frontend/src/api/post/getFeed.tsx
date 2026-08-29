@@ -12,7 +12,7 @@ export interface mediaPostProps {
     user_id: string
     username: string
     content: string
-    total_comment: number
+    total_comments: number
     total_likes: number
     visibility: string
     repost_from: string
