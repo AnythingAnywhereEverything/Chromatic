@@ -285,7 +285,7 @@ AS $$
             )
             FROM users u
             JOIN user_profiles up ON up.user_id = u.id
-            JOIN media_objects mo ON mo.media_id = up.avatar_media_id
+            LEFT JOIN media_objects mo ON mo.media_id = up.avatar_media_id
             WHERE u.id = p.user_id
             AND u.deleted_at IS NULL
         ) AS author,
@@ -312,7 +312,7 @@ AS $$
                     )
                     FROM users u
                     JOIN user_profiles up ON up.user_id = u.id
-                    JOIN media_objects mo ON mo.media_id = up.avatar_media_id
+                    LEFT JOIN media_objects mo ON mo.media_id = up.avatar_media_id
                     WHERE u.id = rp.user_id
                 ),
                 'visibility', rp.visibility,
