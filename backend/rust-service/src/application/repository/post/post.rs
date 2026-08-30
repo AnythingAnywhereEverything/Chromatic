@@ -12,23 +12,6 @@ use crate::{
     },
 };
 
-pub async fn get_feed_for_user(
-    tx: &mut Transaction<'_, Postgres>,
-    user_id: i64,
-    limit: i32,
-) -> Result<Vec<PostRow>, sqlx::Error> {
-    let posts = sqlx::query_as::<_, PostRow>(
-        r#"
-            SELECT *
-            FROM get_post_amount_for_feed($1, $2);
-        "#,
-    )
-    .bind(user_id)
-    .bind(limit)
-    .fetch_all(tx.as_mut())
-    .await?;
-    Ok(posts)
-}
 
 // todo: func get YOUR FRIEND post
 // todo: func get feed comment :d
@@ -154,7 +137,7 @@ pub async fn get_feed_public(
 // }
 
 // * case the friends is impl completed
-pub async fn get_post_by_id(
+pub async fn get_post_by_id_old(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     post_id: i64,
     user_id: i64,

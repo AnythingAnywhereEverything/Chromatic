@@ -1,23 +1,43 @@
-use sqlx::Transaction;
+use sqlx::{Transaction, Postgres};
 
 use crate::application::repository::{RepositoryResult, post::row::PostRow};
 
 
-pub async fn get_post_by_id(
-    tx: &mut Transaction<'_, sqlx::Postgres>,
-    post_id: i64,
-) -> RepositoryResult<PostRow> {
-    let result = sqlx::query_as::<_, PostRow>(
+
+pub async fn get_feed_for_user(
+    tx: &mut Transaction<'_, Postgres>,
+    user_id: i64,
+    limit: i32,
+) -> Result<Vec<PostRow>, sqlx::Error> {
+    let posts = sqlx::query_as::<_, PostRow>(
         r#"
-        SELECT *
-        FROM get_post_by_id($1)
+            SELECT *
+            FROM get_post_amount_for_feed($1, $2);
+        "#,
+    )
+    .bind(user_id)
+    .bind(limit)
+    .fetch_all(tx.as_mut())
+    .await?;
+    Ok(posts)
+}
+
+pub async fn get_post_by_id(
+    tx: &mut Transaction<'_, Postgres>,
+    post_id: i64,
+    user_id: Option<i64>,
+) -> Result<PostRow, sqlx::Error> {
+    let post = sqlx::query_as::<_, PostRow>(
+        r#"
+            SELECT *
+            FROM get_post_by_id($1, $2);
         "#,
     )
     .bind(post_id)
+    .bind(user_id)
     .fetch_one(tx.as_mut())
     .await?;
-
-    Ok(result)
+    Ok(post)
 }
 
 // ! Everything below are deprecated

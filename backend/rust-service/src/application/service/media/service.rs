@@ -209,7 +209,6 @@ impl MediaService {
 
             let meta = resolved_files.meta.as_ref().unwrap();
             let media_metadata_row = MediaObjectMetadataRow {
-                media_id: media_row.id,
                 width: meta.width.map(|w| w as i32),
                 height: meta.height.map(|h| h as i32),
                 duration: meta.duration.map(|d| d as f64),
@@ -221,7 +220,7 @@ impl MediaService {
                 "Creating media object metadata row: {:#?}",
                 media_metadata_row
             );
-            media::create::media_object_metadata_create(&mut tx, &media_metadata_row).await?;
+            media::create::media_object_metadata_create(&mut tx, media_row.id, &media_metadata_row).await?;
 
             // loop resolved files
             for file in resolved_files.files {
@@ -236,7 +235,6 @@ impl MediaService {
                     .replace(&container.relative_path(), &target_path);
 
                 let media_objects_row = MediaObjectsRow {
-                    media_id: file.id().unwrap(),
                     kind: file.kind().clone(),
                     storage_key: storage_key,
                     content_type: file.content_type().to_string(),
@@ -248,7 +246,7 @@ impl MediaService {
                     deleted_at: None,
                 };
                 tracing::info!("Creating media object row: {:#?}", media_objects_row);
-                media::create::media_object_create(&mut tx, &media_objects_row).await?;
+                media::create::media_object_create(&mut tx, media_row.id, &media_objects_row).await?;
             }
         }
 

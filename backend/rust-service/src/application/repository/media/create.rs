@@ -60,6 +60,7 @@ pub async fn media_create(
 
 pub async fn media_object_create(
     tx: &mut Transaction<'_, sqlx::Postgres>,
+    id: i64,
     media_object_row: &MediaObjectsRow,
 ) -> RepositoryResult<()> {
     sqlx::query(
@@ -81,7 +82,7 @@ pub async fn media_object_create(
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         "#,
     )
-    .bind(media_object_row.media_id)
+    .bind(id)
     .bind(&media_object_row.kind)
     .bind(&media_object_row.storage_key)
     .bind(&media_object_row.content_type)
@@ -98,6 +99,7 @@ pub async fn media_object_create(
 
 pub async fn media_object_metadata_create(
     tx: &mut Transaction<'_, sqlx::Postgres>,
+    id: i64,
     media_object_metadata_row: &MediaObjectMetadataRow,
 ) -> RepositoryResult<()> {
     sqlx::query(
@@ -115,7 +117,7 @@ pub async fn media_object_metadata_create(
         ON CONFLICT (media_id) DO NOTHING
         "#,
     )
-    .bind(media_object_metadata_row.media_id)
+    .bind(id)
     .bind(&media_object_metadata_row.width)
     .bind(&media_object_metadata_row.height)
     .bind(&media_object_metadata_row.duration)
@@ -128,6 +130,7 @@ pub async fn media_object_metadata_create(
 
 pub async fn media_hls_create(
     tx: &mut Transaction<'_, sqlx::Postgres>,
+    id: i64,
     media_hls_row: &MediaHls,
 ) -> RepositoryResult<()> {
     sqlx::query(
@@ -141,7 +144,7 @@ pub async fn media_hls_create(
         VALUES ($1, $2, $3, $4)
         "#,
     )
-    .bind(media_hls_row.media_id)
+    .bind(id)
     .bind(&media_hls_row.master_playlist)
     .bind(media_hls_row.created_at)
     .bind(media_hls_row.updated_at)
@@ -152,6 +155,7 @@ pub async fn media_hls_create(
 
 pub async fn media_hls_playlist_create(
     tx: &mut Transaction<'_, sqlx::Postgres>,
+    id: i64,
     media_hls_playlist_row: &MediaHlsPlaylist,
 ) -> RepositoryResult<()> {
     sqlx::query(
@@ -168,7 +172,7 @@ pub async fn media_hls_playlist_create(
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         "#,
     )
-    .bind(media_hls_playlist_row.media_id)
+    .bind(id)
     .bind(&media_hls_playlist_row.resolution)
     .bind(&media_hls_playlist_row.playlist_storage_key)
     .bind(media_hls_playlist_row.segment_count)

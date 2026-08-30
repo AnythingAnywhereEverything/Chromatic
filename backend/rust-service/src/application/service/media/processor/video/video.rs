@@ -464,7 +464,6 @@ pub async fn process_video_hls(
         let mut tx = pool.begin().await?;
 
         let playlist = MediaHlsPlaylist {
-            media_id: id,
             resolution: res.length.to_string(),
             segment_count: metadata.segment_count,
             segment_duration: metadata.segment_duration,
@@ -472,7 +471,7 @@ pub async fn process_video_hls(
             ..Default::default()
         };
 
-        media::create::media_hls_playlist_create(&mut tx, &playlist).await?;
+        media::create::media_hls_playlist_create(&mut tx, id, &playlist).await?;
 
         tx.commit().await?;
 
@@ -505,8 +504,8 @@ pub async fn process_video_hls(
 
     media::create::media_hls_create(
         &mut tx,
+        id,
         &MediaHls {
-            media_id: id,
             master_playlist: format!("{}/hls/master.m3u8", target_path),
             created_at: chrono::Utc::now().naive_utc(),
             updated_at: chrono::Utc::now().naive_utc(),

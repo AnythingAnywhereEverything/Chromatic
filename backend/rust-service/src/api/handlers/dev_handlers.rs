@@ -1,6 +1,6 @@
 use crate::{
     api::APIError, application::{
-        repository::media::row::MediaType, service::{
+        repository::media::{self, row::MediaType}, service::{
             errors::MediaServiceError, media::{
                 extractor::{
                     ExtractorFileOptions,
@@ -92,5 +92,12 @@ pub async fn files_upload_handler(
             tracing::error!("Failed to save media: {:?}", e);
             MediaServiceError::ProcessingFailed
         })?;
+    
+    // get media datas
+    let mut tx = state.db_pool.begin().await?;
+    for file in uploaded_files.resolve_files() {
+        let media_full = media::get::media_full_data(&mut tx, &file.id).await?;
+        tracing::info!("Media full data: {:#?}", media_full);
+    }
     Ok(())
 }

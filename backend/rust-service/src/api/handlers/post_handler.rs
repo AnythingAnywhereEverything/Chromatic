@@ -10,7 +10,7 @@ use crate::{
         APIError, RequestAuth, dtos::post_dtos::{ LikeDTO, PostDTO}, version,
     }, application::{
         repository::{
-            media::{self as media_repo, row::{MediaStatus, MediaType}}, post::{self as post_repo, find::{FetchMode, PostQOpts}},
+            media::{self as media_repo, row::{MediaStatus, MediaType, ProcessingState}}, post::{self as post_repo, find::{FetchMode, PostQOpts}, row::PostRow},
         }, service::{
             errors::{AuthServiceError, PostServiceError},
             media::{
@@ -31,7 +31,7 @@ pub enum PostStatus {
     Active,
     InActive,
 }
-#[derive(serde::Deserialize, sqlx::Type, Debug)]
+#[derive(serde::Deserialize, sqlx::Type, Debug, serde::Serialize)]
 #[sqlx(type_name = "post_visibility", rename_all = "lowercase")]
 pub enum PostVisibility {
     Everyone,
@@ -105,7 +105,7 @@ pub struct CreatePostRequest {
 
 #[derive(serde::Deserialize)]
 pub struct FeedQuery {
-    pub limit: Option<i64>,
+    pub limit: Option<i32>,
     pub cursor_id: Option<i64>,
 }
 #[derive(Debug, serde::Deserialize)]
@@ -131,7 +131,7 @@ pub async fn get_feed_post_handler(
     Path(version): Path<String>,
     req_auth: RequestAuth,
     query: Query<FeedQuery>,
-) -> Result<Json<Vec<PostDTO>>, APIError> {
+) -> Result<Json<Vec<PostRow>>, APIError> {
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
 
@@ -141,33 +141,17 @@ pub async fn get_feed_post_handler(
     };
     
     let mut tx = state.db_pool.begin().await?;
-    
-    let opts = PostQOpts {
-        target_id: Some(query.cursor_id.unwrap_or_default()),
-        requester: user_id,
-        get_avatar: true,
-        get_media: true,
-        limit: query.limit,
-        mode: FetchMode::All,
-        ..PostQOpts::full()
-    };
 
-    let all_post = post_repo::find::get_post_by_id_experiment(&mut tx, opts).await?;
+    let all_post = post_repo::find::get_feed_for_user(&mut tx, user_id.unwrap_or_default(), query.limit.unwrap_or(8) as i32).await?;
 
-    let mut post_vec: Vec<PostDTO> = all_post.into();
-
-    for post in &mut post_vec {
-        post.current_user_id = user_id.map(|id| id.to_string());
-    }
-
-    Ok(Json(post_vec))
+    Ok(Json(all_post))
 }
 
 pub async fn get_info_post_handler(
     State(state): State<SharedState>,
     Path((version, post_id)): Path<(String, i64)>,
     req_auth: RequestAuth,
-) -> Result<Json<PostDTO>, APIError> {
+) -> Result<Json<PostRow>, APIError> {
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
 
@@ -178,36 +162,25 @@ pub async fn get_info_post_handler(
 
     let mut tx = state.db_pool.begin().await?;
 
-    let opts = PostQOpts {
-        target_id: Some(post_id),
-        requester: user_id,
-        get_avatar: true,
-        get_media: true,
-        mode: FetchMode::One,
-        ..PostQOpts::full()
-    };
-
-    let post = post_repo::find::get_post_by_id_experiment(&mut tx, opts).await?;
+    let post = post_repo::find::get_post_by_id(&mut tx, post_id, user_id).await?;
     
-    Ok(Json(post.try_into()?))
+    Ok(Json(post))
 }
 
 
-
+#[axum::debug_handler]
 pub async fn create_new_post_handler(
     State(state): State<SharedState>,
     Path(version): Path<String>,
     req_auth: RequestAuth,
     request: Multipart,
-) -> Result<Json<PostDTO>, APIError> {
+) -> Result<Json<PostRow>, APIError> {
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
 
-    // ! Temporary testing ID
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
         None => return Err(AuthServiceError::InvalidCredentials.into()),
-        // None => 81727418892554240,
     };
 
     let ext_opts = ExtractorFileOptions {
@@ -265,18 +238,18 @@ pub async fn create_new_post_handler(
 
         state.media_service.save_media(&state, container).await?;
 
-        for media in container.files_mut() {
+        for media in container.resolve_files() {
             // set to complete the media processing
-            media_repo::update::media_status(
+            media_repo::update::processing_state(
                 &mut tx,
-                &media.id().unwrap(),
-                &MediaStatus::Completed,
+                &media.id,
+                &ProcessingState::Completed,
             )
             .await?;
             post_repo::post::add_has_attachment(
                 &mut tx,
                 *new_post_id,
-                media.id().unwrap(),
+                media.id,
                 MediaTypeAttachment::Post.as_str().to_string(),
             )
             .await?;
@@ -304,12 +277,15 @@ pub async fn create_new_post_handler(
                 .await?;
         }
     }
-    let mut post: PostDTO = post_repo::post::get_post_by_id(&mut tx, *new_post_id, user_id)
-        .await?
-        .into();
-
-    post.current_user_id = Some(user_id.to_string());
     tx.commit().await?;
+
+    tracing::trace!("Committing transaction and fetching post by ID");
+
+    let mut tx = state.db_pool.begin().await?;
+    let post = post_repo::find::get_post_by_id(&mut tx, *new_post_id, Some(user_id))
+        .await?;
+
+    // post.current_user_id = Some(user_id.to_string());
     Ok(Json(post))
 }
 
@@ -320,7 +296,7 @@ pub async fn update_post_handler(
     Path((version, post_id)): Path<(String, i64)>,
     req_auth: RequestAuth,
     media_src: Multipart,
-) -> Result<Json<PostDTO>, APIError> {
+) -> Result<Json<()>, APIError> {
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
 
@@ -342,7 +318,7 @@ pub async fn update_post_handler(
 
     let mut tx = state.db_pool.begin().await?;
 
-    let old_post = post_repo::post::get_post_by_id(&mut tx, post_id, user_id).await?;
+    let old_post = post_repo::find::get_post_by_id(&mut tx, post_id, Some(user_id)).await?;
     let old_tags = post_repo::post::get_tag_attachments(&mut tx, post_id).await?;
 
     if let Some(new_tags) = extracted.media_tags {
@@ -377,15 +353,9 @@ pub async fn update_post_handler(
     let _ = post_repo::post::update_post(&mut tx, post_id, user_id, content, extracted.visibility)
         .await?;
 
-    let post: PostDTO = post_repo::post::get_post_by_id(&mut tx, post_id, user_id)
-        .await?
-        .into();
-
-    tracing::trace!("Updated post {:#?}", post);
-
     tx.commit().await?;
 
-    Ok(Json(post))
+    Ok(Json(()))
 }
 
 pub async fn delete_post_handler(
@@ -404,7 +374,7 @@ pub async fn delete_post_handler(
         // None => 1234,
     };
 
-    post_repo::post::get_post_by_id(&mut tx, post_id, user_id).await?;
+    post_repo::find::get_post_by_id(&mut tx, post_id, Some(user_id)).await?;
     let delete = post_repo::post::delete_post(&mut tx, post_id, user_id).await?;
     tx.commit().await?;
 

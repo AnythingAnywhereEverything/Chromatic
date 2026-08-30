@@ -34,72 +34,72 @@ pub struct PostDTO {
     pub current_user_id: Option<String>, // Will default to None
 }
 
-impl Into<PostDTO> for PostRow {
-    fn into(self) -> PostDTO {
-        PostDTO {
-            id: self.id.to_string(),
-            user_id: self.user_id.to_string(),
-            username: self.username,
-            display_name: self.display_name.unwrap_or_default(),
-            content: self.content,
-            total_likes: self.total_likes,
-            total_comments: self.total_comments,
-            reposted_from: self.reposted_from.map(|id| id.to_string()),
-            is_repost: self.is_repost,
-            has_attachment: self.has_attachment,
-            created_at: Some(self.created_at.to_string()),
-            updated_at: Some(self.updated_at.to_string()),
-            visibility: self.visibility.to_string(),
-            media: self.media_attachment.0.into_iter().map(|media| MediaFullDTO {
-                id: media.id.to_string(),
-                path: media.path,
-                name: media.name,
-                flags: media.flags,
-                thumbhash: media.thumbhash,
-                status: media.status,
-                created_at: media.created_at,
-                file_size: media.file_size,
-                mime_type: media.mime_type,
-                width: media.width,
-                height: media.height,
-                duration: media.duration,
-            }).collect(),
-            tag: self.tags.0.into_iter().map(|tag| TagDTO {
-                target_id: tag.target_id.to_string(),
-                tag_name: tag.tag_name,
-                tag_id: tag.tag_id.to_string(),
-                tag_color: tag.tag_color,
-            }).collect(),
-            is_liked: self.is_liked,
-            current_user_id : None,
-            avatar_path: self.avatar_path,
-            avatar_mime: self.avatar_mime,
-            avatar_thumbhash: self.avatar_thumbhash,
-            followers_count: self.followers_count,
-            following_count: self.following_count,
-        }
-    }
-}
+// impl Into<PostDTO> for PostRow {
+//     fn into(self) -> PostDTO {
+//         PostDTO {
+//             id: self.id.to_string(),
+//             user_id: self.user_id.to_string(),
+//             username: self.username,
+//             display_name: self.display_name.unwrap_or_default(),
+//             content: self.content,
+//             total_likes: self.total_likes,
+//             total_comments: self.total_comments,
+//             reposted_from: self.reposted_from.map(|id| id.to_string()),
+//             is_repost: self.is_repost,
+//             has_attachment: self.has_attachment,
+//             created_at: Some(self.created_at.to_string()),
+//             updated_at: Some(self.updated_at.to_string()),
+//             visibility: self.visibility.to_string(),
+//             media: self.media_attachment.0.into_iter().map(|media| MediaFullDTO {
+//                 id: media.id.to_string(),
+//                 path: media.path,
+//                 name: media.name,
+//                 flags: media.flags,
+//                 thumbhash: media.thumbhash,
+//                 status: media.status,
+//                 created_at: media.created_at,
+//                 file_size: media.file_size,
+//                 mime_type: media.mime_type,
+//                 width: media.width,
+//                 height: media.height,
+//                 duration: media.duration,
+//             }).collect(),
+//             tag: self.tags.0.into_iter().map(|tag| TagDTO {
+//                 target_id: tag.target_id.to_string(),
+//                 tag_name: tag.tag_name,
+//                 tag_id: tag.tag_id.to_string(),
+//                 tag_color: tag.tag_color,
+//             }).collect(),
+//             is_liked: self.is_liked,
+//             current_user_id : None,
+//             avatar_path: self.avatar_path,
+//             avatar_mime: self.avatar_mime,
+//             avatar_thumbhash: self.avatar_thumbhash,
+//             followers_count: self.followers_count,
+//             following_count: self.following_count,
+//         }
+//     }
+// }
 
-impl TryFrom<PostQueryResult> for PostDTO {
-    type Error = PostServiceError;
+// impl TryFrom<PostQueryResult> for PostDTO {
+//     type Error = PostServiceError;
 
-    fn try_from(value: PostQueryResult) -> Result<Self, Self::Error> {
-        match value {
-            PostQueryResult::One(row) => Ok(row.into()),
-            PostQueryResult::Many(_) => Err(PostServiceError::UnexpectedMultipleRows),
-        }
-    }
-}
+//     fn try_from(value: PostQueryResult) -> Result<Self, Self::Error> {
+//         match value {
+//             PostQueryResult::One(row) => Ok(row.into()),
+//             PostQueryResult::Many(_) => Err(PostServiceError::UnexpectedMultipleRows),
+//         }
+//     }
+// }
 
-impl From<PostQueryResult> for Vec<PostDTO> {
-    fn from(value: PostQueryResult) -> Self {
-        match value {
-            PostQueryResult::One(row) => vec![row.into()],
-            PostQueryResult::Many(rows) => rows.into_iter().map(Into::into).collect(),
-        }
-    }
-}
+// impl From<PostQueryResult> for Vec<PostDTO> {
+//     fn from(value: PostQueryResult) -> Self {
+//         match value {
+//             PostQueryResult::One(row) => vec![row.into()],
+//             PostQueryResult::Many(rows) => rows.into_iter().map(Into::into).collect(),
+//         }
+//     }
+// }
 
 
 #[derive(Debug, Serialize)]
@@ -146,45 +146,45 @@ pub struct LikeDTO {
     pub total_liked: i32,
 }
 
-impl Into<CommentDTO> for CommentRow {
-    fn into(self) -> CommentDTO {
-        CommentDTO {
-            id: self.id.to_string(),
-            post_id: self.post_id.to_string(),
-            user_id: self.user_id.to_string(),
+// impl Into<CommentDTO> for CommentRow {
+//     fn into(self) -> CommentDTO {
+//         CommentDTO {
+//             id: self.id.to_string(),
+//             post_id: self.post_id.to_string(),
+//             user_id: self.user_id.to_string(),
 
-            username: self.username,
-            display_name: self.display_name,
+//             username: self.username,
+//             display_name: self.display_name,
 
-            avatar_path: self.avatar_path,
-            avatar_mime: self.avatar_mime,
-            avatar_thumbhash: self.avatar_thumbhash,
+//             avatar_path: self.avatar_path,
+//             avatar_mime: self.avatar_mime,
+//             avatar_thumbhash: self.avatar_thumbhash,
 
-            followers_count: self.followers_count,
-            following_count: self.following_count,
+//             followers_count: self.followers_count,
+//             following_count: self.following_count,
 
-            content: self.content,
-            total_likes: self.total_likes,
-            is_liked: self.is_liked,
-            has_attachment: self.has_attachment,
+//             content: self.content,
+//             total_likes: self.total_likes,
+//             is_liked: self.is_liked,
+//             has_attachment: self.has_attachment,
 
-            created_at: Some(self.created_at.to_string()),
-            updated_at: Some(self.updated_at.to_string()),
-            media: self.media_attachment.0.into_iter().map(|media| MediaFullDTO {
-                id: media.id.to_string(),
-                path: media.path,
-                name: media.name,
-                thumbhash: media.thumbhash,
-                status: media.status,
-                created_at: media.created_at,
-                file_size: media.file_size,
-                mime_type: media.mime_type,
-                width: media.width,
-                height: media.height,
-                duration: media.duration,
-                flags: media.flags,
-            }).collect(),
-                current_user_id : None,
-        }
-    }
-}
+//             created_at: Some(self.created_at.to_string()),
+//             updated_at: Some(self.updated_at.to_string()),
+//             media: self.media_attachment.0.into_iter().map(|media| MediaFullDTO {
+//                 id: media.id.to_string(),
+//                 path: media.path,
+//                 name: media.name,
+//                 thumbhash: media.thumbhash,
+//                 status: media.status,
+//                 created_at: media.created_at,
+//                 file_size: media.file_size,
+//                 mime_type: media.mime_type,
+//                 width: media.width,
+//                 height: media.height,
+//                 duration: media.duration,
+//                 flags: media.flags,
+//             }).collect(),
+//                 current_user_id : None,
+//         }
+//     }
+// }

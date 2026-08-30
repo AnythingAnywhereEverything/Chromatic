@@ -32,7 +32,7 @@ impl ToString for MediaStatus {
 }
 
 
-#[derive(Debug, sqlx::Type, Serialize, Deserialize)]
+#[derive(Debug, sqlx::Type, Serialize)]
 #[sqlx(type_name = "media_processing_state", rename_all = "lowercase")]
 pub enum ProcessingState {
     Pending,
@@ -41,7 +41,7 @@ pub enum ProcessingState {
     Completed,
 }
 
-#[derive(Debug, sqlx::Type, Serialize, Deserialize)]
+#[derive(Debug, sqlx::Type, Serialize)]
 #[sqlx(type_name = "media_post_processing_state", rename_all = "lowercase")]
 pub enum PostProcessingState {
     Idle,
@@ -50,8 +50,48 @@ pub enum PostProcessingState {
     Completed,
 }
 
-#[derive(Debug, Serialize, Deserialize, sqlx::Type, Clone, PartialEq, Eq)]
+impl<'de> Deserialize<'de> for ProcessingState {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+
+        match value.to_lowercase().as_str() {
+            "pending" => Ok(Self::Pending),
+            "ready" => Ok(Self::Ready),
+            "failed" => Ok(Self::Failed),
+            "completed" => Ok(Self::Completed),
+            _ => Err(serde::de::Error::unknown_variant(
+                &value,
+                &["Pending", "Ready", "Failed", "Completed"],
+            )),
+        }
+    }
+}
+impl<'de> Deserialize<'de> for PostProcessingState {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+
+        match value.to_lowercase().as_str() {
+            "idle" => Ok(Self::Idle),
+            "processing" => Ok(Self::Processing),
+            "failed" => Ok(Self::Failed),
+            "completed" => Ok(Self::Completed),
+            _ => Err(serde::de::Error::unknown_variant(
+                &value,
+                &["Idle", "Processing", "Failed", "Completed"],
+            )),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, sqlx::Type, Clone, PartialEq, Eq)]
 #[sqlx(type_name = "media_type", rename_all = "lowercase")]
+#[serde(rename_all = "PascalCase")]
 pub enum MediaType {
     Image,
     Video,
@@ -61,13 +101,56 @@ pub enum MediaType {
     Other,
 }
 
-#[derive(Debug, Serialize, Deserialize, sqlx::Type, Clone, PartialEq, Eq)]
+impl<'de> Deserialize<'de> for MediaType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+
+        match value.to_lowercase().as_str() {
+            "image" => Ok(Self::Image),
+            "video" => Ok(Self::Video),
+            "hls" => Ok(Self::Hls),
+            "audio" => Ok(Self::Audio),
+            "document" => Ok(Self::Document),
+            "other" => Ok(Self::Other),
+            _ => Err(serde::de::Error::unknown_variant(
+                &value,
+                &["Image", "Video", "Hls", "Audio", "Document", "Other"],
+            )),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, sqlx::Type, Clone, PartialEq, Eq)]
 #[sqlx(type_name = "media_kind", rename_all = "lowercase")]
+#[serde(rename_all = "PascalCase")]
 pub enum MediaKind {
     Original,
     Thumbnail,
     Preview,
     Transcoded,
+}
+
+impl<'de> Deserialize<'de> for MediaKind {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+
+        match value.to_lowercase().as_str() {
+            "original" => Ok(Self::Original),
+            "thumbnail" => Ok(Self::Thumbnail),
+            "preview" => Ok(Self::Preview),
+            "transcoded" => Ok(Self::Transcoded),
+            _ => Err(serde::de::Error::unknown_variant(
+                &value,
+                &["Original", "Thumbnail", "Preview", "Transcoded"],
+            )),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
@@ -114,7 +197,6 @@ impl Default for MediaRow {
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct MediaObjectsRow {
-    pub media_id: i64,
     pub kind: MediaKind,
     pub storage_key: String,
     pub content_type: String,
@@ -129,7 +211,6 @@ pub struct MediaObjectsRow {
 }
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct MediaObjectMetadataRow {
-    pub media_id: i64,
     pub width: Option<i32>,
     pub height: Option<i32>,
     pub duration: Option<f64>,
@@ -140,7 +221,6 @@ pub struct MediaObjectMetadataRow {
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct MediaHls {
-    pub media_id: i64,
     pub master_playlist: String,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
@@ -148,8 +228,6 @@ pub struct MediaHls {
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct MediaHlsPlaylist {
-    pub media_id: i64,
-
     pub resolution: String,
     pub playlist_storage_key: String,
 
@@ -163,7 +241,6 @@ pub struct MediaHlsPlaylist {
 impl Default for MediaHlsPlaylist {
     fn default() -> Self {
         MediaHlsPlaylist {
-            media_id: 0,
             resolution: String::new(),
             playlist_storage_key: String::new(),
             segment_count: 0,
@@ -197,9 +274,9 @@ pub struct MediaFullDataRow {
 #[derive(sqlx::FromRow, Debug, Serialize, Deserialize)]
 pub struct Attachment {
     pub id: String,
-    pub uploader_id: String,
-    pub original_name: String,
-    pub original_content_type: String,
+    pub uploader_id: Option<String>,
+    pub original_name: Option<String>,
+    pub original_content_type: Option<String>,
     pub file_type: MediaType,
     pub processing_state: ProcessingState,
     pub post_processing_state: PostProcessingState,
@@ -216,9 +293,9 @@ impl Into<Attachment> for MediaFullDataRow {
     fn into(self) -> Attachment {
         Attachment {
             id: self.id,
-            uploader_id: self.uploader_id,
-            original_name: self.original_name,
-            original_content_type: self.original_content_type,
+            uploader_id: Some(self.uploader_id),
+            original_name: Some(self.original_name),
+            original_content_type: Some(self.original_content_type),
             file_type: self.file_type,
             processing_state: self.processing_state,
             post_processing_state: self.post_processing_state,

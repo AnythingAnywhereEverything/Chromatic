@@ -25,7 +25,7 @@ pub struct UserProfileMinimalRow {
 // sensitive data should be in credential (e.g., password, email)
 #[derive(Debug, sqlx::FromRow, Deserialize, Serialize)]
 pub struct UserProfileRow {
-    pub id: i64,
+    pub id: String,
     pub username: Option<String>,
     pub display_name: Option<String>,
     pub bio: Option<String>,

@@ -1,3 +1,4 @@
+use chrono::NaiveDateTime;
 use serde::Deserialize;
 use serde::Serialize;
 use sqlx::types::Json;
@@ -8,19 +9,19 @@ use crate::application::repository::media::row::Attachment;
 use crate::application::repository::media::row::MediaFullDataRow;
 use crate::application::repository::user::row::UserProfileRow;
 
-#[derive(sqlx::FromRow, Debug, Deserialize)]
+#[derive(sqlx::FromRow, Debug, Deserialize, Serialize)]
 pub struct PostRow {
     // media_posts table
     pub author: Json<UserProfileRow>,
 
-    pub post_id: i64,
+    pub post_id: String,
     pub content: String,
 
     pub total_likes: i32,
     pub total_comments: i32,
 
     // repost information
-    pub is_repost: bool,
+    pub is_reposted: bool,
     pub reposted_post: Option<Json<RepostedPostRow>>,
 
     pub visibility: PostVisibility,
@@ -35,13 +36,13 @@ pub struct PostRow {
     #[sqlx(skip)]
     pub comments: Json<Vec<CommentRow>>,
 
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
 }
 
-#[derive(sqlx::FromRow, Debug, Deserialize)]
+#[derive(sqlx::FromRow, Debug, Deserialize, Serialize)]
 pub struct RepostedPostRow {
-    pub id: i64,
+    pub id: String,
     pub author: Json<UserProfileRow>,
     pub content: String,
     pub is_reposted: bool,
@@ -53,7 +54,7 @@ pub struct RepostedPostRow {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(sqlx::FromRow, Debug, Deserialize)]
+#[derive(sqlx::FromRow, Debug, Deserialize, Serialize)]
 pub struct CommentRow {
     pub comment_id: i64,
     pub post_id: i64,
@@ -83,7 +84,7 @@ pub struct CreatePostRow {
     pub content: String,
     pub total_likes: i32,
     pub total_comments: i32,
-    pub reposted_post: Option<i64>,
+    pub reposted_from: Option<i64>,
     pub is_repost: bool,
     pub has_attachment: bool,
     pub created_at: chrono::DateTime<chrono::Utc>,
@@ -95,26 +96,26 @@ pub struct CreatePostRow {
     pub comments: Json<Vec<CommentRow>>,
 }
 
-#[derive(sqlx::FromRow)]
+#[derive(sqlx::FromRow, Deserialize, Serialize)]
 pub struct HasAttachmentRow {
     pub target_id: i64,
     pub media_id: i64,
     pub target_type: String,
 }
 
-#[derive(sqlx::FromRow)]
+#[derive(sqlx::FromRow, Deserialize)]
 pub struct TotalLikesRow {
     pub id: i64,
     pub total_likes: i32,
 }
 
-#[derive(sqlx::FromRow)]
+#[derive(sqlx::FromRow, Deserialize)]
 pub struct TotalCommentRow {
     pub post_id: i64,
     pub total_comments: i32,
 }
 
-#[derive(sqlx::FromRow)]
+#[derive(sqlx::FromRow, Deserialize)]
 pub struct PostLikesRow {
     pub id: i64,
     pub user_id: i64,
@@ -124,7 +125,7 @@ pub struct PostLikesRow {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(sqlx::FromRow)]
+#[derive(sqlx::FromRow, Deserialize)]
 pub struct CreateCommentResult {
     pub id: i64,
     pub post_id: i64,
@@ -139,7 +140,7 @@ pub struct CreateCommentResult {
 
 // Tag attachment
 
-#[derive(sqlx::FromRow, Debug, Serialize)]
+#[derive(sqlx::FromRow, Debug, Serialize, Deserialize)]
 pub struct TagAttachmentRow {
     pub target_id: i64,
     pub target_type: TagTarget,

@@ -45,12 +45,15 @@ pub async fn get_comment_handler(
 
     let mut tx = state.db_pool.begin().await?;
     let comments = post_repo::comment::get_comment(&mut tx, post_id, user_id).await?;
-    let mut comments_vec: Vec<CommentDTO> = comments.into_iter().map(|post| post.into()).collect(); 
-    for comment in & mut comments_vec{
-        comment.current_user_id = user_id.map(|id | id.to_string())
-    }
 
-    Ok(Json(comments_vec))
+    // return early for debug
+
+    // let mut comments_vec: Vec<CommentDTO> = comments.into_iter().map(|post| post.into()).collect(); 
+    // for comment in & mut comments_vec{
+    //     comment.current_user_id = user_id.map(|id | id.to_string())
+    // }
+
+    Ok(Json(vec![]))
 }
 
 pub async fn create_new_comment_handler(
