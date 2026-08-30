@@ -1,5 +1,6 @@
 use uuid::Uuid;
 
+use crate::application::repository::media::row::MediaType;
 use crate::application::service::errors::media_service::ContainerError;
 use crate::application::service::media::processor::types::MediaProcessorOptions;
 use crate::application::service::media::storage::{PersistentStore, TempStore};
@@ -26,9 +27,17 @@ pub struct FileContainer {
     config: Option<ContainerConfig>,
 }
 
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub enum RecentMediaType {
+    Avatar,
+    Banner,
+}
+
 /// Use on service layer to configure the container's behavior and storage options.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ContainerConfig {
+    check_conflict: Option<RecentMediaType>,
     naming_strategy: NamingStrategy,
     processing_options: Option<MediaProcessorOptions>,
     generate_thumbhash: bool,
@@ -36,9 +45,62 @@ pub struct ContainerConfig {
     is_file_id_contained: bool,
 }
 
+/// Resolved duplicate file ID
+/// use full for when there are more than 1 media kinds
+/// e.g. video that has thumbnail image associated with it
+#[derive(Debug, Clone)]
+pub struct ResolvedFileContainer {
+    pub id: i64,
+    pub check_conflict_type: Option<RecentMediaType>,
+    pub original_name: String,
+    pub original_content_type: String,
+    pub file_type: MediaType,
+    pub has_post_processing: bool,
+    pub flags: i64,
+    pub meta: Option<ResolvedMeta>,
+    pub files: Vec<super::File>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ResolvedMeta {
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    pub duration: Option<f64>,
+}
+
+impl FileContainer {
+    pub fn resolve_files(&self) -> Vec<ResolvedFileContainer> {
+        let mut resolved_files_map: std::collections::HashMap<i64, ResolvedFileContainer> = std::collections::HashMap::new();
+
+        for file in &self.files {
+            if let Some(file_id) = file.id() {
+                let entry = resolved_files_map.entry(file_id).or_insert_with(|| ResolvedFileContainer {
+                    id: file_id,
+                    check_conflict_type: self.config.as_ref().and_then(|c| c.get_check_conflict()).cloned(),
+                    original_name: file.original_name().unwrap_or_default().to_string(),
+                    original_content_type: file.original_content_type().unwrap_or_default().to_string(),
+                    file_type: file.category().clone(),
+                    has_post_processing: false,
+                    flags: file.flags(),
+                    meta: Some(ResolvedMeta {
+                        width: file.width(),
+                        height: file.height(),
+                        duration: file.duration(),
+                    }),
+                    files: Vec::new(),
+                });
+                entry.files.push(file.clone());
+            }
+        }
+
+        resolved_files_map.into_values().collect()
+    }
+}
+
 impl ContainerConfig {
     pub fn new() -> Self {
         Self {
+            check_conflict: None,
             naming_strategy: NamingStrategy::FileId,
             generate_thumbhash: false,
             animated_image_indicator: false,
@@ -58,6 +120,15 @@ impl ContainerConfig {
 
     pub fn get_naming_strategy(&self) -> &NamingStrategy {
         &self.naming_strategy
+    }
+
+    pub fn set_check_conflict(mut self, check_conflict: RecentMediaType) -> Self {
+        self.check_conflict = Some(check_conflict);
+        self
+    }
+
+    pub fn get_check_conflict(&self) -> Option<&RecentMediaType> {
+        self.check_conflict.as_ref()
     }
 
     pub fn get_processing_options(&self) -> Option<&MediaProcessorOptions> {
@@ -223,6 +294,10 @@ impl FileContainer {
         self.files.get_mut(index)
     }
 
+    pub fn files(&self, index: usize) -> Option<&super::File> {
+        self.files.get(index)
+    }
+
     pub async fn abort(&mut self, storage: Arc<dyn TempStore>) -> Result<(), ContainerError> {
         self.files.clear();
         storage.delete(&self.relative_path).await?;
@@ -276,13 +351,15 @@ impl FileContainer {
                 "Error finalizing container: {:?}. Attempting to clean up temp storage.",
                 result.as_ref().err()
             );
-            if let Err(cleanup_err) = temp_store.delete(&self.relative_path).await {
-                tracing::error!(
-                    "Failed to clean up temp storage for container {}: {:?}",
-                    self.relative_path,
-                    cleanup_err
-                );
-            }
+        }
+
+        // attempt clean up directory in temp storage regardless of finalization result
+        if let Err(cleanup_err) = temp_store.delete(&self.relative_path).await {
+            tracing::error!(
+                "Failed to clean up temp storage for container {}: {:?}",
+                self.relative_path,
+                cleanup_err
+            );
         }
 
         result

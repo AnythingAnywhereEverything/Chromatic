@@ -1,7 +1,7 @@
-use crate::application::service::{errors::media_service::ExtractionError, media::{
-    inspector::{FileType, MediaKind, get_file_type, inspect_bytes},
+use crate::application::{repository::media::row::MediaType, service::{errors::media_service::ExtractionError, media::{
+    inspector::{FileType, get_file_type, inspect_bytes},
     storage::TempStore,
-}};
+}}};
 use axum::extract::multipart::{Field, Multipart};
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
@@ -159,11 +159,11 @@ impl Default for ExtractorFileOptions {
 async fn validate_file_type(
     chunk: &[u8],
     validation: &ValidationOptions,
-) -> Result<(String, String, Vec<FileType>, MediaKind), ExtractionError> {
+) -> Result<(String, String, Vec<FileType>, MediaType), ExtractionError> {
     let inspected = inspect_bytes(chunk).await?;
     let detected_extension = inspected.extension.clone();
     let detected_mime = inspected.mime.clone();
-    let kind = inspected.kind.clone();
+    let kind = inspected.category.clone();
     let file_types = get_file_type(&detected_mime);
 
     let is_valid = match validation.validation_type {
@@ -220,7 +220,7 @@ impl MultipartExtractor {
         let mut detected_mime = String::new();
 
         let mut file_type = Vec::new();
-        let mut kind = MediaKind::Generic;
+        let mut category = MediaType::Other;
 
         while let Some(chunk) =
             tokio::time::timeout(std::time::Duration::from_secs(10), field.chunk())
@@ -262,17 +262,17 @@ impl MultipartExtractor {
             // Validate the first 8 KB of the file to determine its type and validate against the provided options
             if !is_validated && chunk.len() > 8192 {
                 // Inspect the chunk to determine the file type
-                let (de, dm, ft, kd) = if let Some(validation) = &validation {
+                let (de, dm, ft, cat) = if let Some(validation) = &validation {
                     validate_file_type(&chunk[..8192], validation).await?
                 } else {
                     let inspected = inspect_bytes(&chunk[..8192]).await?;
                     let ft = get_file_type(&inspected.mime);
-                    (inspected.extension, inspected.mime, ft, inspected.kind)
+                    (inspected.extension, inspected.mime, ft, inspected.category)
                 };
                 detected_extension = de;
                 detected_mime = dm;
                 file_type = ft;
-                kind = kd;
+                category = cat;
 
                 is_validated = true;
             }
@@ -300,17 +300,17 @@ impl MultipartExtractor {
             let mut buffer = vec![0; 8192];
             let bytes_read = temp_file.read(&mut buffer).await?;
 
-            let (de, dm, ft, kd) = if let Some(validation) = &validation {
+            let (de, dm, ft, cat) = if let Some(validation) = &validation {
                 validate_file_type(&buffer[..bytes_read], validation).await?
             } else {
                 let inspected = inspect_bytes(&buffer[..bytes_read]).await?;
                 let ft = get_file_type(&inspected.mime);
-                (inspected.extension, inspected.mime, ft, inspected.kind)
+                (inspected.extension, inspected.mime, ft, inspected.category)
             };
             detected_extension = de;
             detected_mime = dm;
             file_type = ft;
-            kind = kd;
+            category = cat;
 
             if let Some(validation) = validation.as_ref() {
                 for ft in &file_type {
@@ -336,7 +336,7 @@ impl MultipartExtractor {
             .set_original_name(field.file_name().map(|name| name.to_string()))
             .set_detected_extension(detected_extension)
             .set_content_type(detected_mime)
-            .set_kind(kind);
+            .set_category(category);
 
         temp_file.flush().await?;
         Ok(())

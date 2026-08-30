@@ -233,5 +233,11 @@ pub enum MediaProcessorError {
 
     #[error(transparent)]
     LibvipsError(#[from] rs_vips::error::Error),
+
+    #[error(transparent)]
+    StorageError(#[from] StorageError),
+
+    #[error(transparent)]
+    SqlxError(#[from] sqlx::Error),
 }
 

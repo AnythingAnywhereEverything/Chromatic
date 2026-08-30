@@ -1,18 +1,7 @@
-use crate::application::service::errors::media_service::InspectionError;
+use crate::application::{repository::media::row::MediaType, service::errors::media_service::InspectionError};
 use content_inspector::ContentType;
 use std::{path::Path, process::Command};
 
-#[derive(Debug, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
-pub enum MediaKind {
-    Image,
-    Video,
-    Audio,
-    Code,
-    Document,
-    Archive,
-    Application,
-    Generic,
-}
 
 #[derive(Debug, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
 pub enum GenericKind {
@@ -34,36 +23,33 @@ pub enum GenericKind {
 
 #[derive(Debug, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
 pub enum FileType {
-    Category(MediaKind),
+    Category(MediaType),
     Generic(GenericKind),
 }
 
 pub fn get_file_type(mime: &str) -> Vec<FileType> {
     match mime {
-        "image/jpeg" => vec![FileType::Generic(GenericKind::Jpeg), FileType::Category(MediaKind::Image)],
-        "image/png" => vec![FileType::Generic(GenericKind::Png), FileType::Category(MediaKind::Image)],
-        "image/gif" => vec![FileType::Generic(GenericKind::Gif), FileType::Category(MediaKind::Image)],
-        "image/webp" => vec![FileType::Generic(GenericKind::Webp), FileType::Category(MediaKind::Image)],
-        "image/bmp" => vec![FileType::Generic(GenericKind::Bmp), FileType::Category(MediaKind::Image)],
-        "image/tiff" => vec![FileType::Generic(GenericKind::Tiff), FileType::Category(MediaKind::Image)],
-        "image/avif" => vec![FileType::Generic(GenericKind::Avif), FileType::Category(MediaKind::Image)],
-        "video/mp4" => vec![FileType::Generic(GenericKind::Mp4), FileType::Category(MediaKind::Video)],
-        "video/webm" => vec![FileType::Generic(GenericKind::Webm), FileType::Category(MediaKind::Video)],
-        "video/x-matroska" => vec![FileType::Generic(GenericKind::Mkv), FileType::Category(MediaKind::Video)],
-        "video/quicktime" => vec![FileType::Generic(GenericKind::Mov), FileType::Category(MediaKind::Video)],
-        "video/x-msvideo" => vec![FileType::Generic(GenericKind::Avi), FileType::Category(MediaKind::Video)],
-        "video/x-flv" => vec![FileType::Generic(GenericKind::Flv), FileType::Category(MediaKind::Video)],
-        "video/mpeg" => vec![FileType::Generic(GenericKind::Mpeg), FileType::Category(MediaKind::Video)],
+        "image/jpeg" => vec![FileType::Generic(GenericKind::Jpeg), FileType::Category(MediaType::Image)],
+        "image/png" => vec![FileType::Generic(GenericKind::Png), FileType::Category(MediaType::Image)],
+        "image/gif" => vec![FileType::Generic(GenericKind::Gif), FileType::Category(MediaType::Image)],
+        "image/webp" => vec![FileType::Generic(GenericKind::Webp), FileType::Category(MediaType::Image)],
+        "image/bmp" => vec![FileType::Generic(GenericKind::Bmp), FileType::Category(MediaType::Image)],
+        "image/tiff" => vec![FileType::Generic(GenericKind::Tiff), FileType::Category(MediaType::Image)],
+        "image/avif" => vec![FileType::Generic(GenericKind::Avif), FileType::Category(MediaType::Image)],
+        "video/mp4" => vec![FileType::Generic(GenericKind::Mp4), FileType::Category(MediaType::Video)],
+        "video/webm" => vec![FileType::Generic(GenericKind::Webm), FileType::Category(MediaType::Video)],
+        "video/x-matroska" => vec![FileType::Generic(GenericKind::Mkv), FileType::Category(MediaType::Video)],
+        "video/quicktime" => vec![FileType::Generic(GenericKind::Mov), FileType::Category(MediaType::Video)],
+        "video/x-msvideo" => vec![FileType::Generic(GenericKind::Avi), FileType::Category(MediaType::Video)],
+        "video/x-flv" => vec![FileType::Generic(GenericKind::Flv), FileType::Category(MediaType::Video)],
+        "video/mpeg" => vec![FileType::Generic(GenericKind::Mpeg), FileType::Category(MediaType::Video)],
         _ => {
             let kind = match mime.split('/').next() {
-                Some("image") => MediaKind::Image,
-                Some("video") => MediaKind::Video,
-                Some("audio") => MediaKind::Audio,
-                Some("text") => MediaKind::Code,
-                Some("application") => MediaKind::Application,
-                Some("document") => MediaKind::Document,
-                Some("archive") => MediaKind::Archive,
-                _ => MediaKind::Generic,
+                Some("image") => MediaType::Image,
+                Some("video") => MediaType::Video,
+                Some("audio") => MediaType::Audio,
+                Some("document") => MediaType::Document,
+                _ => MediaType::Other,
             };
             vec![FileType::Category(kind)]
         }
@@ -74,14 +60,14 @@ pub fn get_file_type(mime: &str) -> Vec<FileType> {
 pub struct MediaEarlyInspection {
     pub mime: String,
     pub extension: String,
-    pub kind: MediaKind,
+    pub category: MediaType,
 }
 
 #[derive(Debug, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
 pub struct MediaInspection {
     pub mime: String,
     pub extension: String,
-    pub kind: MediaKind,
+    pub category: MediaType,
     pub size_bytes: u64,
     pub width: Option<i32>,
     pub height: Option<i32>,
@@ -95,7 +81,7 @@ pub async fn inspect_bytes(bytes: &[u8]) -> Result<MediaEarlyInspection, Inspect
     Ok(MediaEarlyInspection {
         mime,
         extension: extention.to_string(),
-        kind,
+        category: kind,
     })
 }
 
@@ -120,28 +106,15 @@ pub fn get_mime_and_extension(bytes: &[u8]) -> Result<(String, String), Inspecti
     Ok((mime.to_string(), extension.to_string()))
 }
 
-pub fn categorize(mime: &str) -> MediaKind {
+pub fn categorize(mime: &str) -> MediaType {
     match mime {
-        m if m.starts_with("image/") => MediaKind::Image,
-        m if m.starts_with("video/") => MediaKind::Video,
-        m if m.starts_with("audio/") => MediaKind::Audio,
+        m if m.starts_with("image/") => MediaType::Image,
+        m if m.starts_with("video/") => MediaType::Video,
+        m if m.starts_with("audio/") => MediaType::Audio,
 
-        "application/pdf" => MediaKind::Document,
+        "application/pdf" => MediaType::Document,
 
-        "application/zip" | "application/x-tar" | "application/x-rar-compressed" => {
-            MediaKind::Archive
-        }
-
-        "text/plain"
-        | "application/json"
-        | "application/javascript"
-        | "text/x-rust"
-        | "text/x-python"
-        | "text/x-java"
-        | "text/x-c++"
-        | "text/x-c" => MediaKind::Code,
-
-        _ => MediaKind::Generic,
+        _ => MediaType::Other,
     }
 }
 

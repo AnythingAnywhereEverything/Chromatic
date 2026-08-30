@@ -1,20 +1,12 @@
 use std::path::PathBuf;
 
-use crate::application::service::{errors::media_service::FileError, media::inspector::MediaKind};
-#[repr(u32)]
+use crate::application::{repository::media::row::{MediaKind, MediaType}, service::errors::media_service::FileError};
+#[repr(i64)]
 pub enum Flags {
     None = 0,
     // Fist bit indicates whether the file is animated (e.g., GIF, APNG).
     // bit as numerial = 1
     IsAnimated = 1 << 0,
-
-    // Second bit indicates whether the file is an HLS video.
-    // bit as numerial = 2
-    IsHLS = 1 << 1,
-
-    // For video file
-    // bit as numerial = 4
-    HasThumbnail = 1 << 2,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -33,7 +25,7 @@ pub struct File {
     placeholder: Option<String>,
 
     // Flags for the file, represented as a bitmask.
-    flags: u32,
+    flags: i64,
 
     // Size of the file in bytes.
     size: u64,
@@ -58,11 +50,13 @@ pub struct File {
     // * and /hls/master.m3u8 for the HLS playlist.
     key_override: Option<String>,
 
+    category: MediaType,
+
     kind: MediaKind,
 
     width: Option<u32>,
     height: Option<u32>,
-    duration: Option<f32>,
+    duration: Option<f64>,
 
     is_deleted: bool,
 }
@@ -77,12 +71,13 @@ impl File {
             detected_extension: String::new(),
             current_extension: String::new(),
             placeholder: None,
-            flags: Flags::None as u32,
+            flags: Flags::None as i64,
             file_name: String::new(),
             file_directory: String::new(),
             size: 0,
             full_file_directory: PathBuf::new(),
-            kind: MediaKind::Generic,
+            category: MediaType::Other,
+            kind: MediaKind::Original,
             key_override: None,
             width: None,
             height: None,
@@ -95,38 +90,14 @@ impl File {
 /// Special feature
 impl File {
     pub fn is_animated(&self) -> bool {
-        (self.flags & (Flags::IsAnimated as u32)) != 0
+        (self.flags & (Flags::IsAnimated as i64)) != 0
     }
 
     pub fn set_animated(&mut self, animated: bool) {
         if animated {
-            self.flags |= Flags::IsAnimated as u32;
+            self.flags |= Flags::IsAnimated as i64;
         } else {
-            self.flags &= !(Flags::IsAnimated as u32);
-        }
-    }
-
-    pub fn is_hls(&self) -> bool {
-        (self.flags & (Flags::IsHLS as u32)) != 0
-    }
-
-    pub fn set_hls(&mut self, hls: bool) {
-        if hls {
-            self.flags |= Flags::IsHLS as u32;
-        } else {
-            self.flags &= !(Flags::IsHLS as u32);
-        }
-    }
-
-    pub fn has_thumbnail(&self) -> bool {
-        (self.flags & (Flags::HasThumbnail as u32)) != 0
-    }
-
-    pub fn set_has_thumbnail(&mut self, has_thumbnail: bool) {
-        if has_thumbnail {
-            self.flags |= Flags::HasThumbnail as u32;
-        } else {
-            self.flags &= !(Flags::HasThumbnail as u32);
+            self.flags &= !(Flags::IsAnimated as i64);
         }
     }
 
@@ -258,7 +229,7 @@ impl File {
         self.height
     }
 
-    pub fn duration(&self) -> Option<f32> {
+    pub fn duration(&self) -> Option<f64> {
         self.duration
     }
 
@@ -302,7 +273,7 @@ impl File {
         self.placeholder.as_deref()
     }
 
-    pub fn flags(&self) -> u32 {
+    pub fn flags(&self) -> i64 {
         self.flags
     }
 
@@ -312,6 +283,10 @@ impl File {
 
     pub fn file_name(&self) -> &str {
         &self.file_name
+    }
+
+    pub fn category(&self) -> &MediaType {
+        &self.category
     }
 
     pub fn file_name_with_extension(&self) -> String {
@@ -344,6 +319,11 @@ impl File {
 
 /// Setters
 impl File {
+    pub fn set_kind(&mut self, kind: MediaKind) -> &mut Self {
+        self.kind = kind;
+        self
+    }
+
     pub fn set_key_override(&mut self, key_override: Option<String>) -> &mut Self {
         self.key_override = key_override;
         self
@@ -364,8 +344,8 @@ impl File {
         self
     }
 
-    pub fn set_kind(&mut self, kind: MediaKind) -> &mut Self {
-        self.kind = kind;
+    pub fn set_category(&mut self, category: MediaType) -> &mut Self {
+        self.category = category;
         self
     }
 
@@ -429,7 +409,7 @@ impl File {
         self
     }
 
-    pub fn set_flags(&mut self, flags: u32) -> &mut Self {
+    pub fn set_flags(&mut self, flags: i64) -> &mut Self {
         self.flags = flags;
         self
     }
@@ -454,7 +434,7 @@ impl File {
         self
     }
 
-    pub fn set_duration(&mut self, duration: f32) -> &mut Self {
+    pub fn set_duration(&mut self, duration: f64) -> &mut Self {
         self.duration = Some(duration);
         self
     }

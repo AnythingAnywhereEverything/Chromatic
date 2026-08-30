@@ -10,15 +10,24 @@ use tokio::task::JoinHandle;
 
 use crate::application::{
     repository::media::{
-        self,
-        row::{MediaDataRow, MediaMetadataRow, MediaStatus},
+        self, row::{
+            MediaKind, MediaObjectMetadataRow, MediaObjectsRow, MediaRow, MediaType,
+            PostProcessingState, ProcessingState,
+        },
     }, service::{
-        errors::MediaServiceError, media::{
-            inspector::{self, MediaKind}, model::{
+        errors::MediaServiceError,
+        media::{
+            inspector,
+            model::{
                 File, FileContainer,
                 container::{ContainerConfig, NamingStrategy},
-            }, processor::{image::ImageProcessor, types::VideoPostProcessorType, video::VideoProcessor}, storage::{PersistentStore, TempStore},
-        }, snowflake_service::SnowflakeGenerator,
+            },
+            processor::{
+                image::ImageProcessor, types::VideoPostProcessorType, video::VideoProcessor,
+            },
+            storage::{PersistentStore, TempStore},
+        },
+        snowflake_service::SnowflakeGenerator,
     }, state::AppState,
 };
 
@@ -33,8 +42,10 @@ pub struct SaveOptions {
     pub temp_store: Arc<dyn TempStore>,
 }
 
+#[derive(Debug)]
 pub struct ProcessResponse {
     pub processed_file: File,
+    pub file_to_insert: Vec<File>,
     pub post_container: Option<FileContainer>,
 }
 
@@ -111,71 +122,133 @@ impl MediaService {
 
         for task in tasks {
             let res = task.await??;
+            tracing::info!("Processing result: {:#?}", res);
 
             let file = res.processed_file;
+            let file_to_insert = res.file_to_insert;
             let post_container = res.post_container;
 
             new_files.push(file);
-
-            if let Some(post_container) = post_container {
+            for file in file_to_insert {
+                new_files.push(file);
+            }
+            if let Some(mut post_container) = post_container {
+                post_container.set_target_path(target_path.clone());
                 ppc.push(post_container);
             }
         }
 
         container.replace_files(new_files);
+
+        let resolved = container.resolve_files();
+        // guarding for debug
+        tracing::info!("Resolved files: {:#?}", resolved);
+
+        // abort post-processing containers
+        // for mut post_container in ppc {
+        //     post_container
+        //         .abort(self.temporary_store.clone())
+        //         .await
+        //         .map_err(|e| {
+        //             tracing::error!("Failed to abort post-processing container: {:?}", e);
+        //             MediaServiceError::ProcessingFailed
+        //         })?;
+        // }
+
         let mut tx = state.db_pool.begin().await?;
 
         // loop save file to database
-        let container_dir = container.relative_path().to_string();
-        for file in container.files_mut() {
-            if file.is_deleted() && file.key_override().is_none() {
-                continue;
-            }
-            // replace file path with contaer target path
-            let file_path = if let Some(key_override) = file.key_override() {
-                let path = key_override;
-                // replace container dir from path with target path
-                path.replace(&container_dir, &target_path)
-            } else {
-                let path = format!(
-                    "{}/{}",
-                    file.file_directory(),
-                    file.file_name_with_extension()
-                );
-                // replace container dir from path with target path
-                path.replace(&container_dir, &target_path)
-            };
+        // let container_dir = container.relative_path().to_string();
+        for mut resolved_files in resolved {
+            // check if media file id is within the post-processing container
 
-            let media_data_row = MediaDataRow {
-                id: file.id().ok_or(MediaServiceError::ProcessingFailed)?,
+            let is_post_processing = ppc.iter().any(|c| {
+                c.files(0)
+                    .map_or(false, |f| f.id() == Some(resolved_files.id))
+            });
+
+            // check if name exists and not duplicate
+            for file in &resolved_files.files {
+                if let Some(check_conflict_type) = &resolved_files.check_conflict_type {
+                    if let Some(conflict_id) = media::check::conflict_recent_media(&mut tx, &uploader, &file.file_name_with_extension(), check_conflict_type.clone()).await? {
+                        // update related id in container
+                        for file in container.files_mut() {
+                            if file.id() == Some(resolved_files.id) {
+                                file.set_id(conflict_id);
+                            }
+                        }
+                        
+                        resolved_files.id = conflict_id;
+                        tracing::info!("Conflict detected for resolved file: {:#?}", resolved_files);
+
+                        // ! hardcode specific usecase.
+                        return Ok(());
+                    }
+                }
+            }
+
+            let media_row = MediaRow {
+                id: resolved_files.id,
                 uploader_id: uploader,
-                name: file.file_name_with_extension().to_string(),
-                status: MediaStatus::Pending,
-                path: file_path,
-                flags: file.flags() as i64,
-                thumbhash: file.placeholder().map(|s| s.to_string()),
-                original_name: file.original_name().map(|s| s.to_string()).unwrap_or_default(),
-                original_content_type: file.original_content_type().map(|s| s.to_string()).unwrap_or_default(),
+                flags: resolved_files.flags,
+                file_type: resolved_files.file_type,
+                processing_state: ProcessingState::Pending,
+                post_processing_state: if is_post_processing {
+                    PostProcessingState::Idle
+                } else {
+                    PostProcessingState::Completed
+                },
+                original_name: resolved_files.original_name,
+                original_content_type: resolved_files.original_content_type,
                 ..Default::default()
             };
 
-            // check if file already exists in database, if it does, update it, else insert it.
-            if let Some(existing_media_id) =
-                media::create::media_data_check_existing(&mut tx, &media_data_row).await?
-            {
-                file.set_id(existing_media_id);
-            } else {
-                media::create::media_data(&mut tx, &media_data_row).await?;
+            tracing::info!("Creating media row: {:#?}", media_row);
 
-                let media_metadata_row = MediaMetadataRow {
-                    media_id: file.id().ok_or(MediaServiceError::ProcessingFailed)?,
-                    file_size: file.size() as i64,
-                    mime_type: file.content_type().to_string(),
-                    width: file.width().map(|w| w as i32),
-                    height: file.height().map(|h| h as i32),
-                    duration: file.duration(),
+            media::create::media_create(&mut tx, &media_row).await?;
+
+            let meta = resolved_files.meta.as_ref().unwrap();
+            let media_metadata_row = MediaObjectMetadataRow {
+                media_id: media_row.id,
+                width: meta.width.map(|w| w as i32),
+                height: meta.height.map(|h| h as i32),
+                duration: meta.duration.map(|d| d as f64),
+                created_at: chrono::Utc::now().naive_utc(),
+                updated_at: chrono::Utc::now().naive_utc(),
+            };
+
+            tracing::info!(
+                "Creating media object metadata row: {:#?}",
+                media_metadata_row
+            );
+            media::create::media_object_metadata_create(&mut tx, &media_metadata_row).await?;
+
+            // loop resolved files
+            for file in resolved_files.files {
+                if file.is_deleted() {
+                    continue;
+                }
+
+                // make storage key
+
+                let storage_key = file
+                    .file_directory()
+                    .replace(&container.relative_path(), &target_path);
+
+                let media_objects_row = MediaObjectsRow {
+                    media_id: file.id().unwrap(),
+                    kind: file.kind().clone(),
+                    storage_key: storage_key,
+                    content_type: file.content_type().to_string(),
+                    size: file.size() as i64,
+                    name: file.file_name_with_extension(),
+                    thumbhash: file.placeholder().map(|t| t.to_string()),
+                    created_at: chrono::Utc::now().naive_utc(),
+                    updated_at: chrono::Utc::now().naive_utc(),
+                    deleted_at: None,
                 };
-                media::create::media_metadata(&mut tx, &media_metadata_row).await?;
+                tracing::info!("Creating media object row: {:#?}", media_objects_row);
+                media::create::media_object_create(&mut tx, &media_objects_row).await?;
             }
         }
 
@@ -185,15 +258,12 @@ impl MediaService {
             .finalize(self.persistent_store.clone(), self.temporary_store.clone())
             .await?;
 
+        // print post container info
+        tracing::info!("Post container info: {:#?}", ppc);
+
         let mut tx = state.db_pool.begin().await?;
         for mut post_container in ppc {
             post_container.set_target_path(target_path.clone());
-
-            // set media as processing for the post processing container
-            for file in post_container.files_mut() {
-                media::update::media_status(&mut tx, &file.id().unwrap(), &MediaStatus::Processing)
-                    .await?;
-            }
 
             let ts = self.temporary_store.clone();
             let ps = self.persistent_store.clone();
@@ -205,7 +275,8 @@ impl MediaService {
 
         // set the remaining files in the container as ready
         for file in container.files_mut() {
-            media::update::media_status(&mut tx, &file.id().unwrap(), &MediaStatus::Ready).await?;
+            media::update::processing_state(&mut tx, &file.id().unwrap(), &ProcessingState::Ready)
+                .await?;
         }
 
         tx.commit().await?;
@@ -221,10 +292,12 @@ impl MediaService {
         persistent: Arc<dyn PersistentStore>,
     ) -> Result<(), MediaServiceError> {
         let config = container.config().clone();
+        let target_path = container.target_path()?;
+        let container_relative_path = container.relative_path().to_string();
         for file in container.files_mut() {
             let result: Result<(), MediaServiceError> = async {
-                match file.kind() {
-                    MediaKind::Video => {
+                match file.category() {
+                    MediaType::Video => {
                         let processing_options = config
                             .clone()
                             .unwrap_or(ContainerConfig::new())
@@ -236,6 +309,11 @@ impl MediaService {
 
                         let video_processor = VideoProcessor::new(fflages.video_gpu_accel);
 
+                        // make file target path
+                        let ftp = file
+                            .file_directory()
+                            .replace(&container_relative_path, &target_path);
+
                         if let Some(video_processes) = pvpo {
                             tracing::info!(
                                 "Starting post processing for video file: {} with processes: {:?}",
@@ -243,7 +321,9 @@ impl MediaService {
                                 video_processes
                             );
                             for process in video_processes {
-                                video_processor.run_post(&file, process).await?;
+                                video_processor
+                                    .run_post(&file, &ftp, &persistent, process, &pool)
+                                    .await?;
                             }
                         }
 
@@ -263,23 +343,29 @@ impl MediaService {
 
             let mut tx = pool.begin().await?;
             if let Err(e) = result {
-                media::update::media_status(&mut tx, &file.id().unwrap(), &MediaStatus::Failed)
-                    .await?;
+                media::update::post_processing_state(
+                    &mut tx,
+                    &file.id().unwrap(),
+                    &PostProcessingState::Failed,
+                )
+                .await?;
                 container.abort(temp_store.clone()).await?;
                 tx.commit().await?;
                 return Err(e);
             }
 
-            media::update::media_status(&mut tx, &file.id().unwrap(), &MediaStatus::Completed)
-                .await?;
+            media::update::post_processing_state(
+                &mut tx,
+                &file.id().unwrap(),
+                &PostProcessingState::Completed,
+            )
+            .await?;
             tx.commit().await?;
         }
 
         container
             .finalize(persistent.clone(), temp_store.clone())
             .await?;
-        container.abort(temp_store.clone()).await?;
-
         Ok(())
     }
 
@@ -299,10 +385,12 @@ impl MediaService {
         let processing_options = config.get_processing_options().cloned().unwrap_or_default();
 
         // multi-thread
-        let result: JoinHandle<Result<ProcessResponse, MediaServiceError>> =
-            tokio::spawn(async move {
-                match file.kind() {
-                    MediaKind::Image => {
+        let result: JoinHandle<Result<ProcessResponse, MediaServiceError>> = tokio::spawn(
+            async move {
+                let mut extra_files: Vec<File> = Vec::new();
+
+                match file.category() {
+                    MediaType::Image => {
                         let ipo = processing_options.get_image_processors().cloned();
 
                         // * No processing Early Exit
@@ -398,6 +486,7 @@ impl MediaService {
                             }
                             let res = ProcessResponse {
                                 processed_file: file,
+                                file_to_insert: extra_files,
                                 post_container: None,
                             };
                             return Ok(res);
@@ -462,6 +551,12 @@ impl MediaService {
                             }
                         }
 
+                        // generate thumbhash if requested
+                        if config.is_generate_thumbhash() {
+                            let thumbhash = generate_thumbhash_from_file(file.file_full_path());
+                            file.set_placeholder(thumbhash);
+                        }
+
                         if config.is_animated_image_indicator() && file.is_animated() {
                             let static_image = VipsImage::new_from_file_with_opts(
                                 file.file_full_path(),
@@ -477,13 +572,13 @@ impl MediaService {
                             static_image.write_to_file(&static_image_path)?;
 
                             file.rename(&animated_name)?;
-                        }
 
-                        // generate thumbhash if requested
-                        if config.is_generate_thumbhash() {
-                            let thumbhash =
-                                generate_thumbhash_from_file(file.file_full_path());
-                            file.set_placeholder(thumbhash);
+                            let mut static_file = file.clone();
+                            static_file
+                                .set_content_type("image/png".to_string())
+                                .set_extension_unsafe(".png".to_string())
+                                .set_kind(MediaKind::Preview);
+                            extra_files.push(static_file);
                         }
 
                         if let Some((w, h)) = inspector::probe_image(&file.file_full_path())? {
@@ -492,7 +587,7 @@ impl MediaService {
                             file.set_height(h as u32);
                         }
                     }
-                    MediaKind::Video => {
+                    MediaType::Video => {
                         let vpo = processing_options.get_video_processors().cloned();
                         let pvpo = processing_options.get_post_video_processors().cloned();
                         // we may generate a thumbnail, or just save it as is.
@@ -533,6 +628,12 @@ impl MediaService {
                             }
                         };
 
+                        let (width, height, duration) =
+                            inspector::probe_video(&file.file_full_path()).await?;
+                        file.set_width(width.unwrap_or(0) as u32);
+                        file.set_height(height.unwrap_or(0) as u32);
+                        file.set_duration(duration.unwrap_or(0.0) as f64);
+
                         let is_file_id_contained = config.is_file_id_contained();
                         if fflages.video_thumbnail
                             && !config
@@ -546,51 +647,72 @@ impl MediaService {
                                 is_file_id_contained,
                                 pvpo
                             );
-                            let put_image_directory = if is_file_id_contained || !pvpo.is_some() {
-                                file.file_full_directory().to_path_buf()
-                            } else {
-                                file.file_full_directory()
-                                    .join(format!("{}/", file.id().unwrap_or(-1)))
-                            };
+
+                            let (put_image_path, put_image_relative) =
+                                if is_file_id_contained || !pvpo.is_some() {
+                                    let put_image_path = file.file_full_directory().to_path_buf();
+                                    let put_image_relative = file.file_directory();
+                                    (put_image_path, put_image_relative.to_string())
+                                } else {
+                                    let put_image_path = file
+                                        .file_full_directory()
+                                        .join(format!("{}/", file.id().unwrap_or(-1)));
+                                    let put_image_relative = format!(
+                                        "{}/{}",
+                                        file.file_directory(),
+                                        file.id().unwrap_or(-1)
+                                    );
+                                    (put_image_path, put_image_relative)
+                                };
 
                             tracing::debug!(
                                 "Putting video thumbnail in directory: {:?}",
-                                put_image_directory
+                                put_image_path
                             );
 
-                            let file_name = format!("t_{}.png", file.id().unwrap_or(-1));
+                            let file_name = format!("t_{}", file.id().unwrap_or(-1));
 
-                            let thumbnail_path = put_image_directory.join(&file_name);
+                            let thumbnail_path = put_image_path.join(format!("{}.png", &file_name));
 
+                            let mut thumbnail_file = file.clone();
                             // write bytes to a file
                             if let Some(thumbnail_byte) = thumbnail_byte.clone() {
-                                std::fs::create_dir_all(&put_image_directory)?;
+                                std::fs::create_dir_all(&put_image_path)?;
                                 std::fs::write(&thumbnail_path, &thumbnail_byte)?;
+                                let thumbnail_size = thumbnail_byte.len() as u64;
+                                thumbnail_file.set_size(thumbnail_size);
                             }
 
-                            file.set_has_thumbnail(true);
-                            // no tracking required
+                            thumbnail_file
+                                .set_file_name(file_name)
+                                .set_extension_unsafe(".png".to_string())
+                                .set_kind(MediaKind::Preview)
+                                .set_file_directory(put_image_relative)
+                                .set_content_type("image/png".to_string())
+                                .set_full_file_directory(put_image_path);
+
+                            extra_files.push(thumbnail_file);
                         }
 
                         if config.is_generate_thumbhash() {
                             if let Some(thumbnail_byte) = thumbnail_byte {
                                 let image = VipsImage::new_from_buffer(&thumbnail_byte, "")?;
                                 let thumbhash = generate_thumbhash_from_image(image);
-                                file.set_placeholder(thumbhash);
+                                file.set_placeholder(thumbhash.clone());
+
+                                // additionally edit thumbhash on extra files if needed
+                                for extra_file in &mut extra_files {
+                                    extra_file.set_placeholder(thumbhash.clone());
+                                }
                             }
                         }
-
-                        let (width, height, duration) =
-                            inspector::probe_video(&file.file_full_path()).await?;
-                        file.set_width(width.unwrap_or(0) as u32);
-                        file.set_height(height.unwrap_or(0) as u32);
-                        file.set_duration(duration.unwrap_or(0.0) as f32);
 
                         // early exit if no processing is required
                         // original should not be processed, only post processing is required.
                         if (vpo.is_none() && pvpo.is_none()) || fflages.video_post_orig {
                             let res = ProcessResponse {
                                 processed_file: file,
+                                file_to_insert: extra_files,
                                 post_container: None,
                             };
                             return Ok(res);
@@ -619,6 +741,7 @@ impl MediaService {
                             if !fflages.video_post_orig {
                                 file.delete()?;
                             }
+
                             post_container.add_file(new_file)?;
                             post_container.file_id_contained()?;
 
@@ -627,20 +750,13 @@ impl MediaService {
                                 post_container
                             );
 
-                            // ! hard coded here specifically for this project
-                            // set file path override to directory
-                            let key_override = if is_file_id_contained {
-                                file.file_directory().to_string()
-                            } else {
-                                format!("{}/{}/", file.file_directory(), file.id().unwrap_or(-1))
-                            };
-                            file.set_key_override(Some(key_override));
-
                             // set and check HLS EARLY
                             tracing::debug!("Checking for HLS in video post processors");
-                            if pvpo.iter().any(|p| matches!(p, VideoPostProcessorType::HLS { .. })) {
-                                tracing::debug!("HLS post processor found, setting HLS flag on file");
-                                file.set_hls(true);
+                            if pvpo
+                                .iter()
+                                .any(|p| matches!(p, VideoPostProcessorType::HLS { .. }))
+                            {
+                                file.set_category(MediaType::Hls);
                             }
 
                             tracing::debug!(
@@ -651,6 +767,7 @@ impl MediaService {
 
                             let res = ProcessResponse {
                                 processed_file: file,
+                                file_to_insert: extra_files,
                                 post_container: Some(post_container),
                             };
                             return Ok(res);
@@ -659,6 +776,7 @@ impl MediaService {
                     _ => {
                         let res = ProcessResponse {
                             processed_file: file,
+                            file_to_insert: extra_files,
                             post_container: None,
                         };
                         return Ok(res);
@@ -666,10 +784,12 @@ impl MediaService {
                 }
                 let res = ProcessResponse {
                     processed_file: file,
+                    file_to_insert: extra_files,
                     post_container: None,
                 };
                 Ok(res)
-            });
+            },
+        );
         Ok(result)
     }
 }

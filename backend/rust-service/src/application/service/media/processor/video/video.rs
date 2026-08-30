@@ -1,15 +1,23 @@
 use std::{
     path::{Path, PathBuf},
     process::Stdio,
+    sync::Arc,
 };
 
 use tokio::process::Command;
 
-use crate::application::service::{
-    errors::media_service::MediaProcessorError,
-    media::{
-        model::File,
-        processor::video::hwaccel::{self, HardwareAccel},
+use crate::application::{
+    repository::media::{
+        self,
+        row::{MediaHls, MediaHlsPlaylist},
+    },
+    service::{
+        errors::media_service::MediaProcessorError,
+        media::{
+            model::File,
+            processor::video::hwaccel::{self, HardwareAccel},
+            storage::PersistentStore,
+        },
     },
 };
 
@@ -107,8 +115,7 @@ async fn get_video_width(path: &Path) -> Result<i32, MediaProcessorError> {
     Ok(width)
 }
 
-pub async fn get_video_duration(path: &str) -> Result<f32, MediaProcessorError> {
-    tracing::debug!("Getting video duration for path: {}", path);
+pub async fn get_video_duration(path: &Path) -> Result<f32, MediaProcessorError> {
     let output = Command::new("ffprobe")
         .args([
             "-v",
@@ -117,7 +124,7 @@ pub async fn get_video_duration(path: &str) -> Result<f32, MediaProcessorError> 
             "format=duration",
             "-of",
             "default=noprint_wrappers=1:nokey=1",
-            path,
+            path.to_str().unwrap(),
         ])
         .output()
         .await?;
@@ -305,10 +312,16 @@ pub async fn process_video_trim(
 }
 
 pub async fn process_video_hls(
+    id: i64,
+
     segment_duration: f32,
     job_dir_path: PathBuf,
     source_path: PathBuf,
     gpu_accel: bool,
+
+    target_path: &String,
+    persistent: &Arc<dyn PersistentStore>,
+    pool: &sqlx::Pool<sqlx::Postgres>,
 ) -> Result<(), MediaProcessorError> {
     tokio::fs::create_dir_all(&job_dir_path).await?;
 
@@ -323,22 +336,9 @@ pub async fn process_video_hls(
         resolutions
     );
 
-    tracing::info!(
-        "\nStarting HLS processing for video file: {}\nwith segment time: {} seconds\n has video acceleration: {}\n",
-        source_path.display(),
-        segment_duration,
-        gpu_accel
-    );
-
     let encoder = if gpu_accel {
         let available = hwaccel::get_available_hwaccels().await?;
         let selected = hwaccel::select_best_hardware_accel(&available);
-
-        tracing::info!(
-            "Available hardware acceleration: {:?}, selected: {:?}",
-            available,
-            selected
-        );
 
         selected
     } else {
@@ -348,11 +348,16 @@ pub async fn process_video_hls(
     let mut variants = Vec::new();
 
     for (index, res) in resolutions.iter().enumerate() {
-        let playlist_name = format!("v{}.m3u8", index);
-        let segment_pattern = job_dir_path.join(format!("v{}_seg_%03d.ts", index));
+        let resolution_relative_path = format!("{}/hls/{}", target_path, res.length);
+        let playlist_name = format!("{}/v{}.m3u8", res.length, index);
+
+        let job_resolution_dir = job_dir_path.join(res.length.to_string());
+        let segment_pattern = job_dir_path.join(format!("{}/v{}_seg_%03d.ts", res.length, index));
         let playlist_path = job_dir_path.join(&playlist_name);
 
         let variant_segment_duration = get_segment_duration(segment_duration, res);
+
+        tokio::fs::create_dir_all(&job_resolution_dir).await?;
 
         let (variant_width, variant_height) = match res.side {
             ResolutionSide::Width => {
@@ -381,13 +386,6 @@ pub async fn process_video_hls(
         let variant_encoder = if encoder.supports_resolution(variant_width, variant_height) {
             encoder
         } else {
-            tracing::info!(
-                "Hardware encoder {:?} does not support {}x{}, using software encoder",
-                encoder,
-                variant_width,
-                variant_height
-            );
-
             HardwareAccel::Software
         };
 
@@ -457,10 +455,33 @@ pub async fn process_video_hls(
             return Err(MediaProcessorError::ProcessingFailed);
         }
 
+        // move the generated HLS variant files to the target path
+
         let metadata = probe_hls_variant(&playlist_path).await?;
 
         tracing::debug!("HLS variant {} metadata: {:?}", index, metadata);
 
+        let mut tx = pool.begin().await?;
+
+        let playlist = MediaHlsPlaylist {
+            media_id: id,
+            resolution: res.length.to_string(),
+            segment_count: metadata.segment_count,
+            segment_duration: metadata.segment_duration,
+            playlist_storage_key: format!("{}/hls/{}", target_path, playlist_name),
+            ..Default::default()
+        };
+
+        media::create::media_hls_playlist_create(&mut tx, &playlist).await?;
+
+        tx.commit().await?;
+
+        persistent
+            .put_dir(
+                &job_dir_path.join(res.length.to_string()),
+                &resolution_relative_path,
+            )
+            .await?;
         variants.push((index, playlist_name, metadata));
     }
 
@@ -480,6 +501,21 @@ pub async fn process_video_hls(
         master.push_str(&format!("{}\n\n", playlist_name));
     }
 
+    let mut tx = pool.begin().await?;
+
+    media::create::media_hls_create(
+        &mut tx,
+        &MediaHls {
+            media_id: id,
+            master_playlist: format!("{}/hls/master.m3u8", target_path),
+            created_at: chrono::Utc::now().naive_utc(),
+            updated_at: chrono::Utc::now().naive_utc(),
+        },
+    )
+    .await?;
+
+    tx.commit().await?;
+
     tokio::fs::write(job_dir_path.join("master.m3u8"), master).await?;
 
     Ok(())
@@ -492,6 +528,8 @@ struct HlsVariantMetadata {
     bandwidth: u64,
     average_bandwidth: u64,
     codecs: String,
+    segment_count: i32,
+    segment_duration: f32,
 }
 
 async fn probe_hls_variant(
@@ -573,12 +611,14 @@ async fn probe_hls_variant(
         other => other.to_string(),
     };
 
-    // * Read the generated HLS playlist to calculate actual segment bitrates.
+    // * Read the generated HLS playlist and calculate actual segment metadata.
     let playlist = tokio::fs::read_to_string(playlist_path).await?;
 
     let mut total_bytes = 0u64;
     let mut total_duration = 0f64;
     let mut peak_bandwidth = 0u64;
+    let mut segment_count = 0i32;
+
     let mut current_duration = None;
 
     let playlist_dir = playlist_path
@@ -601,7 +641,6 @@ async fn probe_hls_variant(
         }
 
         let segment_path = playlist_dir.join(line.trim());
-
         let metadata = tokio::fs::metadata(&segment_path).await?;
         let bytes = metadata.len();
 
@@ -612,6 +651,7 @@ async fn probe_hls_variant(
                 peak_bandwidth = peak_bandwidth.max(bandwidth);
                 total_bytes += bytes;
                 total_duration += duration;
+                segment_count += 1;
             }
         }
     }
@@ -620,6 +660,12 @@ async fn probe_hls_variant(
         ((total_bytes as f64 * 8.0) / total_duration) as u64
     } else {
         peak_bandwidth
+    };
+
+    let segment_duration = if segment_count > 0 {
+        (total_duration / segment_count as f64) as f32
+    } else {
+        0.0
     };
 
     // * HLS BANDWIDTH represents the peak segment bitrate.
@@ -638,5 +684,7 @@ async fn probe_hls_variant(
         bandwidth,
         average_bandwidth,
         codecs,
+        segment_count,
+        segment_duration,
     })
 }
