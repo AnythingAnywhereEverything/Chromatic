@@ -1,55 +1,71 @@
 use serde::Deserialize;
 use serde::Serialize;
 use sqlx::types::Json;
-use chrono::DateTime;
-use chrono::Utc;
 
+use crate::api::handlers::post_handler::PostVisibility;
 use crate::api::handlers::post_handler::TagTarget;
-use crate::{api::handlers::post_handler::PostVisibility};
+use crate::application::repository::media::row::Attachment;
+use crate::application::repository::media::row::MediaFullDataRow;
+use crate::application::repository::user::row::UserProfileRow;
 
-#[derive(sqlx::FromRow, Debug)]
+#[derive(sqlx::FromRow, Debug, Deserialize)]
 pub struct PostRow {
-    // media_posts tb
-    pub id: i64,
-    pub user_id: i64,
-    pub username: String,
-    pub display_name: Option<String>,
+    // media_posts table
+    pub author: Json<UserProfileRow>,
+
+    pub post_id: i64,
     pub content: String,
+
     pub total_likes: i32,
     pub total_comments: i32,
-    pub reposted_from: Option<i64>,
+
+    // repost information
     pub is_repost: bool,
+    pub reposted_post: Option<Json<RepostedPostRow>>,
+
+    pub visibility: PostVisibility,
+    pub tags: Json<Vec<TagAttachmentFull>>,
+
+    // target user. This indicates whether the target user has liked the post.
+    pub is_liked: bool,
+    
+    // quick access to attachment information and indicate whether the post has any attachments for sql joints.
     pub has_attachment: bool,
+    pub attachments: Json<Vec<Attachment>>,
+    #[sqlx(skip)]
+    pub comments: Json<Vec<CommentRow>>,
+
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
-    pub visibility: PostVisibility,
-    pub media_attachment: Json<Vec<MediaAttachment>>,
-    pub tags: Json<Vec<TagAttachmentFull>>,
-    pub is_liked: bool,
-
-    pub avatar_path : Option<String>,
-    pub avatar_mime : Option<String>,
-    pub avatar_thumbhash : Option<String>,
-
-    pub followers_count: i32,
-    pub following_count: i32,
-        #[sqlx(skip)]
-    pub comments: Json<Vec<CommentRow>>
 }
 
-#[derive(sqlx::FromRow, Debug)]
-pub struct CommentRow{
+#[derive(sqlx::FromRow, Debug, Deserialize)]
+pub struct RepostedPostRow {
     pub id: i64,
+    pub author: Json<UserProfileRow>,
+    pub content: String,
+    pub is_reposted: bool,
+    pub visibility: PostVisibility,
+
+    pub has_attachment: bool,
+    pub attachments: Json<Vec<Attachment>>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(sqlx::FromRow, Debug, Deserialize)]
+pub struct CommentRow {
+    pub comment_id: i64,
     pub post_id: i64,
     pub user_id: i64,
-    pub username : String,
+    pub username: String,
     pub display_name: String,
-    pub total_likes : i32,
+    pub total_likes: i32,
     pub is_liked: bool,
 
-    pub avatar_path : Option<String>,
-    pub avatar_mime : Option<String>,
-    pub avatar_thumbhash : Option<String>,
+    pub avatar_path: Option<String>,
+    pub avatar_mime: Option<String>,
+    pub avatar_thumbhash: Option<String>,
 
     pub followers_count: i32,
     pub following_count: i32,
@@ -57,67 +73,49 @@ pub struct CommentRow{
     pub has_attachment: bool,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
-    pub media_attachment: Json<Vec<MediaAttachment>>,
+    pub media_attachment: Json<Vec<MediaFullDataRow>>,
 }
 
-#[derive(sqlx::FromRow, Debug)]
-pub struct CreatePostRow{
+#[derive(sqlx::FromRow, Debug, Deserialize)]
+pub struct CreatePostRow {
     pub id: i64,
     pub user_id: i64,
     pub content: String,
     pub total_likes: i32,
     pub total_comments: i32,
-    pub reposted_from: Option<i64>,
+    pub reposted_post: Option<i64>,
     pub is_repost: bool,
     pub has_attachment: bool,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
     pub visibility: PostVisibility,
-    pub media_attachment: Json<Vec<MediaAttachment>>,
+    pub media_attachment: Json<Vec<MediaFullDataRow>>,
     pub tags: Json<Vec<TagAttachmentFull>>,
     #[sqlx(skip)]
-    pub comments: Json<Vec<CommentRow>>
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MediaAttachment {
-    pub id: String,
-    pub user_id: i64,
-    pub path: String,
-    pub created_at: DateTime<Utc>,
-    pub thumbhash: Option<String>,
-    pub flags: i64,
-    pub name: String,
-    pub updated_at: DateTime<Utc>,
-    pub status: String,
-    pub file_size: i64,
-    pub mime_type: String,
-    pub width: Option<i32>,
-    pub height: Option<i32>,
-    pub duration: Option<f32>,
+    pub comments: Json<Vec<CommentRow>>,
 }
 
 #[derive(sqlx::FromRow)]
-pub struct HasAttachmentRow{
+pub struct HasAttachmentRow {
     pub target_id: i64,
     pub media_id: i64,
-    pub target_type: String
+    pub target_type: String,
 }
 
 #[derive(sqlx::FromRow)]
-pub struct TotalLikesRow{
+pub struct TotalLikesRow {
     pub id: i64,
     pub total_likes: i32,
 }
 
 #[derive(sqlx::FromRow)]
-pub struct TotaCommentRow{
-    pub id: i64,
-    pub total_comment: i32
+pub struct TotalCommentRow {
+    pub post_id: i64,
+    pub total_comments: i32,
 }
 
 #[derive(sqlx::FromRow)]
-pub struct PostLikesRow {   
+pub struct PostLikesRow {
     pub id: i64,
     pub user_id: i64,
     pub media_id: i64,
@@ -141,18 +139,18 @@ pub struct CreateCommentResult {
 
 // Tag attachment
 
-#[derive(sqlx::FromRow,Debug, Serialize)]
-pub struct TagAttachmentRow{
+#[derive(sqlx::FromRow, Debug, Serialize)]
+pub struct TagAttachmentRow {
     pub target_id: i64,
     pub target_type: TagTarget,
-    pub tag_id: i64
+    pub tag_id: i64,
 }
 
 #[derive(sqlx::FromRow, Debug, Serialize, Deserialize)]
-pub struct TagAttachmentFull{
+pub struct TagAttachmentFull {
     pub target_id: i64,
     pub target_type: TagTarget,
     pub tag_id: i64,
     pub tag_name: String,
-    pub tag_color:  Option<String>,
+    pub tag_color: Option<String>,
 }

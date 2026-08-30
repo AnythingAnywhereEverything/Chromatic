@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug, sqlx::FromRow)]
 pub struct UserRow {
     pub id: i64,
@@ -19,10 +21,11 @@ pub struct UserProfileMinimalRow {
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
-#[derive(Debug, sqlx::FromRow)]
+// strip sensitive data out for profile
+// sensitive data should be in credential (e.g., password, email)
+#[derive(Debug, sqlx::FromRow, Deserialize, Serialize)]
 pub struct UserProfileRow {
     pub id: i64,
-    pub email: Option<String>,
     pub username: Option<String>,
     pub display_name: Option<String>,
     pub bio: Option<String>,
@@ -52,5 +55,5 @@ pub struct ReportUserAndGuildRow {
     pub description: Option<String>,
     pub status: String,
     pub created_at: chrono::DateTime<chrono::Utc>,
-    pub resolved_at: Option<chrono::DateTime<chrono::Utc>>
+    pub resolved_at: Option<chrono::DateTime<chrono::Utc>>,
 }

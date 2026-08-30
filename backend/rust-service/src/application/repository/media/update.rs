@@ -1,6 +1,6 @@
 use sqlx::Transaction;
 
-use crate::application::repository::{RepositoryResult, media::row::MediaStatus};
+use crate::application::repository::{RepositoryResult, media::row::{MediaStatus, PostProcessingState, ProcessingState}};
 
 // pub enum MediaStatus {
 //     // Prioritized Over All Other Statuses
@@ -14,6 +14,46 @@ use crate::application::repository::{RepositoryResult, media::row::MediaStatus};
 //     // Prioritized Over All Other Statuses
 //     Failed,
 // }
+
+pub async fn post_processing_state(
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    media_id: &i64,
+    state: &PostProcessingState,
+) -> RepositoryResult<()> {
+    sqlx::query(
+        r#"
+        UPDATE media
+        SET post_processing_state = $1
+        WHERE id = $2
+        "#,
+    )
+    .bind(state)
+    .bind(media_id)
+    .execute(tx.as_mut())
+    .await?;
+
+    Ok(())
+}
+
+pub async fn processing_state(
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    media_id: &i64,
+    state: &ProcessingState,
+) -> RepositoryResult<()> {
+    sqlx::query(
+        r#"
+        UPDATE media
+        SET processing_state = $1
+        WHERE id = $2
+        "#,
+    )
+    .bind(state)
+    .bind(media_id)
+    .execute(tx.as_mut())
+    .await?;
+
+    Ok(())
+}
 
 pub async fn media_status(
     tx: &mut Transaction<'_, sqlx::Postgres>,

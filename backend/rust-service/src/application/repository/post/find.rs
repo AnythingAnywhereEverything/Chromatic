@@ -2,6 +2,25 @@ use sqlx::Transaction;
 
 use crate::application::repository::{RepositoryResult, post::row::PostRow};
 
+
+pub async fn get_post_by_id(
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    post_id: i64,
+) -> RepositoryResult<PostRow> {
+    let result = sqlx::query_as::<_, PostRow>(
+        r#"
+        SELECT *
+        FROM get_post_by_id($1)
+        "#,
+    )
+    .bind(post_id)
+    .fetch_one(tx.as_mut())
+    .await?;
+
+    Ok(result)
+}
+
+// ! Everything below are deprecated
 pub enum FetchMode {
     One,
     All,
@@ -62,7 +81,7 @@ impl PostQOpts {
             requester: None,
             target_id: None,
             cursor_id: None,
-            
+
             get_avatar: true,
             get_media: true,
             get_tags: true,

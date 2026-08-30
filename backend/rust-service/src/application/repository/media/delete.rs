@@ -11,9 +11,11 @@ pub async fn hard_delete_media_data(
 ) -> RepositoryResult<String> {
     let row= sqlx::query_scalar(
         r#"
-        DELETE FROM media_data
-        WHERE id = $1
-        RETURNING path
+        DELETE FROM media
+        USING media_objects
+        WHERE media.id = media_objects.media_id
+        AND media.id = $1
+        RETURNING media_objects.storage_key
         "#,
     )
     .bind(media_id)
@@ -29,7 +31,7 @@ pub async fn soft_delete_media_data(
 ) -> RepositoryResult<()> {
     sqlx::query(
         r#"
-        UPDATE media_data
+        UPDATE media
         SET deleted_at = now()
         WHERE id = $1
         "#,

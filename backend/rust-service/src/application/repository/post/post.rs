@@ -3,7 +3,6 @@ use sqlx::{Postgres, Transaction};
 use crate::{
     api::handlers::post_handler::{PostVisibility, TagTarget}, application::{
         repository::{
-            media::row::MediaDataWithMetadataRow,
             post::row::{
                 CreatePostRow, HasAttachmentRow, PostLikesRow, PostRow, TagAttachmentFull,
                 TagAttachmentRow, TotalLikesRow,
@@ -12,6 +11,24 @@ use crate::{
         service::errors::PostServiceError,
     },
 };
+
+pub async fn get_feed_for_user(
+    tx: &mut Transaction<'_, Postgres>,
+    user_id: i64,
+    limit: i32,
+) -> Result<Vec<PostRow>, sqlx::Error> {
+    let posts = sqlx::query_as::<_, PostRow>(
+        r#"
+            SELECT *
+            FROM get_post_amount_for_feed($1, $2);
+        "#,
+    )
+    .bind(user_id)
+    .bind(limit)
+    .fetch_all(tx.as_mut())
+    .await?;
+    Ok(posts)
+}
 
 // todo: func get YOUR FRIEND post
 // todo: func get feed comment :d
@@ -30,14 +47,9 @@ pub async fn get_feed_public(
     sqlx::query_as::<_, PostRow>(
         r#"
              SELECT
-                m.id,
-                m.user_id,
-                u.username,
-                up.display_name,
+                m.id as post_id,
 
-                avatar_md.path AS avatar_path,
-                avatar_mdt.mime_type AS avatar_mime,
-                avatar_md.thumbhash AS avatar_thumbhash,
+                author.*,
 
                 up.followers_count,
                 up.following_count,
@@ -107,8 +119,8 @@ pub async fn get_feed_public(
                 WHERE ta.target_id = m.id
             ) tag ON TRUE
 
-        LEFT JOIN users u
-            ON m.user_id = u.id
+        LEFT JOIN users author
+            ON m.user_id = author.id
         LEFT JOIN user_profiles up
             ON m.user_id = up.user_id
 
@@ -390,38 +402,6 @@ pub async fn add_has_attachment(
     .bind(media_id)
     .bind(target_type)
     .fetch_all(&mut **tx)
-    .await
-}
-
-pub async fn get_post_attachment(
-    tx: &mut Transaction<'_, sqlx::Postgres>,
-    post_id: i64,
-) -> Result<Vec<MediaDataWithMetadataRow>, sqlx::Error> {
-    sqlx::query_as::<_, MediaDataWithMetadataRow>(
-        r#"
-            SELECT 
-                md.id,
-                md.uploader_id,
-                md.path,
-                md.thumbhash,
-                md.name,
-                md.status,
-                md.created_at,
-                md.updated_at,
-                mdt.file_size,
-                mdt.mime_type,
-                mdt.width,
-                mdt.height,
-                mdt.duration
-                FROM media_attachments ma 
-            JOIN media_data md ON ma.media_id = md.id
-            JOIN media_metadata mdt ON mdt.media_id = md.id
-            WHERE ma.target_id = $1
-            ORDER BY md.id
-        "#,
-    )
-    .bind(post_id)
-    .fetch_all(&mut **tx) // This re-borrowing is correct!
     .await
 }
 

@@ -1,38 +1,41 @@
 use sqlx::Transaction;
 
-use crate::application::repository::{RepositoryResult, media::row::{MediaDataWithMetadataRow}};
+use crate::application::repository::{RepositoryResult, media::row::MediaFullDataRow};
+use sqlx::types::Json;
 
 pub async fn media_full_data(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     media_id: &i64,
-) -> RepositoryResult<MediaDataWithMetadataRow> {
-
+) -> RepositoryResult<MediaFullDataRow> {
     tracing::debug!("Fetching media full data for media_id: {}", media_id);
 
-    let row = sqlx::query_as::<_, MediaDataWithMetadataRow>(
+    let row = sqlx::query_scalar::<_, Json<MediaFullDataRow>>(
         r#"
-        SELECT
-            md.id,
-            md.path,
-            md.flags,
-            md.name,
-            md.thumbhash,
-            md.status,
-            md.created_at,
-            mm.file_size,
-            mm.mime_type,
-            mm.width,
-            mm.height,
-            mm.duration
-        FROM media_data md
-        LEFT JOIN media_metadata mm ON mm.media_id = md.id
-        WHERE md.id = $1
-        LIMIT 1
+        SELECT jsonb_build_object(
+            'id', id::text,
+            'uploader_id', uploader_id::text,
+            'original_name', original_name,
+            'original_content_type', original_content_type,
+            'file_type', file_type,
+            'lock_hash', lock_hash,
+            'lock_expiration', lock_expiration,
+            'processing_state', processing_state,
+            'post_processing_state', post_processing_state,
+            'flags', flags::text,
+            'media_objects', media_objects,
+            'media_object_metadata', media_object_metadata,
+            'media_hls', media_hls,
+            'media_hls_playlists', media_hls_playlists,
+            'created_at', created_at,
+            'updated_at', updated_at,
+            'deleted_at', deleted_at
+        )
+        FROM get_media_by_id_without_playlists($1);
         "#,
     )
     .bind(media_id)
     .fetch_one(tx.as_mut())
     .await?;
 
-    Ok(row)
+    Ok(row.0)
 }

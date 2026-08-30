@@ -193,8 +193,8 @@ pub async fn experimental_dynamic_user_query(
     if opts.get_avatar {
         query.push_str(
             r#"
-            LEFT JOIN media_data m1
-                ON up.avatar_media_id = m1.id
+            LEFT JOIN media_objects m1
+                ON up.avatar_media_id = m1.media_id AND m1.kind = 'original'
             "#,
         );
     }
@@ -202,8 +202,8 @@ pub async fn experimental_dynamic_user_query(
     if opts.get_banner {
         query.push_str(
             r#"
-            LEFT JOIN media_data m2
-                ON up.banner_media_id = m2.id
+            LEFT JOIN media_objects m2
+                ON up.banner_media_id = m2.media_id AND m2.kind = 'original'
             "#,
         );
     }
@@ -310,10 +310,10 @@ pub async fn profile_full_by_id(
             ON u.id = us.user_id
         LEFT JOIN user_profiles up
             ON u.id = up.user_id
-        LEFT JOIN media_data m1
-            ON up.avatar_media_id = m1.id
-        LEFT JOIN media_data m2
-            ON up.banner_media_id = m2.id
+        LEFT JOIN media_objects m1
+            ON up.avatar_media_id = m1.media_id AND m1.kind = 'original'
+        LEFT JOIN media_objects m2
+            ON up.banner_media_id = m2.media_id AND m2.kind = 'original'
         LEFT JOIN (
             SELECT follower_id, user_id, true AS is_following
             FROM user_follow
@@ -374,10 +374,10 @@ pub async fn profile_full_by_username(
             ON u.id = us.user_id
         LEFT JOIN user_profiles up
             ON u.id = up.user_id
-        LEFT JOIN media_data m1
-            ON up.avatar_media_id = m1.id
-        LEFT JOIN media_data m2
-            ON up.banner_media_id = m2.id
+        LEFT JOIN media_objects m1
+            ON up.avatar_media_id = m1.media_id AND m1.kind = 'original'
+        LEFT JOIN media_objects m2
+            ON up.banner_media_id = m2.media_id AND m2.kind = 'original'
         LEFT JOIN (
             SELECT follower_id, user_id, true AS is_following
             FROM user_follow
@@ -422,8 +422,8 @@ pub async fn profile_with_minimal_by_id(
             u.created_at
         FROM users u
         LEFT JOIN user_profiles up ON u.id = up.user_id
-        LEFT JOIN media_data m1 ON up.avatar_media_id = m1.id
-        LEFT JOIN media_data m2 ON up.banner_media_id = m2.id
+        LEFT JOIN media_objects m1 ON up.avatar_media_id = m1.media_id AND m1.kind = 'original'
+        LEFT JOIN media_objects m2 ON up.banner_media_id = m2.media_id AND m2.kind = 'original'
         WHERE u.id = $1
         "#,
     )
