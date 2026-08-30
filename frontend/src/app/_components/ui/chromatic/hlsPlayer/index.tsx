@@ -9,6 +9,7 @@ import Hls from "hls.js";
 import { Image } from "../Image";
 
 import {
+    createFallbackMasterPlaylist,
     createHls,
     getHlsLevels,
     switchResolution,
@@ -46,6 +47,17 @@ export const HlsPlayer = ({ id, media, width, height }: HlsPlayerProps) => {
     const hlsRef = useRef<Hls | null>(null);
     const playerContainerRef = useRef<HTMLDivElement | null>(null);
 
+    const playlistSources = useMemo(
+        () =>
+            media.media_hls_playlists
+                .map((playlist) => ({
+                    resolution: playlist.resolution,
+                    src: makeFullURL(playlist.playlist_storage_key).trim(),
+                }))
+                .filter((playlist) => playlist.src),
+        [media.media_hls_playlists],
+    );
+
     const masterSrc = media.media_hls?.master_playlist
         ? makeFullURL(media.media_hls.master_playlist).trim()
         : "";
@@ -56,6 +68,7 @@ export const HlsPlayer = ({ id, media, width, height }: HlsPlayerProps) => {
             media.media_objects.find((object) => object.kind === "Preview"),
         [media.media_objects],
     );
+
     const thumbnailSrc = useMemo(
         () =>
             thumbnailObject
@@ -63,48 +76,55 @@ export const HlsPlayer = ({ id, media, width, height }: HlsPlayerProps) => {
                 : "",
         [thumbnailObject],
     );
-    const initialLevels = useMemo<HlsLevel[]>(
+
+        const initialLevels = useMemo<HlsLevel[]>(
         () =>
-            media.media_hls_playlists.map((playlist, index) => {
-                const match = playlist.resolution.match(/^(\d+)x(\d+)$/);
-                return {
-                    index,
-                    width: match ? Number(match[1]) : 0,
-                    height: match
-                        ? Number(match[2])
-                        : Number(playlist.resolution),
-                };
-            }),
+            media.media_hls_playlists
+                .map((playlist, index) => {
+                    const resolution = Number(playlist.resolution);
+
+                    return {
+                        index,
+                        width: 0,
+                        height: Number.isFinite(resolution) ? resolution : 0,
+                    };
+                })
+                .sort((a, b) => a.height - b.height),
         [media.media_hls_playlists],
     );
 
     const [hlsLevels, setHlsLevels] = useState<HlsLevel[]>(initialLevels);
     const [selectedLevel, setSelectedLevel] = useState(-1);
-
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
-
     const [duration, setDuration] = useState(
         media.media_object_metadata.duration,
     );
-
     const [volume, setVolume] = useState(1);
     const [isMuted, setIsMuted] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    const loadHls = () => {
+    const loadHls = (levelIndex = -1) => {
         const video = videoRef.current;
 
-        if (!video || !masterSrc || hlsRef.current) {
+        if (!video || hlsRef.current) {
             return;
         }
 
-        setIsLoaded(true);
+        const source =
+            levelIndex === -1
+                ? masterSrc || playlistSources[playlistSources.length - 1]?.src
+                : playlistSources[levelIndex]?.src;
+
+        if (!source) {
+            return;
+        }
 
         if (!Hls.isSupported()) {
             if (video.canPlayType("application/vnd.apple.mpegurl")) {
-                video.src = masterSrc;
+                video.src = source;
+                setIsLoaded(true);
             }
 
             return;
@@ -115,12 +135,21 @@ export const HlsPlayer = ({ id, media, width, height }: HlsPlayerProps) => {
         hlsRef.current = hls;
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            // * Use the levels HLS actually loaded; this also gives us the correct indexes.
-            const levels = getHlsLevels(hls);
+            if (masterSrc) {
+                // * Only a master playlist contains resolution metadata.
+                const levels = getHlsLevels(hls);
 
-            if (levels.length > 0) {
-                setHlsLevels(levels);
+                if (levels.length > 0) {
+                    setHlsLevels(levels);
+                }
+            } else {
+                // * Variant playlists have no resolution metadata.
+                setHlsLevels(initialLevels);
             }
+
+            setIsLoaded(true);
+
+            video.play().catch(() => {});
         });
 
         hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
@@ -141,14 +170,12 @@ export const HlsPlayer = ({ id, media, width, height }: HlsPlayerProps) => {
             if (data.fatal) {
                 hls.destroy();
                 hlsRef.current = null;
-
                 setIsLoaded(false);
-                setHlsLevels(initialLevels);
                 setSelectedLevel(-1);
             }
         });
 
-        hls.loadSource(masterSrc);
+        hls.loadSource(source);
         hls.attachMedia(video);
     };
 
@@ -159,57 +186,129 @@ export const HlsPlayer = ({ id, media, width, height }: HlsPlayerProps) => {
             return;
         }
 
-        if (video.paused) {
-            if (!hlsRef.current && !isLoaded) {
-                loadHls();
-
-                // * HLS needs time to attach before play() can succeed.
-                if (!Hls.isSupported()) {
-                    await video.play().catch(() => {});
-                    return;
-                }
-
-                return;
-            }
-
-            await video.play().catch(() => {});
-        } else {
+        if (!video.paused) {
             video.pause();
+            return;
         }
+
+        if (!hlsRef.current && !isLoaded) {
+            loadHls();
+            return;
+        }
+
+        await video.play().catch(() => {});
     };
 
     const changeResolution = async (levelIndex: number) => {
         const video = videoRef.current;
-        const currentHls = hlsRef.current;
 
-        if (!video || !currentHls) {
+        if (!video) {
             return;
         }
 
-        if (levelIndex === -1) {
-            currentHls.currentLevel = -1;
-            setSelectedLevel(-1);
+        // * Master playlist mode: HLS can switch levels normally.
+        if (masterSrc && hlsRef.current) {
+            const currentHls = hlsRef.current;
+
+            if (levelIndex === -1) {
+                currentHls.currentLevel = -1;
+                setSelectedLevel(-1);
+                return;
+            }
+
+            if (!currentHls.levels[levelIndex]) {
+                return;
+            }
+
+            try {
+                const newHls = await switchResolution(
+                    video,
+                    currentHls,
+                    masterSrc,
+                    levelIndex,
+                );
+
+                hlsRef.current = newHls;
+                setSelectedLevel(levelIndex);
+            } catch (error) {
+                console.error("Resolution switch failed:", error);
+            }
+
             return;
         }
 
-        if (!currentHls.levels[levelIndex]) {
+        // * No master playlist: each resolution is its own real playlist.
+        const source =
+            levelIndex === -1
+                ? playlistSources[playlistSources.length - 1]?.src
+                : playlistSources[levelIndex]?.src;
+
+        if (!source) {
             return;
         }
 
-        try {
-            // * Preload the requested resolution, then swap the real player.
-            const newHls = await switchResolution(
-                video,
-                currentHls,
-                masterSrc,
-                levelIndex,
-            );
+        const wasPlaying = !video.paused;
+        const currentTime = video.currentTime;
 
-            hlsRef.current = newHls;
-            setSelectedLevel(levelIndex);
-        } catch (error) {
-            console.error("Resolution switch failed:", error);
+        hlsRef.current?.destroy();
+        hlsRef.current = null;
+
+        setIsLoaded(false);
+        setSelectedLevel(levelIndex);
+
+        if (!Hls.isSupported()) {
+            video.src = source;
+
+            const handleLoadedMetadata = () => {
+                video.currentTime = currentTime;
+
+                if (wasPlaying) {
+                    video.play().catch(() => {});
+                }
+
+                setIsLoaded(true);
+                video.removeEventListener(
+                    "loadedmetadata",
+                    handleLoadedMetadata,
+                );
+            };
+
+            video.addEventListener("loadedmetadata", handleLoadedMetadata);
+            return;
         }
+
+        const hls = createHls();
+        hlsRef.current = hls;
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            video.currentTime = currentTime;
+            setIsLoaded(true);
+
+            if (wasPlaying) {
+                video.play().catch(() => {});
+            }
+        });
+
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+            if (
+                data.details === "bufferAppendNoProgress" ||
+                data.details === "bufferSeekOverHole" ||
+                data.details === "aborted"
+            ) {
+                return;
+            }
+
+            console.error("HLS error:", data);
+
+            if (data.fatal) {
+                hls.destroy();
+                hlsRef.current = null;
+                setIsLoaded(false);
+            }
+        });
+
+        hls.loadSource(source);
+        hls.attachMedia(video);
     };
 
     useEffect(() => {

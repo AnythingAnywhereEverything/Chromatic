@@ -12,6 +12,45 @@ export type HlsPlaylist = {
     url: string;
 };
 
+export type HlsPlaylistSource = {
+    resolution: string;
+    src: string;
+};
+
+export const createFallbackMasterPlaylist = (
+    playlists: HlsPlaylistSource[],
+    width: number,
+    height: number,
+): string => {
+    const variants = playlists
+        .map((playlist) => {
+            const resolutionHeight = Number(playlist.resolution);
+
+            if (!Number.isFinite(resolutionHeight) || resolutionHeight <= 0) {
+                return null;
+            }
+
+            const aspectRatio = width / height;
+            const resolutionWidth = Math.round(
+                resolutionHeight * aspectRatio,
+            );
+
+            return [
+                `#EXT-X-STREAM-INF:BANDWIDTH=${Math.max(
+                    resolutionWidth * resolutionHeight * 4,
+                    1,
+                )},RESOLUTION=${resolutionWidth}x${resolutionHeight}`,
+                playlist.src,
+            ].join("\n");
+        })
+        .filter((variant): variant is string => variant !== null);
+
+    return [
+        "#EXTM3U",
+        ...variants,
+    ].join("\n");
+};
+
 export const getHlsLevels = (hls: Hls): HlsLevel[] =>
     hls.levels
         .map((level, index) => ({
