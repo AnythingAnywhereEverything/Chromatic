@@ -250,11 +250,11 @@ CREATE OR REPLACE FUNCTION get_post_by_id(
 RETURNS TABLE(
     author JSONB,
 
-    post_id BIGINT,
+    post_id TEXT,
     content TEXT,
 
-    total_likes BIGINT,
-    total_comments BIGINT,
+    total_likes INT,
+    total_comments INT,
 
     is_reposted BOOLEAN,
     reposted_post JSONB,
@@ -265,11 +265,10 @@ RETURNS TABLE(
     is_liked BOOLEAN,
 
     has_attachment BOOLEAN,
-    attachment JSONB,
+    attachments JSONB,
 
     created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    deleted_at TIMESTAMP
+    updated_at TIMESTAMP
 )
 LANGUAGE sql
 STABLE
@@ -277,62 +276,60 @@ AS $$
     SELECT
         (
             SELECT jsonb_build_object(
-                'id', u.id,
+                'id', u.id::text,
                 'username', u.username,
                 'display_name', up.display_name,
                 'avatar', mo.name,
-                'avatar_placeholder', mo.thumbhash
+                'avatar_placeholder', mo.thumbhash,
+                'created_at', u.created_at
             )
             FROM users u
-            JOIN user_profile up ON up.user_id = u.id
-            JOIN media_objects mo ON mo.media_id = up.avatar_id
+            JOIN user_profiles up ON up.user_id = u.id
+            JOIN media_objects mo ON mo.media_id = up.avatar_media_id
             WHERE u.id = p.user_id
             AND u.deleted_at IS NULL
-            AND up.deleted_at IS NULL
         ) AS author,
 
-        p.id AS post_id,
+        p.id::text AS post_id,
         p.content,
 
         p.total_likes,
         p.total_comments,
 
-        p.is_reposted,
+        p.is_repost as is_reposted,
         (
             SELECT jsonb_build_object(
-                'id', rp.id,
+                'id', rp.id::text,
                 'content', rp.content,
                 'author', (
                     SELECT jsonb_build_object(
-                        'id', u.id,
+                        'id', u.id::text,
                         'username', u.username,
                         'display_name', up.display_name,
                         'avatar', mo.name,
-                        'avatar_placeholder', mo.thumbhash
+                        'avatar_placeholder', mo.thumbhash,
+                        'created_at', u.created_at
                     )
                     FROM users u
-                    JOIN user_profile up ON up.user_id = u.id
-                    JOIN media_objects mo ON mo.media_id = up.avatar_id
+                    JOIN user_profiles up ON up.user_id = u.id
+                    JOIN media_objects mo ON mo.media_id = up.avatar_media_id
                     WHERE u.id = rp.user_id
                 ),
                 'visibility', rp.visibility,
                 'has_attachment', rp.has_attachment,
-                COALESCE(
+                'attachments', COALESCE(
                     (
                         SELECT jsonb_agg(
                             jsonb_build_object(
-                                'id', gma.id,
+                                'id', gma.id::text,
                                 'file_type', gma.file_type,
                                 'processing_state', gma.processing_state,
                                 'post_processing_state', gma.post_processing_state,
-                                'flags', gma.flags,
-
+                                'flags', gma.flags::text,
                                 'media_objects', gma.media_objects,
                                 'media_object_metadata', gma.media_object_metadata,
-
                                 'media_hls', gma.media_hls,
                                 'media_hls_playlists', gma.media_hls_playlists,
-
                                 'created_at', gma.created_at,
                                 'updated_at', gma.updated_at
                             )
@@ -345,28 +342,28 @@ AS $$
                         AND gma.deleted_at IS NULL
                     ),
                     '[]'::jsonb
-                ) AS attachment,
+                ),
                 'created_at', rp.created_at,
-                'updated_at', rp.updated_at,
+                'updated_at', rp.updated_at
             )
-            FROM posts rp
-            WHERE rp.id = p.reposted_post_id
+            FROM media_posts rp
+            WHERE rp.id = p.reposted_from
             AND rp.deleted_at IS NULL
         ) AS reposted_post,
         p.visibility,
         COALESCE((
             SELECT jsonb_agg(
                 jsonb_build_object(
-                    'target_id', ta.target_id,
+                    'target_id', ta.target_id::text,
                     'target_type', ta.target_type,
-                    'tag_id', ta.tag_id,
+                    'tag_id', ta.tag_id::text,
                     'tag_name', it.tag_name
                 )
-                FROM tag_attachments ta
-                JOIN interest_tags it
-                    ON it.id = ta.tag_id
-                WHERE ta.target_id = p.id
             )
+            FROM tag_attachments ta
+            JOIN interest_tags it
+                ON it.id = ta.tag_id
+            WHERE ta.target_id = p.id
         ), '[]'::jsonb) AS tags,
         (
             EXISTS (
@@ -383,11 +380,11 @@ AS $$
             (
                 SELECT jsonb_agg(
                     jsonb_build_object(
-                        'id', gma.id,
+                        'id', gma.id::text,
                         'file_type', gma.file_type,
                         'processing_state', gma.processing_state,
                         'post_processing_state', gma.post_processing_state,
-                        'flags', gma.flags,
+                        'flags', gma.flags::text,
 
                         'media_objects', gma.media_objects,
                         'media_object_metadata', gma.media_object_metadata,
@@ -410,7 +407,7 @@ AS $$
         ) AS attachment,
         p.created_at,
         p.updated_at
-    FROM posts p
+    FROM media_posts p
     WHERE p.id = p_post_id
     AND p.deleted_at IS NULL
     AND (
@@ -431,11 +428,11 @@ AS $$
 
                     -- Both users follow each other
                     (
-                        p.visibility = 'friends'::post_visibility
+                        p.visibility = 'friend'::post_visibility
                         AND EXISTS (
                             SELECT 1
-                            FROM user_followers uf1
-                            JOIN user_followers uf2
+                            FROM user_follow uf1
+                            JOIN user_follow uf2
                                 ON uf1.follower_id = uf2.user_id
                             AND uf2.follower_id = uf1.user_id
                             WHERE uf1.user_id = p.user_id
@@ -457,26 +454,25 @@ CREATE OR REPLACE FUNCTION get_post_amount_for_feed(
 )
 RETURNS TABLE(
     author JSONB,
-    post_id BIGINT,
+    post_id TEXT,
     content TEXT,
-    total_likes BIGINT,
-    total_comments BIGINT,
+    total_likes INT,
+    total_comments INT,
     is_reposted BOOLEAN,
     reposted_post JSONB,
     visibility post_visibility,
     tags JSONB,
     is_liked BOOLEAN,
     has_attachment BOOLEAN,
-    attachment JSONB,
+    attachments JSONB,
     created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    deleted_at TIMESTAMP
+    updated_at TIMESTAMP
 )
 LANGUAGE sql
 STABLE
 AS $$
     SELECT gp.*
-    FROM posts p
+    FROM media_posts p
     CROSS JOIN LATERAL get_post_by_id(p.id, p_user_id) gp
     WHERE p.deleted_at IS NULL
     ORDER BY p.created_at DESC
