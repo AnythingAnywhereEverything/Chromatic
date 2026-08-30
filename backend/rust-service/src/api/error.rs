@@ -65,6 +65,7 @@ pub enum APIErrorCode {
     // Post
     TextTooLarge,
     EmptyFile,
+    TagIdError,
 
     // Comment
     CommentNotFoundOrUnauthorized,

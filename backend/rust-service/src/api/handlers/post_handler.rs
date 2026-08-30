@@ -7,7 +7,7 @@ use multipart_derive::Multipart;
 
 use crate::{
     api::{
-        APIError, RequestAuth, dtos::post_dtos::{ LikeDTO, PostDTO}, version,
+        APIError, APIErrorKind::PostError, RequestAuth, dtos::post_dtos::{ LikeDTO, PostDTO}, version,
     }, application::{
         repository::{
             media::{self as media_repo, row::{MediaStatus, MediaType, ProcessingState}}, post::{self as post_repo, find::{FetchMode, PostQOpts}, row::PostRow},
@@ -322,23 +322,38 @@ pub async fn update_post_handler(
     let old_tags = post_repo::post::get_tag_attachments(&mut tx, post_id).await?;
 
     if let Some(new_tags) = extracted.media_tags {
-        let old_tag_ids: std::collections::HashSet<i64> =
-            old_tags.iter().map(|tag| tag.tag_id).collect();
+        let old_tag_ids: std::collections::HashSet<i64> = old_tags
+            .iter()
+            .filter_map(|tag| tag.tag_id.parse::<i64>().ok())
+            .collect();
 
-        let new_tag_ids: std::collections::HashSet<i64> = new_tags.iter().copied().collect();
+        let new_tag_ids: std::collections::HashSet<i64> =
+            new_tags.iter().copied().collect();
 
         // * Delete old tags that are no longer present.
         for old_tag in &old_tags {
-            if !new_tag_ids.contains(&old_tag.tag_id) {
-                post_repo::post::delete_tag_attachment(&mut tx, post_id, old_tag.tag_id).await?;
+            let old_tag_id = old_tag.tag_id.parse::<i64>().map_err(|_| PostServiceError::TagIdNotFound)?;
+
+            if !new_tag_ids.contains(&old_tag_id) {
+                post_repo::post::delete_tag_attachment(
+                    &mut tx,
+                    post_id,
+                    old_tag_id,
+                )
+                .await?;
             }
         }
 
         // * Add new tags that weren't already attached.
         for tag_id in new_tags {
             if !old_tag_ids.contains(&tag_id) {
-                post_repo::post::add_tags_target(&mut tx, post_id, TagTarget::Post, tag_id)
-                    .await?;
+                post_repo::post::add_tags_target(
+                    &mut tx,
+                    post_id,
+                    TagTarget::Post,
+                    tag_id,
+                )
+                .await?;
             }
         }
     }
@@ -371,7 +386,6 @@ pub async fn delete_post_handler(
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
         None => return Err(AuthServiceError::InvalidCredentials.into()),
-        // None => 1234,
     };
 
     post_repo::find::get_post_by_id(&mut tx, post_id, Some(user_id)).await?;

@@ -33,6 +33,9 @@ pub enum PostServiceError {
 
     #[error("Too many rows on get one")]
     UnexpectedMultipleRows,
+
+    #[error("Can't not find tag id")]
+    TagIdNotFound,
 }
 
 impl From<sqlx::Error> for PostServiceError {
