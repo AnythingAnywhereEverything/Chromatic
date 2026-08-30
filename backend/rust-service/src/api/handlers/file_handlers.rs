@@ -1,8 +1,8 @@
 use crate::{
     api::APIError, application::{
-        service::{
+        repository::media::row::MediaType, service::{
             errors::MediaServiceError, media::{
-                inspector::{self, MediaKind}, processor::{
+                inspector, processor::{
                     image::ImageProcessor,
                     types::{CropStyle, ImageProcessorType, MediaProcessorOptions, ResizeStyle},
                     video::video::extract_thumbnail,
@@ -78,7 +78,7 @@ pub async fn get_files_handler(
     let extension = media_type.1;
     let category = inspector::categorize(&mime);
 
-    if category == MediaKind::Image && (params.width.is_some() || params.height.is_some()) {
+    if category == MediaType::Image && (params.width.is_some() || params.height.is_some()) {
 
         let image = {
             if mime == "image/gif" || mime == "image/webp" {
@@ -181,7 +181,7 @@ pub async fn get_files_handler(
             )?;
             return Ok(response);
         }
-    } else if category == MediaKind::Video
+    } else if category == MediaType::Video
         && (params.width.is_some() || params.height.is_some())
     {
         // get thumbnail for video

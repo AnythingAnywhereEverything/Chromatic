@@ -10,7 +10,7 @@ use crate::{
         APIError, RequestAuth, dtos::post_dtos::{ LikeDTO, PostDTO}, version,
     }, application::{
         repository::{
-            media::{self as media_repo, row::MediaStatus}, post::{self as post_repo, find::{FetchMode, PostQOpts}},
+            media::{self as media_repo, row::{MediaStatus, MediaType}}, post::{self as post_repo, find::{FetchMode, PostQOpts}},
         }, service::{
             errors::{AuthServiceError, PostServiceError},
             media::{
@@ -216,10 +216,10 @@ pub async fn create_new_post_handler(
         validation: Some(
             ValidationOptions::new_whitelist()
                 .add_type(media::inspector::FileType::Category(
-                    media::inspector::MediaKind::Image,
+                    MediaType::Image,
                 ))
                 .add_type(media::inspector::FileType::Category(
-                    media::inspector::MediaKind::Video,
+                    MediaType::Video,
                 )),
         ),
         field_options: None,

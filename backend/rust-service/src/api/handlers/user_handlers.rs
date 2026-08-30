@@ -11,8 +11,8 @@ use crate::{
         dtos::user_dtos::{PublicUserProfileDTO, UserDTO},
         version,
     }, application::{
-        repository::user::{self as user_repo, find::URDQOpts}, service::{
-            errors::AuthServiceError, media::{extractor::{ExtractorFileOptions, ValidationOptions}, inspector::{FileType, MediaKind}, model::FileContainer}, profile_service::ProfileService,
+        repository::{media::row::MediaType, user::{self as user_repo, find::URDQOpts}}, service::{
+            errors::AuthServiceError, media::{extractor::{ExtractorFileOptions, ValidationOptions}, inspector::FileType, model::FileContainer}, profile_service::ProfileService,
         }, state::SharedState,
     },
 };
@@ -92,7 +92,7 @@ pub async fn update_current_user_profile_handler(
         max_size: Some(10_000_000), // 10 MB
         max_files: Some(5),
         validation: Some(
-            ValidationOptions::new_whitelist().add_type(FileType::Category(MediaKind::Image)),
+            ValidationOptions::new_whitelist().add_type(FileType::Category(MediaType::Image)),
         ),
         ..Default::default()
     };

@@ -8,19 +8,15 @@ use multipart_derive::Multipart;
 use crate::{
     api::{
         APIError, RequestAuth,
-        dtos::{post_dtos::CommentDTO, user_dtos::MediaFullDTO},
+        dtos::{post_dtos::CommentDTO},
         handlers::post_handler::MediaTypeAttachment,
         version,
     }, application::{
         repository::{
-            media::{self as media_repo, row::MediaStatus},
-            post::{self as post_repo},
+            media::{self as media_repo, row::{MediaStatus, MediaType}}, post::{self as post_repo},
         }, service::{
             errors::{AuthServiceError, CommentServiceError}, media::{
-                extractor::{ExtractorFileOptions, ValidationOptions},
-                inspector::{FileType, MediaKind},
-                model::{FileContainer, container::ContainerConfig},
-                processor::types::{ImageProcessorType, MediaProcessorOptions, ResizeStyle},
+                extractor::{ExtractorFileOptions, ValidationOptions}, inspector::FileType, model::{FileContainer, container::ContainerConfig}, processor::types::{ImageProcessorType, MediaProcessorOptions, ResizeStyle},
             },
         }, state::SharedState,
     },
@@ -75,7 +71,7 @@ pub async fn create_new_comment_handler(
         max_files: Some(5),
         max_size: Some(25 * 1024 * 1024), // 25 MB
         validation: Some(
-            ValidationOptions::new_whitelist().add_type(FileType::Category(MediaKind::Image)),
+            ValidationOptions::new_whitelist().add_type(FileType::Category(MediaType::Image)),
         ),
         ..Default::default()
     };
@@ -141,26 +137,6 @@ pub async fn create_new_comment_handler(
             .await?;
         }
     }
-
-    let media_with_post = post_repo::post::get_post_attachment(&mut tx, new_comment_id).await?;
-    let media = media_with_post
-        .into_iter()
-        .map(|media| MediaFullDTO {
-            id: media.id.to_string(),
-            path: media.path,
-            name: media.name,
-            thumbhash: media.thumbhash,
-            status: media.status.to_string(),
-            created_at: media.created_at,
-            file_size: media.file_size,
-            flags: media.flags,
-            mime_type: media.mime_type,
-            width: media.width,
-            height: media.height,
-            duration: media.duration,
-        })
-        .collect::<Vec<_>>();
-    tracing::warn!("Updated Post after upload: {:#?}", media);
 
     tx.commit().await?;
     todo!();

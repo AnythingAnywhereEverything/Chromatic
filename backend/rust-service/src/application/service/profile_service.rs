@@ -1,22 +1,15 @@
 use crate::{
     application::{
         repository::{
-            media::{self as media_repo, row::MediaStatus},
-            user::{self as user_repo, find::URDQOpts, row::UserProfileRow},
-        },
-        service::{
-            errors::ProfileServiceError,
-            media::{
+            media::{self as media_repo, row::ProcessingState}, user::{self as user_repo, find::URDQOpts, row::UserProfileRow},
+        }, service::{
+            errors::ProfileServiceError, media::{
                 model::{
-                    FileContainer,
-                    container::{ContainerConfig, NamingStrategy},
-                },
-                processor::types::{CropStyle, ImageProcessorType, MediaProcessorOptions},
+                    FileContainer, container::{ContainerConfig, NamingStrategy, RecentMediaType},
+                }, processor::types::{CropStyle, ImageProcessorType, MediaProcessorOptions},
             },
-        },
-        state::AppState,
-    },
-    domain::user::types::{Bio, DisplayName, Quotes},
+        }, state::AppState,
+    }, domain::user::types::{Bio, DisplayName, Quotes},
 };
 pub struct ProfileService;
 
@@ -114,7 +107,9 @@ impl ProfileService {
             avatar
                 .set_uploader_id(user_id)
                 .set_target_path(format!("avatars/{}", user_id))
-                .set_config(option.set_processing_options(
+                .set_config(option
+                    .set_check_conflict(RecentMediaType::Avatar)
+                    .set_processing_options(
                     MediaProcessorOptions::new().set_image_processors(vec![
                         ImageProcessorType::Crop {
                             style: CropStyle::Ratio {
@@ -135,7 +130,9 @@ impl ProfileService {
             banner
                 .set_uploader_id(user_id)
                 .set_target_path(format!("banners/{}", user_id))
-                .set_config(option.set_processing_options(
+                .set_config(option
+                    .set_check_conflict(RecentMediaType::Banner)
+                    .set_processing_options(
                     MediaProcessorOptions::new().set_image_processors(vec![
                         ImageProcessorType::Crop {
                             style: CropStyle::Ratio {
@@ -158,19 +155,19 @@ impl ProfileService {
 
             let is_avatar = container.target_path()?.contains("avatars");
 
-            for media in container.files_mut() {
-                media_repo::update::media_status(
+            for media in container.resolve_files() {
+                media_repo::update::processing_state(
                     &mut tx,
-                    &media.id().unwrap(),
-                    &MediaStatus::Completed,
+                    &media.id,
+                    &ProcessingState::Completed,
                 )
                 .await?;
 
                 let media_to_delete = if is_avatar {
-                    user_repo::update::avatar_media_id(&mut tx, user_id, Some(media.id().unwrap()))
+                    user_repo::update::avatar_media_id(&mut tx, user_id, Some(media.id))
                         .await?
                 } else {
-                    user_repo::update::banner_media_id(&mut tx, user_id, Some(media.id().unwrap()))
+                    user_repo::update::banner_media_id(&mut tx, user_id, Some(media.id))
                         .await?
                 };
                 if let Some(media_id) = media_to_delete {

@@ -1,14 +1,11 @@
 use crate::{
     api::APIError, application::{
-        service::{
+        repository::media::row::MediaType, service::{
             errors::MediaServiceError, media::{
                 extractor::{
                     ExtractorFileOptions,
                     ValidationOptions,
-                }, inspector::{
-                    FileType,
-                    MediaKind::{Code, Image, Video},
-                }, model::container::{ContainerConfig, NamingStrategy}, processor::types::{
+                }, inspector::FileType, model::container::{ContainerConfig, NamingStrategy}, processor::types::{
                     CropStyle, ImageProcessorType, MediaProcessorOptions, ResizeStyle, VideoPostProcessorType,
                 }
             },
@@ -40,9 +37,8 @@ pub async fn files_upload_handler(
         max_size: Some(100 * 1024 * 1024),
         validation: Some(
             ValidationOptions::new_whitelist()
-                .add_type(FileType::Category(Image))
-                .add_type(FileType::Category(Video))
-                .add_type(FileType::Category(Code)),
+                .add_type(FileType::Category(MediaType::Image))
+                .add_type(FileType::Category(MediaType::Video))
         ),
         field_options: None,
     };
@@ -64,6 +60,7 @@ pub async fn files_upload_handler(
             .set_animated_image_indicator(true)
             .set_processing_options(MediaProcessorOptions::new()
                 .set_fflags_video_gpu_accel(true)
+                .set_fflags_video_thumbnail(true)
                 .set_image_processors(vec![
                 ImageProcessorType::Resize {
                     style: ResizeStyle::Normalized {
@@ -95,17 +92,5 @@ pub async fn files_upload_handler(
             tracing::error!("Failed to save media: {:?}", e);
             MediaServiceError::ProcessingFailed
         })?;
-
-    // Print media information for debugging
-    tracing::info!("Uploaded files: {:#?}", uploaded_files);
-
-    // uploaded_files
-    //     .abort(temp_storage.clone())
-    //     .await
-    //     .map_err(|e| {
-    //         tracing::error!("Failed to abort file container: {:?}", e);
-    //         MediaServiceError::ProcessingFailed
-    //     })?;
-
     Ok(())
 }
