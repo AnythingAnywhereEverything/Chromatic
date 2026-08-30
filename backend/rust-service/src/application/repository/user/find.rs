@@ -66,7 +66,7 @@ pub async fn experimental_dynamic_user_query(
     opts: URDQOpts,
 ) -> RepositoryResult<UserProfileRow> {
     let mut select = vec![
-        "u.id".to_string(),
+        "u.id::TEXT".to_string(),
         "u.username".to_string(),
     ];
 
@@ -284,8 +284,7 @@ pub async fn profile_full_by_id(
     let row = sqlx::query_as::<_, UserProfileRow>(
         r#"
         SELECT
-            u.id,
-            u.email,
+            u.id::TEXT,
             u.username,
             up.followers_count,
             up.following_count,
@@ -348,8 +347,7 @@ pub async fn profile_full_by_username(
     let row = sqlx::query_as::<_, UserProfileRow>(
         r#"
         SELECT
-            u.id,
-            u.email,
+            u.id::TEXT,
             u.username,
             up.followers_count,
             up.following_count,

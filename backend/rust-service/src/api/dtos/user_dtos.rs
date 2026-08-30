@@ -56,7 +56,7 @@ pub struct PublicUserProfileDTO {
 impl Into<PublicUserProfileDTO> for UserProfileRow {
     fn into(self) -> PublicUserProfileDTO {
         PublicUserProfileDTO {
-            id: self.id.to_string(),
+            id: self.id,
             username: self.username,
             display_name: self.display_name,
             bio: self.bio,
