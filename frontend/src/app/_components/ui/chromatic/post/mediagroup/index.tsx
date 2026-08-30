@@ -1,4 +1,3 @@
-import { mediaPostAttechment } from "@/api/post/getFeed";
 import style from "./mediagroup.module.scss";
 import React from "react";
 import { Image } from "../../Image";
@@ -7,38 +6,56 @@ import {
     CalculatorProps,
 } from "../helpers/calculateMediaRow";
 import { HlsPlayer } from "../../hlsPlayer";
+import { Media, MediaObjects } from "@/api/types/media";
 
 // BIT MASKING LAYER
 const MediaFlags = {
     IsAnimated: 1 << 0,
-    IsHLS: 1 << 1,
-    HasThumbnail: 1 << 2,
 };
 
 interface MediaGroupProps {
     containerWidthRatio?: number;
     containerHeightRatio?: number;
-    media: mediaPostAttechment[];
+    media: Media[];
 }
 
-function isAnimated(media: mediaPostAttechment): boolean {
-    return media.path.includes("a_");
+// read from flag
+function isAnimated(media: Media): boolean {
+    return (media.flags & MediaFlags.IsAnimated) !== 0;
+}
+
+function makeStaticURL(objects: MediaObjects[]): string {
+    if (objects === undefined || objects.length === 0) {
+        return "";
+    }
+    // loop get all from media object, pioritize thumbnail 
+    for (let i = 0; i < objects.length; i++) {
+        if (objects[i].kind === "Thumbnail") {
+            return objects[i].storage_key + "/" + objects[i].name;
+        }
+    }
+    for (let i = 0; i < objects.length; i++) {
+        if (objects[i].kind === "Original") {
+            return objects[i].storage_key + "/" + objects[i].name;
+        }
+    }
+    return "";
 }
 
 const CONTAINER_WIDTH_RATIO = 1;
 const CONTAINER_HEIGHT_RATIO = 1;
 
 function GetAllMediaDimensions(
-    media: mediaPostAttechment[],
+    media: Media[],
     cWidth: number,
     cHeight: number,
-): mediaPostAttechment[] {
+): Media[] {
     let calculatorProps: CalculatorProps = {
         containerWidth: cWidth,
         containerHeight: cHeight,
         medias: media.map((item, i) => ({
-            w: item.width || 0,
-            h: item.height || 0,
+            w: item.media_object_metadata.width || 0,
+            h: item.media_object_metadata.height || 0,
             order: i,
         })),
         gap: 8,
@@ -47,15 +64,15 @@ function GetAllMediaDimensions(
     let fittedMedias = calculateMediaRow(calculatorProps);
 
     media.forEach((item, i) => {
-        item.width = fittedMedias[i].w;
-        item.height = fittedMedias[i].h;
+        item.media_object_metadata.width = fittedMedias[i].w;
+        item.media_object_metadata.height = fittedMedias[i].h;
     });
 
     return media;
 }
 
 function MediaLayout({ media, containerWidthRatio ,containerHeightRatio }: MediaGroupProps ) {
-    const [medias, setMedia] = React.useState<mediaPostAttechment[]>([]);
+    const [medias, setMedia] = React.useState<Media[]>([]);
     const [activeIndex, setActiveIndex] = React.useState(0);
     const [translateX, setTranslateX] = React.useState(0);
     const [hasOverflow, setHasOverflow] = React.useState(false);
@@ -166,39 +183,20 @@ function MediaLayout({ media, containerWidthRatio ,containerHeightRatio }: Media
                     }}
                 >
                     {medias.map((item) => {
-                        const isHLS = item.flags & MediaFlags.IsHLS;
                         const isAnimated = item.flags & MediaFlags.IsAnimated;
+                        let url = makeStaticURL(item.media_objects);
 
-                        if (isHLS) {
-                            // if path of the media is not end with /,
-                            // remove the last section after the last /
-                            let baseSrc = item.path;
-
-                            if (!baseSrc.endsWith("/")) {
-                                const lastSlashIndex = baseSrc.lastIndexOf("/");
-
-                                if (lastSlashIndex !== -1) {
-                                    baseSrc = baseSrc.substring(
-                                        0,
-                                        lastSlashIndex + 1,
-                                    );
-                                }
-                            }
-
+                        if (item.file_type === "Hls") {
                             return (
                                 <li
                                     className={style["image-item"]}
                                     key={item.id}
                                 >
                                     <HlsPlayer
-                                        thumbhash={item.thumbhash || undefined}
                                         id={item.id}
-                                        base_src={baseSrc}
-                                        autoPlay={false}
-                                        controls={true}
-                                        width={item.width}
-                                        height={item.height}
-                                        duration={item.duration}
+                                        media={item}
+                                        width={item.media_object_metadata.width}
+                                        height={item.media_object_metadata.height}
                                     />
                                 </li>
                             );
@@ -208,19 +206,19 @@ function MediaLayout({ media, containerWidthRatio ,containerHeightRatio }: Media
                             <Image
                                 containerClassName={style["image-item"]}
                                 key={item.id}
-                                src={item.path}
+                                src={url}
                                 format={isAnimated ? "webp" : undefined}
                                 animated_src={
                                     isAnimated
-                                        ? item.path.replace(".png", ".webp")
+                                        ? url
                                         : undefined
                                 }
                                 alt="Media"
-                                containerWidth={item.width}
-                                containerHeight={item.height}
-                                width={item.width}
-                                height={item.height}
-                                thumbhash={item.thumbhash || undefined}
+                                containerWidth={item.media_object_metadata.width}
+                                containerHeight={item.media_object_metadata.height}
+                                width={item.media_object_metadata.width}
+                                height={item.media_object_metadata.height}
+                                thumbhash={item.media_objects[0]?.thumbhash || undefined}
                                 optimizationType={
                                     isAnimated
                                         ? "animated_in_viewport"

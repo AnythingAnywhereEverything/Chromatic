@@ -1,43 +1,51 @@
 import { fetchWithAuth, fetchWithOptionAuth, getCacheUserId, getToken } from "@/handler/token_handler"
 import { getUser } from "../user";
-
-export interface MediaReponse {
-    currentPage: number;
-    media: mediaPostProps[];
-}
+import { Media } from "../types/media";
 
 // * from community? post
-export interface mediaPostProps {
+
+export interface Author {
     id: string
-    user_id: string
     username: string
+    display_name: string
+    avatar: string
+    avatar_thumbhash: string
+    created_at: string
+}
+export interface RepostedPost {
+    post_id: string
+    author: Author
     content: string
-    total_comments: number
-    total_likes: number
+    is_reposted: boolean
     visibility: string
-    repost_from: string
-    is_repost: boolean
     has_attachment: boolean
+    media: Media[]
     created_at: string
     updated_at: string
+}
+export interface PostProps {
+    post_id: string
+
+    author: Author
+
+    content: string
+    visibility: string
+    total_comments: number
+    total_likes: number
+
     bookmark: boolean
 
-    tag: PostTag[]
-    media: mediaPostAttechment[]
+    is_reposted: boolean
+    reposted_post?: RepostedPost
+    
     is_liked: boolean
-    current_user_id: string
-    display_name: string
+    tag: PostTag[]
 
-    avatar_path: string
-    avatar_mime: string
-    avatar_thumbhash: string
+    has_attachment: boolean
+    attachments: Media[]
 
-    banner_path: string
-    banner_mime: string
-    banner_thumbhash: string
-
-    followers_count: number
-    following_count: number
+    created_at: string
+    updated_at: string
 }
 
 export interface commentProps{
@@ -48,7 +56,7 @@ export interface commentProps{
     has_attachment: boolean
     created_at: string
     updated_at: string
-    media: mediaPostAttechment[]
+    media: Media[]
     display_name: string
     username: string
     avatar_path: string
@@ -65,21 +73,21 @@ export interface commentProps{
     total_likes: number
 }
 
-export interface mediaPostAttechment {
-    id: string // * media from media_data
-    flags: number
-    uploader_id: string
-    name: string
-    path: string
-    status: string
-    thumbhash: string
-    mime_type: string
-    create_at: string
-    updated_at: string
-    width: number
-    height: number
-    duration: number
-}
+// export interface mediaPostAttechment {
+//     id: string // * media from media_data
+//     flags: number
+//     uploader_id: string
+//     name: string
+//     path: string
+//     status: string
+//     thumbhash: string
+//     mime_type: string
+//     create_at: string
+//     updated_at: string
+//     width: number
+//     height: number
+//     duration: number
+// }
 
 interface PostTag {
     tag_id : string
@@ -91,7 +99,7 @@ interface PostTag {
 const LIMIT = 8;
 
 export const getUserFeed = async(
-):Promise<mediaPostProps[]> => {
+):Promise<PostProps[]> => {
     const res = await fetchWithAuth(`v2/posts/feed?${LIMIT}`);
     if (!res.ok) throw new Error("Failed to get post data")
     const data = await res.json();
@@ -100,7 +108,7 @@ export const getUserFeed = async(
     return data;
 }
 
-export const getFocusedPost = async(postId: string):Promise<mediaPostProps> => {
+export const getFocusedPost = async(postId: string):Promise<PostProps> => {
     const res = await fetchWithOptionAuth(`v2/posts/${postId}`);
     if (!res.ok) throw new Error("Failed to get post data")
     const data = await res.json();

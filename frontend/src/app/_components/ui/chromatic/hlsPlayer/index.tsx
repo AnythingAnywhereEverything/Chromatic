@@ -1,60 +1,93 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 
 import type { HlsPlayerProps } from "./type";
 
 import style from "./style.module.scss";
 
 import Hls from "hls.js";
+
 import { Image } from "../Image";
+
 import {
     createHls,
     getHlsLevels,
-    getMasterLevels,
     switchResolution,
     type HlsLevel,
 } from "./hls";
 
-import { formatTime, getSelectedResolution, makeFullURL } from "./video";
+import { formatTime, makeFullURL } from "./video";
+
 import { IoPause, IoPlay } from "react-icons/io5";
+
 import {
     PiSpeakerSimpleHighFill,
     PiSpeakerSimpleLowFill,
     PiSpeakerSimpleSlashFill,
 } from "react-icons/pi";
+
 import { MdFullscreen, MdFullscreenExit } from "react-icons/md";
+
 import { Tooltip, TooltipContent, TooltipTrigger } from "../tooltip";
+
 import {
     Dropdown,
     DropdownContent,
     DropdownTrigger,
     DropdownItem,
 } from "../dropdown";
+
 import { FaCog } from "react-icons/fa";
 
 const VOLUME_STORAGE_KEY = "hls-player-volume";
 const VOLUME_CHANGE_EVENT = "hls-player-volume-change";
 
-export const HlsPlayer = ({
-    id,
-    base_src,
-    thumbhash,
-    autoPlay,
-    width,
-    height,
-    duration: initialDuration = 0,
-}: HlsPlayerProps) => {
-    const thumbnailSrc = `${base_src}t_${id}.png`;
-    const src = makeFullURL(base_src, "hls/master.m3u8").trim();
-
+export const HlsPlayer = ({ id, media, width, height }: HlsPlayerProps) => {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const hlsRef = useRef<Hls | null>(null);
     const playerContainerRef = useRef<HTMLDivElement | null>(null);
 
-    const [hlsLevels, setHlsLevels] = useState<HlsLevel[]>([]);
+    const masterSrc = media.media_hls?.master_playlist
+        ? makeFullURL(media.media_hls.master_playlist).trim()
+        : "";
+
+    const thumbnailObject = useMemo(
+        () =>
+            media.media_objects.find((object) => object.kind === "Thumbnail") ??
+            media.media_objects.find((object) => object.kind === "Preview"),
+        [media.media_objects],
+    );
+    const thumbnailSrc = useMemo(
+        () =>
+            thumbnailObject
+                ? `${thumbnailObject.storage_key}/${thumbnailObject.name ? `/${thumbnailObject.name}` : ""}`
+                : "",
+        [thumbnailObject],
+    );
+    const initialLevels = useMemo<HlsLevel[]>(
+        () =>
+            media.media_hls_playlists.map((playlist, index) => {
+                const match = playlist.resolution.match(/^(\d+)x(\d+)$/);
+                return {
+                    index,
+                    width: match ? Number(match[1]) : 0,
+                    height: match
+                        ? Number(match[2])
+                        : Number(playlist.resolution),
+                };
+            }),
+        [media.media_hls_playlists],
+    );
+
+    const [hlsLevels, setHlsLevels] = useState<HlsLevel[]>(initialLevels);
     const [selectedLevel, setSelectedLevel] = useState(-1);
+
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(initialDuration);
+
+    const [duration, setDuration] = useState(
+        media.media_object_metadata.duration,
+    );
+
     const [volume, setVolume] = useState(1);
     const [isMuted, setIsMuted] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
@@ -63,7 +96,7 @@ export const HlsPlayer = ({
     const loadHls = () => {
         const video = videoRef.current;
 
-        if (!video || !base_src.trim() || hlsRef.current) {
+        if (!video || !masterSrc || hlsRef.current) {
             return;
         }
 
@@ -71,7 +104,7 @@ export const HlsPlayer = ({
 
         if (!Hls.isSupported()) {
             if (video.canPlayType("application/vnd.apple.mpegurl")) {
-                video.src = src;
+                video.src = masterSrc;
             }
 
             return;
@@ -82,10 +115,11 @@ export const HlsPlayer = ({
         hlsRef.current = hls;
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            setHlsLevels(getHlsLevels(hls));
+            // * Use the levels HLS actually loaded; this also gives us the correct indexes.
+            const levels = getHlsLevels(hls);
 
-            if (autoPlay) {
-                video.play().catch(() => {});
+            if (levels.length > 0) {
+                setHlsLevels(levels);
             }
         });
 
@@ -107,13 +141,14 @@ export const HlsPlayer = ({
             if (data.fatal) {
                 hls.destroy();
                 hlsRef.current = null;
+
                 setIsLoaded(false);
-                setHlsLevels([]);
+                setHlsLevels(initialLevels);
                 setSelectedLevel(-1);
             }
         });
 
-        hls.loadSource(src);
+        hls.loadSource(masterSrc);
         hls.attachMedia(video);
     };
 
@@ -127,9 +162,17 @@ export const HlsPlayer = ({
         if (video.paused) {
             if (!hlsRef.current && !isLoaded) {
                 loadHls();
+
+                // * HLS needs time to attach before play() can succeed.
+                if (!Hls.isSupported()) {
+                    await video.play().catch(() => {});
+                    return;
+                }
+
+                return;
             }
 
-            await video.play();
+            await video.play().catch(() => {});
         } else {
             video.pause();
         }
@@ -158,12 +201,11 @@ export const HlsPlayer = ({
             const newHls = await switchResolution(
                 video,
                 currentHls,
-                src,
+                masterSrc,
                 levelIndex,
             );
 
             hlsRef.current = newHls;
-
             setSelectedLevel(levelIndex);
         } catch (error) {
             console.error("Resolution switch failed:", error);
@@ -175,36 +217,7 @@ export const HlsPlayer = ({
             hlsRef.current?.destroy();
             hlsRef.current = null;
         };
-    }, [base_src]);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        const loadMasterLevels = async () => {
-            if (!base_src.trim()) {
-                return;
-            }
-
-            try {
-                // * Only fetch/parse master.m3u8. No HLS instance and no media segments.
-                const levels = await getMasterLevels(src);
-
-                if (!cancelled) {
-                    setHlsLevels(levels);
-                }
-            } catch (error) {
-                if (!cancelled) {
-                    console.error("Failed to load HLS master playlist:", error);
-                }
-            }
-        };
-
-        loadMasterLevels();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [src, base_src]);
+    }, [masterSrc]);
 
     const isSeekingRef = useRef(false);
 
@@ -253,14 +266,6 @@ export const HlsPlayer = ({
 
         event.currentTarget.releasePointerCapture(event.pointerId);
     };
-
-    useEffect(() => {
-        if (!autoPlay) {
-            return;
-        }
-
-        loadHls();
-    }, [autoPlay, base_src]);
 
     useEffect(() => {
         const video = videoRef.current;
@@ -323,6 +328,8 @@ export const HlsPlayer = ({
 
     const [bufferedTime, setBufferedTime] = useState(0);
 
+    const playbackFrameRef = useRef<number | null>(null);
+
     useEffect(() => {
         const video = videoRef.current;
 
@@ -330,7 +337,11 @@ export const HlsPlayer = ({
             return;
         }
 
-        const updateBuffered = () => {
+        const updatePlayback = () => {
+            playbackFrameRef.current = null;
+
+            setCurrentTime(video.currentTime);
+
             const currentTime = video.currentTime;
 
             for (let i = 0; i < video.buffered.length; i++) {
@@ -346,16 +357,37 @@ export const HlsPlayer = ({
             setBufferedTime(0);
         };
 
-        video.addEventListener("progress", updateBuffered);
-        video.addEventListener("timeupdate", updateBuffered);
-        video.addEventListener("loadedmetadata", updateBuffered);
-        video.addEventListener("durationchange", updateBuffered);
+        const handleTimeUpdate = () => {
+            if (playbackFrameRef.current !== null) {
+                return;
+            }
+
+            playbackFrameRef.current = requestAnimationFrame(updatePlayback);
+        };
+
+        const handleLoadedMetadata = () => {
+            updatePlayback();
+        };
+
+        const handleDurationChange = () => {
+            updatePlayback();
+        };
+
+        video.addEventListener("timeupdate", handleTimeUpdate);
+        video.addEventListener("progress", handleTimeUpdate);
+        video.addEventListener("loadedmetadata", handleLoadedMetadata);
+        video.addEventListener("durationchange", handleDurationChange);
 
         return () => {
-            video.removeEventListener("progress", updateBuffered);
-            video.removeEventListener("timeupdate", updateBuffered);
-            video.removeEventListener("loadedmetadata", updateBuffered);
-            video.removeEventListener("durationchange", updateBuffered);
+            video.removeEventListener("timeupdate", handleTimeUpdate);
+            video.removeEventListener("progress", handleTimeUpdate);
+            video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+            video.removeEventListener("durationchange", handleDurationChange);
+
+            if (playbackFrameRef.current !== null) {
+                cancelAnimationFrame(playbackFrameRef.current);
+                playbackFrameRef.current = null;
+            }
         };
     }, []);
 
@@ -367,7 +399,6 @@ export const HlsPlayer = ({
         }
 
         const handlePlay = () => setIsPlaying(true);
-
         const handlePause = () => setIsPlaying(false);
 
         const handleTimeUpdate = () => {
@@ -392,18 +423,26 @@ export const HlsPlayer = ({
         };
 
         video.addEventListener("play", handlePlay);
+
         video.addEventListener("pause", handlePause);
+
         video.addEventListener("timeupdate", handleTimeUpdate);
+
         video.addEventListener("durationchange", handleDurationChange);
+
         video.addEventListener("volumechange", handleVolumeChange);
 
         document.addEventListener("fullscreenchange", handleFullscreenChange);
 
         return () => {
             video.removeEventListener("play", handlePlay);
+
             video.removeEventListener("pause", handlePause);
+
             video.removeEventListener("timeupdate", handleTimeUpdate);
+
             video.removeEventListener("durationchange", handleDurationChange);
+
             video.removeEventListener("volumechange", handleVolumeChange);
 
             document.removeEventListener(
@@ -480,22 +519,29 @@ export const HlsPlayer = ({
                     width={width}
                     height={height}
                 />
-                <Image
-                    src={thumbnailSrc}
-                    thumbhash={thumbhash || undefined}
-                    style={{
-                        opacity: isLoaded ? 0 : 1,
-                        transition: "opacity 0.3s ease-in-out",
-                    }}
-                    alt="Video thumbnail"
-                    width={width}
-                    height={height}
-                />
+
+                {thumbnailObject && (
+                    <Image
+                        src={thumbnailSrc}
+                        thumbhash={thumbnailObject.thumbhash || undefined}
+                        style={{
+                            opacity: isLoaded ? 0 : 1,
+                            transition: "opacity 0.3s ease-in-out",
+                        }}
+                        alt="Video thumbnail"
+                        width={width}
+                        height={height}
+                    />
+                )}
             </div>
+
             <div className={style["hls-overlay"]} onClick={playVideo} />
+
             <div className={style["hls-controls"]}>
                 <div
-                    className={`${style["hls-seek-container"]} ${isSeekingRef.current ? style["seeking"] : ""}`}
+                    className={`${style["hls-seek-container"]} ${
+                        isSeekingRef.current ? style["seeking"] : ""
+                    }`}
                     onPointerDown={handleSeekPointerDown}
                     onPointerMove={handleSeekPointerMove}
                     onPointerUp={handleSeekPointerUp}
@@ -511,6 +557,7 @@ export const HlsPlayer = ({
                                 : "0%",
                         }}
                     />
+
                     <div
                         className={style["hls-seek"]}
                         style={
@@ -521,6 +568,7 @@ export const HlsPlayer = ({
                             } as React.CSSProperties
                         }
                     />
+
                     <div
                         className={style["hls-seek-thumb"]}
                         style={{
@@ -530,6 +578,7 @@ export const HlsPlayer = ({
                         }}
                     />
                 </div>
+
                 <div className={style["hls-actions"]}>
                     <div className={style["hls-left-actions"]}>
                         <Tooltip gap={24} parent={playerContainerRef.current}>
@@ -546,6 +595,7 @@ export const HlsPlayer = ({
                                     </button>
                                 </div>
                             </TooltipTrigger>
+
                             <TooltipContent>
                                 {isPlaying ? "Pause" : "Play"}
                             </TooltipContent>
@@ -578,6 +628,7 @@ export const HlsPlayer = ({
                                         )}
                                     </button>
                                 </TooltipTrigger>
+
                                 <TooltipContent>Volume</TooltipContent>
                             </Tooltip>
 
@@ -592,7 +643,9 @@ export const HlsPlayer = ({
                                 }
                                 style={
                                     {
-                                        "--volume-progress": `${isMuted ? 0 : volume * 100}%`,
+                                        "--volume-progress": `${
+                                            isMuted ? 0 : volume * 100
+                                        }%`,
                                     } as React.CSSProperties
                                 }
                                 className={style["hls-volume"]}
@@ -601,7 +654,11 @@ export const HlsPlayer = ({
                     </div>
 
                     <div className={style["hls-right-actions"]}>
-                        <Dropdown placement="top" offsetPlacement={24} containerRef={playerContainerRef}>
+                        <Dropdown
+                            placement="top"
+                            offsetPlacement={24}
+                            containerRef={playerContainerRef}
+                        >
                             <DropdownTrigger asChild>
                                 <button
                                     className={style["hls-icon-button"]}
@@ -610,6 +667,7 @@ export const HlsPlayer = ({
                                     <FaCog />
                                 </button>
                             </DropdownTrigger>
+
                             <DropdownContent>
                                 <DropdownItem>
                                     <button
@@ -619,6 +677,7 @@ export const HlsPlayer = ({
                                         Auto
                                     </button>
                                 </DropdownItem>
+
                                 {hlsLevels.map((level) => (
                                     <DropdownItem key={level.index}>
                                         <button
@@ -627,7 +686,7 @@ export const HlsPlayer = ({
                                                 changeResolution(level.index)
                                             }
                                         >
-                                            {level.height}
+                                            {level.height}p
                                         </button>
                                     </DropdownItem>
                                 ))}

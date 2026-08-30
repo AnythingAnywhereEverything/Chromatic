@@ -20,9 +20,9 @@ export const formatTime = (seconds: number): string => {
 
 export const makeFullURL = (
     base_src: string,
-    path: string,
+    path?: string,
 ): string =>
-    `${process.env.NEXT_PUBLIC_CDN_URL}${base_src}${path}`;
+    `${process.env.NEXT_PUBLIC_CDN_URL}${base_src}${path ? `/${path}` : ""}`;
 
 export const getSelectedResolution = (
     levels: {

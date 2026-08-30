@@ -1,74 +1,16 @@
-// hls.ts
-
 import Hls from "hls.js";
 
 export type HlsLevel = {
     index: number;
     width: number;
     height: number;
-}
-
-export const getMasterLevels = async (
-    src: string,
-): Promise<HlsLevel[]> => {
-    const response = await fetch(src);
-
-    if (!response.ok) {
-        throw new Error(`Failed to load master playlist: ${response.status}`);
-    }
-
-    const manifest = await response.text();
-
-    const levels: HlsLevel[] = [];
-    const lines = manifest.split(/\r?\n/);
-
-    let levelIndex = 0;
-
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-
-        if (!line.startsWith("#EXT-X-STREAM-INF:")) {
-            continue;
-        }
-
-        const resolution = line.match(
-            /(?:^|,)RESOLUTION=(\d+)x(\d+)/,
-        );
-
-        if (!resolution) {
-            continue;
-        }
-
-        levels.push({
-            index: levelIndex,
-            width: Number(resolution[1]),
-            height: Number(resolution[2]),
-        });
-
-        levelIndex++;
-    }
-
-    return levels
-        .filter(
-            (level, index, array) =>
-                array.findIndex(
-                    (item) =>
-                        item.width === level.width &&
-                        item.height === level.height,
-                ) === index,
-        )
-        .sort((a, b) => b.height - a.height);
 };
 
-export const createHls = () =>
-    new Hls({
-        autoStartLoad: true,
-        maxBufferLength: 12,
-        maxMaxBufferLength: 20,
-        maxBufferSize: 30 * 1000 * 1000,
-        maxBufferHole: 0.5,
-        startLevel: -1,
-    });
+export type HlsPlaylist = {
+    index: number;
+    resolution: string;
+    url: string;
+};
 
 export const getHlsLevels = (hls: Hls): HlsLevel[] =>
     hls.levels
@@ -87,6 +29,16 @@ export const getHlsLevels = (hls: Hls): HlsLevel[] =>
         )
         .sort((a, b) => b.height - a.height);
 
+export const createHls = () =>
+    new Hls({
+        autoStartLoad: true,
+        maxBufferLength: 12,
+        maxMaxBufferLength: 20,
+        maxBufferSize: 30 * 1000 * 1000,
+        maxBufferHole: 0.5,
+        startLevel: -1,
+    });
+
 export const preloadResolution = async (
     src: string,
     levelIndex: number,
@@ -96,7 +48,6 @@ export const preloadResolution = async (
     preloadVideo.muted = true;
     preloadVideo.playsInline = true;
     preloadVideo.preload = "auto";
-
     preloadVideo.style.position = "fixed";
     preloadVideo.style.width = "1px";
     preloadVideo.style.height = "1px";
@@ -160,7 +111,6 @@ export const preloadResolution = async (
     } catch (error) {
         preloadHls.destroy();
         preloadVideo.remove();
-
         throw error;
     }
 };

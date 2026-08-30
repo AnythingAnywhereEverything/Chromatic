@@ -33,17 +33,6 @@ const PostAvatar = ({
     const [avatarContainerWidth, setAvatarContainerWidth] = useState(containerWidth || 40);
     const [avatarContainerHeight, setAvatarContainerHeight] = useState(containerHeight || 40);
 
-    const handdleResize = () => {
-        if (containerRef.current) {
-            setAvatarContainerWidth(
-                Math.floor(containerRef.current.offsetWidth),
-            );
-            setAvatarContainerHeight(
-                Math.floor(containerRef.current.offsetWidth),
-            );
-        }
-    };
-
     React.useEffect(() => {
             if (containerRef.current && !isInit) {
                 setIsInit(true);
@@ -75,10 +64,10 @@ const PostAvatar = ({
         }, [containerRef.current]);
 
     if (avatar) {
-        const avatarSrc = avatar.startsWith("a_") 
+        const avatarSrc = `avatars/${userId}/${avatar.startsWith("a_") 
             ? avatar.replace(".webp", ".png") 
-            : avatar;
-        console.log(avatarSrc);
+            : avatar}`;
+        console.log("avatarSrc", avatarSrc);
         return (
             <Image
                 style={{borderRadius: "50%"}}

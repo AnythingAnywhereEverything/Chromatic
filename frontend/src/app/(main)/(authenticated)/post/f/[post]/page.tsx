@@ -22,18 +22,19 @@ export async function generateMetadata({
     const postImages = [];
 
     if (response.has_attachment) {
+        const mediaObject = response.attachments[0]?.media_objects[0]; 
         postImages.push({
-            url: `${process.env.NEXT_PUBLIC_CDN_URL}/${response.media[0]?.path}`,
+            url: `${process.env.NEXT_PUBLIC_CDN_URL}/${mediaObject?.storage_key}/${mediaObject?.name}`,
             width: 400,
             height: 400,
         });
     }
 
     return {
-        title: `${response.display_name} (${response.username})'s post`,
+        title: `${response.author.display_name} (${response.author.username})'s post`,
         description: response.content,
         openGraph: {
-            title: `${response.display_name} (${response.username})'s post`,
+            title: `${response.author.display_name} (${response.author.username})'s post`,
             description: response.content,
             url: `${process.env.NEXT_PUBLIC_URL}/f/${postOf}`,
             images: postImages,

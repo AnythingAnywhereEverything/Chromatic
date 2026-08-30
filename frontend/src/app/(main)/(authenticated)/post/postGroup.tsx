@@ -2,13 +2,12 @@
 
 import { Post } from "@/app/_components/ui/chromatic/post";
 import { useEffect, useState } from "react";
-import { getUserFeed } from "@/api/post/getFeed";
-import type { mediaPostProps, MediaReponse } from "@/api/post/getFeed";
+import { getUserFeed, PostProps } from "@/api/post/getFeed";
 import style from "./style.module.scss";
 import PostPopup from "./postPopup";
 
 export default function PostGroup() {
-  const [feed, setFeed] = useState<mediaPostProps[]>([]);
+  const [feed, setFeed] = useState<PostProps[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [popupPostId, setPopupPostId] = useState<string | null>(null);
 
@@ -47,11 +46,11 @@ export default function PostGroup() {
   return (
     <div className={style["feed-layout"]}>
       {feed?.map((post) => (
-        <div key={post.id}
-        // onClick={() => changePathname(post.id)}
+        <div key={post.post_id}
+        // onClick={() => changePathname(post.post_id)}
         >
         <Post
-          key={post.id}
+          key={post.post_id}
           {...post}
           />
           </div>

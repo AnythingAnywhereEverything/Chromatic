@@ -1,13 +1,9 @@
-type HlsPlayerProps = {
-    // must ended with `/`
-    id: string;
-    base_src: string;
-    thumbhash?: string;
-    autoPlay?: boolean;
-    controls?: boolean;
-    width?: number;
-    height?: number;
-    duration?: number;
-};
+import { Media } from "@/api/types/media";
 
+type HlsPlayerProps = {
+    id: string;
+    media: Media;
+    width: number;
+    height: number;
+};
 export type { HlsPlayerProps };

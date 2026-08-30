@@ -11,7 +11,7 @@ import {
     IoClose,
 } from "react-icons/io5";
 import { BsThreeDots } from "react-icons/bs";
-import { deletePost, mediaPostProps } from "@/api/post/getFeed";
+import { deletePost, PostProps } from "@/api/post/getFeed";
 import {
     Dialog,
     DialogClose,
@@ -31,34 +31,24 @@ import {
 import { MediaGroup } from "./mediagroup";
 import { PostAvatar } from "./profile";
 import { useRouter } from "next/navigation";
+import { useUser } from "@/hooks/useUser";
 
 // todo: community will be add soon
-const Post: React.FC<mediaPostProps> = ({
-    id,
-    user_id, // owner
-    username,
+const Post: React.FC<PostProps> = ({
+    post_id,
+    author, // owner
     content,
-    total_comment,
+    total_comments,
     total_likes,
     visibility,
-    is_repost,
-    repost_from,
+    is_reposted,
+    reposted_post,
     has_attachment,
     created_at,
     updated_at,
-    media = [],
+    attachments,
     tag = [],
     is_liked,
-    current_user_id,
-    display_name,
-    avatar_path,
-    avatar_mime,
-    avatar_thumbhash,
-    banner_path,
-    banner_mime,
-    banner_thumbhash,
-    followers_count,
-    following_count,
 }) => {
     const [open, setOpen] = useState(false);
     const [showReadMoreButton, setShowReadMoreButton] = useState(false);
@@ -70,11 +60,13 @@ const Post: React.FC<mediaPostProps> = ({
     const [mediaSrc, setMediaSrc] = useState<string | null>(null);
     const rootRef = useRef<HTMLDivElement>(null);
 
-    const hasDisplayName = display_name || null;
+    let currentUserId = useUser().data?.id;
+
+    const hasDisplayName = author.display_name || null;
     const handleDeletePost = async () => {
         try {
-            console.log("Deleting post with ID:", id);
-            await deletePost(id);
+            console.log("Deleting post with ID:", post_id);
+            await deletePost(post_id);
             // Optionally, you can add a callback to remove the post from the UI after deletion
         } catch (error) {
             console.error("Failed to delete post:", error);
@@ -94,31 +86,31 @@ const Post: React.FC<mediaPostProps> = ({
     // mediaSrc is set on hover per-item; no global effect needed
     return (
         <section className={style["container"]} 
-        key={id}
+        key={post_id}
         >
             <div className={style["header"]}>
                 <section className={style["profile"]} >
-                    <div className={style["avatar"]} key={user_id}>
+                    <div className={style["avatar"]} key={author.id}>
                         <PostAvatar 
-                        userId={user_id} 
-                        username={username} 
-                        displayName={display_name} 
-                        avatar={avatar_path} 
-                        thumbhash={avatar_thumbhash}
+                        userId={author.id} 
+                        username={author.username} 
+                        displayName={author.display_name} 
+                        avatar={author.avatar} 
+                        thumbhash={author.avatar_thumbhash}
                         containerRef={rootRef}
                         />
                     </div>
                     <div className={style["user-info"]}>
                         <div className={style["username"]}>
                             <p>
-                                {display_name || username}
+                                {author.display_name || author.username}
                             </p>
                         </div>
                         <div className={style["post-date"]}>
                             <p>
                                 {hasDisplayName && (
                                     <>
-                                         {username} <GoDotFill style={{fontSize: "var(--text-small)"}} />
+                                         {author.username} <GoDotFill style={{fontSize: "var(--text-small)"}} />
                                     </>
                                 )}
                             </p>
@@ -130,7 +122,7 @@ const Post: React.FC<mediaPostProps> = ({
                             <DropdownTrigger asChild>
                                 <BsThreeDots />
                             </DropdownTrigger>
-                            {user_id === current_user_id ? (
+                            {author.id === currentUserId ? (
                                 <DropdownContent>
                                     <DropdownItem>Edit Post</DropdownItem>
                                     <DropdownItem>
@@ -145,13 +137,13 @@ const Post: React.FC<mediaPostProps> = ({
                             ) : (
                                 <DropdownContent>
                                     <DropdownItem>
-                                        Follow @{username}
+                                        Follow @{author.username}
                                     </DropdownItem>
                                     <DropdownItem>
-                                        Add Friend @{username}
+                                        Add Friend @{author.username}
                                     </DropdownItem>
                                     <DropdownItem>
-                                        Block @{username}
+                                        Block @{author.username}
                                     </DropdownItem>
                                     <DropdownItem>Report</DropdownItem>
                                 </DropdownContent>
@@ -184,7 +176,7 @@ const Post: React.FC<mediaPostProps> = ({
                 </div>
 
                 {/* //*--------------------has attachment cp---------------- */}
-                {has_attachment && <MediaGroup media={media} />}
+                {has_attachment && <MediaGroup media={attachments} />}
                 {/* //todo: */}
                 <ul className={style["subject-tag"]}>
                     {tag.map((item) => {
@@ -209,14 +201,14 @@ const Post: React.FC<mediaPostProps> = ({
                                     const nextLikeState = !likeState;
 
                                     console.log({
-                                        id,
+                                        post_id,
                                         is_liked: likeState,
                                         likeState,
                                         nextLikeState,
                                     });
 
                                     const response = await TogglePostLike(
-                                        id,
+                                        post_id,
                                         nextLikeState,
                                     );
 
@@ -246,7 +238,7 @@ const Post: React.FC<mediaPostProps> = ({
                         <button type="button">
                             <GoComment />
                         </button>
-                        {total_comment || 0}
+                        {total_comments || 0}
                     </div>
                 </section>
 

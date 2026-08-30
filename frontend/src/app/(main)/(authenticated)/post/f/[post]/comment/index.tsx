@@ -133,7 +133,7 @@ const CreateComment: React.FC = () => {
                 userId={user.id}
                 username={user.username}
                 displayName={user.display_name}
-                avatar={`/avatars/${user.id}/${user.avatar}`}
+                avatar={user.avatar}
                 thumbhash={user.avatar_thumbhash}
                 containerRef={ref}
               />
