@@ -11,7 +11,7 @@ export const useAuthService = () => {
             setToken(data.token);
             setCacheUserId(data.user_id);
             queryClient.invalidateQueries({ queryKey: ["user"] });
-        },
+        }
     });
 
     const logoutMut = useMutation({

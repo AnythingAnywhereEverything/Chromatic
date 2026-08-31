@@ -31,19 +31,27 @@ export async function login(data: LoginData): Promise<LoginResponse> {
         },
         body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Username or password is incorrect");
+    if (!res.ok) {
+        if (res.status === 429) {
+            throw new Error("Too many login attempts. Please try again later.");
+        }
+        throw new Error("Username or password is incorrect");
+    }
     const response = await res.json();
     return response;
 }
 
 export async function register(data: RegisterData): Promise<RegisterResponse> {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}v2/auth/register`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
+    const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}v2/auth/register`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
         },
-        body: JSON.stringify(data),
-    });
+    );
     if (!res.ok) throw new Error("Registration failed");
     const response = await res.json();
     return response;

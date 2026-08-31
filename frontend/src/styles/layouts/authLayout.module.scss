@@ -1,63 +1,83 @@
 .auth-container {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  gap: calc(var(--spacing) * 12);
-}
-
-.container-right {
-  display: flex;
-  flex-grow: 0;
-  flex-shrink: 0;
-  flex: 0;
-  width: 100%;
-  height: 100%;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--background);
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  width: 420px;
-  border-radius: var(--radius);
-  border: 1px solid var(--foreground);
-  padding: calc(var(--spacing) * 5);
-}
-
-.sign-in {
-  padding-inline: calc(var(--spacing) * 2);
-  h2 {
     display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
-  }
+    width: 100vw;
+    height: 100%;
+}
+
+.form-container {
+    display: flex;
+    flex-direction: column;
+    width: 400px;
+    gap: var(--space-24);
+    align-items: center;
+    .form {
+        width: 100%;
+    }
+    .title {
+        font-size: var(--font-size-xxl);
+        font-weight: var(--font-medium);
+        color: var(--foreground);
+    }
 }
 
 .wrapper {
     display: flex;
     position: relative;
-    align-items: center;
     width: 100%;
-    height: 3rem;
+    height: var(--size-48);
     border: 1px solid var(--border);
-    border-radius: 0.5rem;
-    background-color: transparent;
-    padding: calc(var(--spacing) * 1);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background-color: color-mix(
+        in srgb,
+        var(--foreground) 5%,
+        var(--background)
+    );
+    cursor: text;
+
     &:focus-within {
-        border-color: var(--ring);
-        box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 50%, transparent);
+        box-shadow: 0 0 0 2px var(--foreground);
+    }
+
+    &:has(input[aria-invalid="true"]) {
+        border-color: var(--destructive);
+        &:focus-within {
+            box-shadow: 0 0 0 2px var(--destructive);
+        }
+        background-color: color-mix(
+            in srgb,
+            var(--destructive) 5%,
+            var(--background)
+        );
+
+        .password-toggle {
+            background-color: color-mix(
+                in srgb,
+                var(--background) 80%,
+                var(--destructive) 20%
+            );
+            transition: background-color 0.2s ease;
+            &:hover,
+            &:focus {
+                background-color: color-mix(
+                    in srgb,
+                    var(--background) 70%,
+                    var(--destructive) 30%
+                );
+            }
+        }
     }
 }
 
-.example-movable-user,
-.example-movable-password {
+// NOTE: Seki, we are we duplicating things?
+// From zartex.
+
+.movable {
     position: absolute;
-    left: 1rem;
+    left: var(--space-12);
     top: 50%;
     transform: translateY(-50%);
     transition:
@@ -67,123 +87,197 @@
         font-size 0.2s ease,
         opacity 0.2s ease;
     pointer-events: none;
-    opacity: 0.5;
+    color: var(--foreground);
+    opacity: 0.8;
+
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
-.example-movable-user.active,
-.example-movable-password.active {
+.movable.active {
     top: 25%;
-    left: 0.75rem;
+    left: var(--space-10);
     transform: translateY(-50%);
     font-size: 0.75rem;
-    opacity: 0.2;
-}
-
-.example-movable-email {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    transition:
-        top 0.2s ease,
-        left 0.2s ease,
-        transform 0.2s ease,
-        font-size 0.2s ease,
-        opacity 0.2s ease;
-    pointer-events: none;
-    opacity: 0.5;
-}
-
-.example-movable-email.active {
-    top: 25%;
-    left: 0.75rem;
-    transform: translateY(-50%);
-    font-size: 0.75rem;
-    opacity: 0.2;
+    opacity: 0.4;
 }
 
 .input-field {
     flex: 1;
     min-width: 0;
-    height: 100%;
+    height: var(--size-40);
     border: none;
     outline: none;
     background: transparent;
-    padding-inline: calc(var(--spacing) * 2.5);
-    padding-block: calc(var(--spacing) * 4);
-    padding-top: calc(var(--spacing) * 6);
+    margin-top: var(--space-8);
+    padding-inline: var(--space-8);
     font-size: var(--text-small);
-    transform: translateY(3px);
+
+    &:-webkit-autofill,
+    &:-webkit-autofill:hover,
+    &:-webkit-autofill:focus,
+    &:-webkit-autofill:active {
+        -webkit-box-shadow: 0 0 0 30px
+            color-mix(in srgb, var(--foreground) 5%, var(--background)) inset !important;
+    }
 }
 
 .password-toggle {
+    width: var(--size-32);
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 2.5rem;
-    height: 100%;
     flex-shrink: 0;
     border: none;
-    background: transparent;
+    background: color-mix(in srgb, var(--foreground) 10%, var(--background));
     cursor: pointer;
-}
-
-.field{
-  display: flex;
-  flex-direction: column;
-  gap: calc(var(--spacing) * 2);
-}
-
-// -----------------------Left side-----------------------
-.container-left {
-    flex: 1;
-    flex-grow: 0;
-    flex-shrink: 0;
-    width: 100%;
-    height: 100%;
-    padding-inline: calc(var(--spacing) * 20);
-    display: none;
-
-    @media screen and (min-width: 1025px) {
-        display: block;
-        align-items: center;;
-    }
-
-}
-
-.down-fall {
-  padding-block: calc(var(--spacing) * 12);
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  height: 100%;
-  align-items: center;
-  justify-content: space-between;
-  justify-items: center;
-  flex-direction: column;
-    .slogan{
-      flex: 1;
-    }
-    .prop {
-        inset: 0;
-        width: 480px;
-        object-fit: contain;
-        bottom: 0;
-    @media screen and (min-width: 1440px) {
-        width: 540px;
-    }
-  }
-}
-.submit {
-  cursor: pointer;
-  background-color: var(--primary);
-  width: 100%;
-  padding-block: calc(var(--spacing) * 2);
-  border-radius: var(--radius);
-  margin-bottom: calc(var(--spacing) * 3);
+    outline: none;
 
     &:hover {
-        background-color: color-mix(in srgb, var(--primary) 80%, white);
+        background: color-mix(
+            in srgb,
+            var(--foreground) 20%,
+            var(--background)
+        );
     }
+
+    &:active {
+        background: color-mix(
+            in srgb,
+            var(--foreground) 30%,
+            var(--background)
+        );
+    }
+
+    &:focus-visible {
+        background: color-mix(
+            in srgb,
+            var(--foreground) 20%,
+            var(--background)
+        );
+    }
+}
+
+.fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-12);
+}
+
+.submit {
+    cursor: pointer;
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    font-size: var(--font-size-md);
+    line-height: var(--text-line-height-md);
+    font-weight: var(--font-medium);
+    width: 100%;
+    height: var(--size-36);
+    padding-block: var(--space-8);
+    margin-bottom: var(--space-4);
+    border-radius: var(--radius-sm);
+
+    transition: background-color 0.2s ease;
+
+    img {
+        height: 100%;
+    }
+
+    &.submitting {
+        pointer-events: none;
+        background-color: color-mix(
+            in srgb,
+            var(--primary) 50%,
+            var(--primary-foreground) 50%
+        );
+    }
+
+    &:disabled {
+        cursor: not-allowed;
+        background-color: color-mix(
+            in srgb,
+            var(--primary) 50%,
+            var(--primary-foreground) 50%
+        );
+    }
+
+    &:hover:not(:disabled) {
+        background-color: color-mix(
+            in srgb,
+            var(--primary) 80%,
+            var(--primary-foreground) 20%
+        );
+    }
+
+    &:active:not(:disabled) {
+        background-color: color-mix(
+            in srgb,
+            var(--primary) 60%,
+            var(--primary-foreground) 40%
+        );
+    }
+
+    &:focus-visible {
+        outline-offset: var(--space-4);
+        outline: 2px solid var(--primary);
+    }
+}
+
+.auth-links {
+    margin-top: var(--space-4);
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    font-size: var(--text-small);
+
+    a {
+        font-size: var(--text-small);
+        color: var(--foreground);
+        text-decoration: none;
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+
+}
+.prompt {
+    font-size: var(--text-small);
+    a {
+        font-size: var(--text-small);
+        color: var(--text-link);
+        text-decoration: none;
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+}
+
+.terms-of-service {
+    text-align: center;
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    margin-top: var(--space-64);
+
+    a {
+        color: var(--foreground);
+        text-decoration: none;
+        font-weight: var(--font-medium);
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+}
+
+.error-message {
+    color: var(--destructive);
+    font-size: var(--text-small);
 }
