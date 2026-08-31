@@ -33,7 +33,7 @@ interface TooltipOptions {
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
     allowHovering?: boolean;
-    gap?: number;
+    offset?: number;
     parent?: HTMLElement | null;
 }
 
@@ -98,7 +98,7 @@ export function useTooltip({
     onOpenChange: setControlledOpen,
     allowHovering = false,
     parent = null,
-    gap = 5,
+    offset: offsetValue = 5,
 }: TooltipOptions = {}) {
     const [uncontrolledOpen, setUncontrolledOpen] = React.useState(initialOpen);
     const open = controlledOpen ?? uncontrolledOpen;
@@ -116,7 +116,7 @@ export function useTooltip({
         onOpenChange: setOpen,
         whileElementsMounted: autoUpdate,
         middleware: [
-            offset(gap),
+            offset(offsetValue),
             flip(),
             shift({
                 mainAxis: true,
@@ -133,7 +133,9 @@ export function useTooltip({
         move: false,
         enabled: controlledOpen == null,
         delay,
-        handleClose: allowHovering ? safePolygon() : undefined,
+        handleClose: allowHovering ? safePolygon({
+            blockPointerEvents: true,
+        }) : undefined,
     });
     const focus = useFocus(context, {
         enabled: controlledOpen == null,
