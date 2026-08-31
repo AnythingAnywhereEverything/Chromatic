@@ -181,12 +181,13 @@
     line-height: var(--text-line-height-md);
     font-weight: var(--font-medium);
     width: 100%;
-    height: var(--size-36);
+    height: var(--size-40);
     padding-block: var(--space-8);
     margin-bottom: var(--space-4);
     border-radius: var(--radius-sm);
 
     transition: background-color 0.2s ease;
+
 
     img {
         height: 100%;
