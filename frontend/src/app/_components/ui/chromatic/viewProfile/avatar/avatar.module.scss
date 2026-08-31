@@ -98,13 +98,13 @@
 }
 
 .remove-avatar-button {
-    color: var(--destructive);
+    color: var(--color-destructive);
     transition: background-color 0.3s ease;
 
     &:hover {
         background-color: color-mix(
             in oklab,
-            var(--destructive) 20%,
+            var(--color-destructive) 20%,
             transparent 40%
         );
     }

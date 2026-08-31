@@ -43,13 +43,13 @@
     }
 
     &:has(input[aria-invalid="true"]) {
-        border-color: var(--destructive);
+        border-color: var(--color-destructive);
         &:focus-within {
-            box-shadow: 0 0 0 2px var(--destructive);
+            box-shadow: 0 0 0 2px var(--color-destructive);
         }
         background-color: color-mix(
             in srgb,
-            var(--destructive) 5%,
+            var(--color-destructive) 5%,
             var(--background)
         );
 
@@ -57,7 +57,7 @@
             background-color: color-mix(
                 in srgb,
                 var(--background) 80%,
-                var(--destructive) 20%
+                var(--color-destructive) 20%
             );
             transition: background-color 0.2s ease;
             &:hover,
@@ -65,7 +65,7 @@
                 background-color: color-mix(
                     in srgb,
                     var(--background) 70%,
-                    var(--destructive) 30%
+                    var(--color-destructive) 30%
                 );
             }
         }
@@ -279,6 +279,6 @@
 }
 
 .error-message {
-    color: var(--destructive);
+    color: var(--color-destructive);
     font-size: var(--text-small);
 }
