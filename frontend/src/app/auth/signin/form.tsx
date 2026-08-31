@@ -11,10 +11,19 @@ import { useUser } from "@/hooks/useUser";
 import { useAuthService } from "@/hooks/useAuthService";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 
+// todo: add anim on this page
+// todo: re css on focused post page
+// todo: complete create post
+
 const SignInForm: NextPageWithLayout = () => {
     const [reveal, setReveal] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [isEditingUser, setEditingUser] = useState(false);
+    
+    const [isEditingPass, setEditingPass] = useState(false);
+    
     const handleReveal = () => {
         setReveal((prev) => !prev);
     };
@@ -29,6 +38,7 @@ const SignInForm: NextPageWithLayout = () => {
     }, [isLoading, data, router]);
 
     const { login } = useAuthService();
+
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -61,27 +71,44 @@ const SignInForm: NextPageWithLayout = () => {
                 <h2>Sign In</h2>
                 <Form action={"#"} onSubmit={handleSubmit}>
                     <section className={`${field.fieldGroup}`}>
-                        <section>
-                            <label 
-                             htmlFor="username">Username or Email</label>
+                        <section className={style["field"]}>
+                            <label htmlFor="username"></label>
                             <div
-                            style={{marginTop: "calc(var(--spacing) * 2)"}} 
-                            className={style["wrapper"]}>
+                                style={{ marginTop: "calc(var(--spacing) * 2)" }}
+                                className={style["wrapper"]}
+                            >
+                                <span
+                                    className={`${style["example-movable-user"]} ${
+                                        isEditingUser || username ? style.active : ""
+                                    }`}
+                                >
+                                    Username
+                                </span>
+                                
                                 <input
                                     className={style["input-field"]}
                                     aria-invalid={error ? "true" : "false"}
                                     required
                                     name="username"
                                     id="username"
-                                    placeholder="example@gmail.com"
-                                    />
-                                </div>
-                        </section>
-                        <section>
-                            <label htmlFor="password">Password</label>
-                                <div 
-                                style={{marginTop: "calc(var(--spacing) * 2)"}} 
-                                className={style["wrapper"]}>
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    onFocus={() => setEditingUser(true)}
+                                    onBlur={() => setEditingUser(false)}
+                                />
+                            </div>
+                           <div
+                                style={{ marginTop: "calc(var(--spacing) * 2)" }}
+                                className={style["wrapper"]}
+                                >
+                                <span
+                                    className={`${style["example-movable-password"]} ${
+                                        isEditingPass || password ? style.active : ""
+                                    }`}
+                                    >
+                                    Password
+                                </span>
+                                
                                 <input
                                     className={style["input-field"]}
                                     aria-invalid={error ? "true" : "false"}
@@ -90,7 +117,10 @@ const SignInForm: NextPageWithLayout = () => {
                                     type={reveal ? "text" : "password"}
                                     name="password"
                                     id="password"
-                                    placeholder="• • • • • • • •"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    onFocus={() => setEditingPass(true)}
+                                    onBlur={() => setEditingPass(false)}
                                     />
 
                                 <button

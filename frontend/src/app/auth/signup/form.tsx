@@ -10,269 +10,268 @@ import Link from "next/link";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 
 const SignUpForm = () => {
-    const [revealPassword, setRevealPassword] = useState(false);
-    const [revealConfirm, setRevealConfirm] = useState(false);
+  const [revealPassword, setRevealPassword] = useState(false);
+  const [revealConfirm, setRevealConfirm] = useState(false);
+  const [isEditingUser, setEditingUser] = useState(false);
+  const [isEditingEmail, setEditingEmail] = useState(false);
+  const [isEditingPass, setEditingPass] = useState(false);
+  const [isEditingConfirm, setEditingConfirm] = useState(false);
 
-    const { data, isLoading } = useUser();
-    const router = useRouter();
+  const { data, isLoading } = useUser();
+  const router = useRouter();
 
-    useEffect(() => {
-        if (!isLoading && data) {
-            router.replace("/");
-        }
-    }, [isLoading, data, router]);
+  useEffect(() => {
+    if (!isLoading && data) {
+      router.replace("/");
+    }
+  }, [isLoading, data, router]);
 
-    type Errors = Partial<{
-        username: string;
-        email: string;
-        password: string;
-        confirmPassword: string;
-    }>;
+  type Errors = Partial<{
+    username: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+  }>;
 
-    const [values, setValues] = useState({
-        username: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-    });
+  const [values, setValues] = useState({
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
 
-    const [errors, setErrors] = useState<Errors>({});
+  const [errors, setErrors] = useState<Errors>({});
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
 
-        setValues((prev) => ({
-            ...prev,
-            [name]: value,
-        }));
+    setValues((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
 
-        if (errors[name as keyof Errors]) {
-            setErrors((prev) => ({
-                ...prev,
-                [name]: undefined,
-            }));
-        }
-    };
+    if (errors[name as keyof Errors]) {
+      setErrors((prev) => ({
+        ...prev,
+        [name]: undefined,
+      }));
+    }
+  };
 
-    const validate = () => {
-        const nextErrors: Errors = {};
+  const validate = () => {
+    const nextErrors: Errors = {};
 
-        if (!values.username.trim()) {
-            nextErrors.username = "Username is required.";
-        }
+    if (!values.username.trim()) {
+      nextErrors.username = "Username is required.";
+    }
 
-        if (!values.email.trim()) {
-            nextErrors.email = "Email is required.";
-        } else if (
-            !/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(
-                values.email,
-            )
-        ) {
-            nextErrors.email = "Please enter a valid email address.";
-        }
+    if (!values.email.trim()) {
+      nextErrors.email = "Email is required.";
+    } else if (
+      !/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(values.email)
+    ) {
+      nextErrors.email = "Please enter a valid email address.";
+    }
 
-        if (!values.password) {
-            nextErrors.password = "Password is required.";
-        } else if (values.password.length < 8) {
-            nextErrors.password = "Password must be at least 8 characters.";
-        }
+    if (!values.password) {
+      nextErrors.password = "Password is required.";
+    } else if (values.password.length < 8) {
+      nextErrors.password = "Password must be at least 8 characters.";
+    }
 
-        if (!values.confirmPassword) {
-            nextErrors.confirmPassword = "Please confirm your password.";
-        } else if (values.confirmPassword !== values.password) {
-            nextErrors.confirmPassword = "Passwords do not match.";
-        }
+    if (!values.confirmPassword) {
+      nextErrors.confirmPassword = "Please confirm your password.";
+    } else if (values.confirmPassword !== values.password) {
+      nextErrors.confirmPassword = "Passwords do not match.";
+    }
 
-        setErrors(nextErrors);
+    setErrors(nextErrors);
 
-        return Object.keys(nextErrors).length === 0;
-    };
+    return Object.keys(nextErrors).length === 0;
+  };
 
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
-        if (!validate()) return;
+    if (!validate()) return;
 
-        register(values)
-            .then((response) => {
-                console.log(response);
-                router.push("/auth/signin");
-            })
-            .catch((error) => {
-                console.error("Registration error:", error);
-            });
-    };
+    register(values)
+      .then((response) => {
+        console.log(response);
+        router.push("/auth/signin");
+      })
+      .catch((error) => {
+        console.error("Registration error:", error);
+      });
+  };
 
-    return (
-        <div className={style.form}>
-            <section className={field.fieldSet}>
-                <h2>Sign Up</h2>
+  return (
+    <div className={style["container-right"]}>
+      <div className={style.form}>
+        <section className={`${field.fieldSet} ${style["sign-in"]}`}>
+          <h2>Sign Up</h2>
 
-                <form action={"#"} onSubmit={handleSubmit}>
-                    <section className={field.fieldGroup}>
-                        <section>
-                            <label htmlFor="username">Username</label>
+          <form action={"#"} onSubmit={handleSubmit}>
+            <section className={field.fieldGroup}>
+              <section className={style["field"]}>
+                <div
+                  style={{
+                    marginTop: "calc(var(--spacing) * 2)",
+                  }}
+                  className={style["wrapper"]}
+                >
+                  <span
+                    className={`${style["example-movable-user"]} ${
+                      isEditingUser || values.username ? style.active : ""
+                    }`}
+                  >
+                    Username
+                  </span>
+                  <input
+                    className={style["input-field"]}
+                    aria-invalid={errors.username ? "true" : "false"}
+                    required
+                    name="username"
+                    id="username"
+                    value={values.username}
+                    onChange={handleChange}
+                    onFocus={() => setEditingUser(true)}
+                    onBlur={() => setEditingUser(false)}
+                  />
+                </div>
 
-                            <div
-                                style={{
-                                    marginTop: "calc(var(--spacing) * 2)",
-                                }}
-                                className={style["wrapper"]}
-                            >
-                                <input
-                                    className={style["input-field"]}
-                                    aria-invalid={errors.username ? "true" : "false"}
-                                    required
-                                    name="username"
-                                    id="username"
-                                    placeholder="webapp_user"
-                                    value={values.username}
-                                    onChange={handleChange}
-                                />
-                            </div>
+                {errors.username && <p>{errors.username}</p>}
+              </section>
 
-                            {errors.username && (
-                                <p>{errors.username}</p>
-                            )}
-                        </section>
+              <section className={style["field"]}>
+                <div
+                  style={{
+                    marginTop: "calc(var(--spacing) * 2)",
+                  }}
+                  className={style["wrapper"]}
+                >
+                  <span
+                    className={`${style["example-movable-email"]} ${
+                      isEditingEmail || values.email ? style.active : ""
+                    }`}
+                  >
+                    Email
+                  </span>
+                  <input
+                    className={style["input-field"]}
+                    aria-invalid={errors.email ? "true" : "false"}
+                    required
+                    type="email"
+                    name="email"
+                    id="email"
+                    value={values.email}
+                    onChange={handleChange}
+                    onFocus={() => setEditingEmail(true)}
+                    onBlur={() => setEditingEmail(false)}
+                  />
+                </div>
 
-                        <section>
-                            <label htmlFor="email">Email</label>
+                {errors.email && <p>{errors.email}</p>}
+              </section>
 
-                            <div
-                                style={{
-                                    marginTop: "calc(var(--spacing) * 2)",
-                                }}
-                                className={style["wrapper"]}
-                            >
-                                <input
-                                    className={style["input-field"]}
-                                    aria-invalid={errors.email ? "true" : "false"}
-                                    required
-                                    type="email"
-                                    name="email"
-                                    id="email"
-                                    placeholder="example@gmail.com"
-                                    value={values.email}
-                                    onChange={handleChange}
-                                />
-                            </div>
+              <section className={style["field"]}>
+                <div
+                  style={{
+                    marginTop: "calc(var(--spacing) * 2)",
+                  }}
+                  className={style["wrapper"]}
+                >
+                  <span
+                    className={`${style["example-movable-password"]} ${
+                      isEditingPass || values.password ? style.active : ""
+                    }`}
+                  >
+                    Password
+                  </span>
+                  <input
+                    className={style["input-field"]}
+                    aria-invalid={errors.password ? "true" : "false"}
+                    autoComplete="new-password"
+                    required
+                    type={revealPassword ? "text" : "password"}
+                    name="password"
+                    id="password"
+                    value={values.password}
+                    onChange={handleChange}
+                    onFocus={() => setEditingPass(true)}
+                    onBlur={() => setEditingPass(false)}
+                  />
 
-                            {errors.email && (
-                                <p>{errors.email}</p>
-                            )}
-                        </section>
+                  <button
+                    className={style["password-toggle"]}
+                    type="button"
+                    onClick={() => setRevealPassword((prev) => !prev)}
+                  >
+                    {revealPassword ? <FaRegEyeSlash /> : <FaRegEye />}
+                  </button>
+                </div>
 
-                        <section>
-                            <label htmlFor="password">Password</label>
+                {errors.password && <p>{errors.password}</p>}
+              </section>
 
-                            <div
-                                style={{
-                                    marginTop: "calc(var(--spacing) * 2)",
-                                }}
-                                className={style["wrapper"]}
-                            >
-                                <input
-                                    className={style["input-field"]}
-                                    aria-invalid={errors.password ? "true" : "false"}
-                                    autoComplete="new-password"
-                                    required
-                                    type={revealPassword ? "text" : "password"}
-                                    name="password"
-                                    id="password"
-                                    placeholder="• • • • • • • •"
-                                    value={values.password}
-                                    onChange={handleChange}
-                                />
+              <section className={style["field"]}>
+                <div
+                  style={{
+                    marginTop: "calc(var(--spacing) * 2)",
+                  }}
+                  className={style["wrapper"]}
+                >
+                  <span
+                    className={`${style["example-movable-password"]} ${
+                      isEditingConfirm || values.confirmPassword
+                        ? style.active
+                        : ""
+                    }`}
+                  >
+                    Confirm Password
+                  </span>
+                  <input
+                    className={style["input-field"]}
+                    aria-invalid={errors.confirmPassword ? "true" : "false"}
+                    autoComplete="new-password"
+                    required
+                    type={revealConfirm ? "text" : "password"}
+                    name="confirmPassword"
+                    id="confirmPassword"
+                    value={values.confirmPassword}
+                    onChange={handleChange}
+                    onFocus={() => setEditingConfirm(true)}
+                    onBlur={() => setEditingConfirm(false)}
+                  />
 
-                                <button
-                                    className={style["password-toggle"]}
-                                    type="button"
-                                    onClick={() =>
-                                        setRevealPassword((prev) => !prev)
-                                    }
-                                >
-                                    {revealPassword ? (
-                                        <FaRegEyeSlash />
-                                    ) : (
-                                        <FaRegEye />
-                                    )}
-                                </button>
-                            </div>
+                  <button
+                    className={style["password-toggle"]}
+                    type="button"
+                    onClick={() => setRevealConfirm((prev) => !prev)}
+                  >
+                    {revealConfirm ? <FaRegEyeSlash /> : <FaRegEye />}
+                  </button>
+                </div>
 
-                            {errors.password && (
-                                <p>{errors.password}</p>
-                            )}
-                        </section>
+                {errors.confirmPassword && <p>{errors.confirmPassword}</p>}
+              </section>
 
-                        <section>
-                            <label htmlFor="confirmPassword">
-                                Confirm Password
-                            </label>
+              <section className={style["btn-field"]}>
+                <button className={style["submit"]} type="submit">
+                  Sign Up
+                </button>
+              </section>
 
-                            <div
-                                style={{
-                                    marginTop: "calc(var(--spacing) * 2)",
-                                }}
-                                className={style["wrapper"]}
-                            >
-                                <input
-                                    className={style["input-field"]}
-                                    aria-invalid={
-                                        errors.confirmPassword
-                                            ? "true"
-                                            : "false"
-                                    }
-                                    autoComplete="new-password"
-                                    required
-                                    type={revealConfirm ? "text" : "password"}
-                                    name="confirmPassword"
-                                    id="confirmPassword"
-                                    placeholder="• • • • • • • •"
-                                    value={values.confirmPassword}
-                                    onChange={handleChange}
-                                />
-
-                                <button
-                                    className={style["password-toggle"]}
-                                    type="button"
-                                    onClick={() =>
-                                        setRevealConfirm((prev) => !prev)
-                                    }
-                                >
-                                    {revealConfirm ? (
-                                        <FaRegEyeSlash />
-                                    ) : (
-                                        <FaRegEye />
-                                    )}
-                                </button>
-                            </div>
-
-                            {errors.confirmPassword && (
-                                <p>
-                                    {errors.confirmPassword}
-                                </p>
-                            )}
-                        </section>
-
-                        <section className={style["btn-field"]}>
-                            <button
-                                className={style["submit"]}
-                                type="submit"
-                            >
-                                Sign Up
-                            </button>
-                        </section>
-
-                        <p className={field["fieldDescription"]}>
-                            Already have an account?{" "}
-                            <Link href={"/auth/signin"}>Sign In.</Link>
-                        </p>
-                    </section>
-                </form>
+              <p className={field["fieldDescription"]}>
+                Already have an account?{" "}
+                <Link href={"/auth/signin"}>Sign In.</Link>
+              </p>
             </section>
-        </div>
-    );
+          </form>
+        </section>
+      </div>
+    </div>
+  );
 };
 
 export default SignUpForm;
