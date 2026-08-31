@@ -56,6 +56,22 @@
     height: 100%;
     cursor:default;
     z-index: 1;
+
+    .hls-play-icon {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 2;
+        display: grid;
+        place-items: center;
+        color: white;
+        font-size: calc(var(--spacing) * 8);
+
+        background: rgba(0, 0, 0, 0.5);
+        padding: var(--space-12);
+        border-radius: var(--radius-round);
+    }
 }
 
 .hls-controls {

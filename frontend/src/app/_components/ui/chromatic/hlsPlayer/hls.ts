@@ -55,8 +55,8 @@ export const getHlsLevels = (hls: Hls): HlsLevel[] =>
     hls.levels
         .map((level, index) => ({
             index,
-            width: level.width,
-            height: level.height,
+            width: level.width < level.height ? level.height : level.width,
+            height: level.width < level.height ? level.width : level.height,
         }))
         .filter(
             (level, index, array) =>
@@ -66,7 +66,7 @@ export const getHlsLevels = (hls: Hls): HlsLevel[] =>
                         item.height === level.height,
                 ) === index,
         )
-        .sort((a, b) => b.height - a.height);
+        .sort((a, b) => b.width - a.width);
 
 export const createHls = () =>
     new Hls({
@@ -84,7 +84,6 @@ export const preloadResolution = async (
 ): Promise<() => void> => {
     const preloadVideo = document.createElement("video");
 
-    preloadVideo.muted = true;
     preloadVideo.playsInline = true;
     preloadVideo.preload = "auto";
     preloadVideo.style.position = "fixed";

@@ -77,7 +77,7 @@ export const HlsPlayer = ({ id, media, width, height }: HlsPlayerProps) => {
         [thumbnailObject],
     );
 
-        const initialLevels = useMemo<HlsLevel[]>(
+    const initialLevels = useMemo<HlsLevel[]>(
         () =>
             media.media_hls_playlists
                 .map((playlist, index) => {
@@ -634,178 +634,194 @@ export const HlsPlayer = ({ id, media, width, height }: HlsPlayerProps) => {
                 )}
             </div>
 
-            <div className={style["hls-overlay"]} onClick={playVideo} />
-
-            <div className={style["hls-controls"]}>
-                <div
-                    className={`${style["hls-seek-container"]} ${
-                        isSeekingRef.current ? style["seeking"] : ""
-                    }`}
-                    onPointerDown={handleSeekPointerDown}
-                    onPointerMove={handleSeekPointerMove}
-                    onPointerUp={handleSeekPointerUp}
-                    onPointerCancel={handleSeekPointerUp}
-                >
-                    <div className={style["hls-player-bar"]} />
-
+            <div className={style["hls-overlay"]} onClick={playVideo}> 
+                {!isPlaying && (
+                    <div className={style["hls-play-icon"]}>
+                        <IoPlay />
+                    </div>
+                )}
+            </div>
+            {isLoaded && (
+                <div className={style["hls-controls"]}>
                     <div
-                        className={style["hls-seek-buffered"]}
-                        style={{
-                            width: duration
-                                ? `${(bufferedTime / duration) * 100}%`
-                                : "0%",
-                        }}
-                    />
+                        className={`${style["hls-seek-container"]} ${
+                            isSeekingRef.current ? style["seeking"] : ""
+                        }`}
+                        onPointerDown={handleSeekPointerDown}
+                        onPointerMove={handleSeekPointerMove}
+                        onPointerUp={handleSeekPointerUp}
+                        onPointerCancel={handleSeekPointerUp}
+                    >
+                        <div className={style["hls-player-bar"]} />
 
-                    <div
-                        className={style["hls-seek"]}
-                        style={
-                            {
-                                "--seek-progress": duration
+                        <div
+                            className={style["hls-seek-buffered"]}
+                            style={{
+                                width: duration
+                                    ? `${(bufferedTime / duration) * 100}%`
+                                    : "0%",
+                            }}
+                        />
+
+                        <div
+                            className={style["hls-seek"]}
+                            style={
+                                {
+                                    "--seek-progress": duration
+                                        ? `${(currentTime / duration) * 100}%`
+                                        : "0%",
+                                } as React.CSSProperties
+                            }
+                        />
+
+                        <div
+                            className={style["hls-seek-thumb"]}
+                            style={{
+                                left: duration
                                     ? `${(currentTime / duration) * 100}%`
                                     : "0%",
-                            } as React.CSSProperties
-                        }
-                    />
+                            }}
+                        />
+                    </div>
 
-                    <div
-                        className={style["hls-seek-thumb"]}
-                        style={{
-                            left: duration
-                                ? `${(currentTime / duration) * 100}%`
-                                : "0%",
-                        }}
-                    />
-                </div>
-
-                <div className={style["hls-actions"]}>
-                    <div className={style["hls-left-actions"]}>
-                        <Tooltip gap={24} parent={playerContainerRef.current}>
-                            <TooltipTrigger asChild>
-                                <div
-                                    className={style["hls-play-pause"]}
-                                    onClick={playVideo}
-                                >
-                                    <button
-                                        className={style["hls-icon-button"]}
-                                        type="button"
-                                    >
-                                        {isPlaying ? <IoPause /> : <IoPlay />}
-                                    </button>
-                                </div>
-                            </TooltipTrigger>
-
-                            <TooltipContent>
-                                {isPlaying ? "Pause" : "Play"}
-                            </TooltipContent>
-                        </Tooltip>
-
-                        <div className={style["hls-time-container"]}>
-                            <span className={style["hls-time"]}>
-                                {formatTime(currentTime)} /{" "}
-                                {formatTime(duration)}
-                            </span>
-                        </div>
-
-                        <div className={style["hls-volume-container"]}>
+                    <div className={style["hls-actions"]}>
+                        <div className={style["hls-left-actions"]}>
                             <Tooltip
                                 gap={24}
                                 parent={playerContainerRef.current}
                             >
                                 <TooltipTrigger asChild>
+                                    <div
+                                        className={style["hls-play-pause"]}
+                                        onClick={playVideo}
+                                    >
+                                        <button
+                                            className={style["hls-icon-button"]}
+                                            type="button"
+                                        >
+                                            {isPlaying ? (
+                                                <IoPause />
+                                            ) : (
+                                                <IoPlay />
+                                            )}
+                                        </button>
+                                    </div>
+                                </TooltipTrigger>
+
+                                <TooltipContent>
+                                    {isPlaying ? "Pause" : "Play"}
+                                </TooltipContent>
+                            </Tooltip>
+
+                            <div className={style["hls-time-container"]}>
+                                <span className={style["hls-time"]}>
+                                    {formatTime(currentTime)} /{" "}
+                                    {formatTime(duration)}
+                                </span>
+                            </div>
+
+                            <div className={style["hls-volume-container"]}>
+                                <Tooltip
+                                    gap={24}
+                                    parent={playerContainerRef.current}
+                                >
+                                    <TooltipTrigger asChild>
+                                        <button
+                                            className={style["hls-icon-button"]}
+                                            type="button"
+                                            onClick={toggleMute}
+                                        >
+                                            {isMuted || volume === 0 ? (
+                                                <PiSpeakerSimpleSlashFill />
+                                            ) : volume > 0.5 ? (
+                                                <PiSpeakerSimpleHighFill />
+                                            ) : (
+                                                <PiSpeakerSimpleLowFill />
+                                            )}
+                                        </button>
+                                    </TooltipTrigger>
+
+                                    <TooltipContent>Volume</TooltipContent>
+                                </Tooltip>
+
+                                <input
+                                    type="range"
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={isMuted ? 0 : volume}
+                                    onChange={(event) =>
+                                        changeVolume(Number(event.target.value))
+                                    }
+                                    style={
+                                        {
+                                            "--volume-progress": `${
+                                                isMuted ? 0 : volume * 100
+                                            }%`,
+                                        } as React.CSSProperties
+                                    }
+                                    className={style["hls-volume"]}
+                                />
+                            </div>
+                        </div>
+
+                        <div className={style["hls-right-actions"]}>
+                            <Dropdown
+                                placement="top"
+                                offsetPlacement={24}
+                                containerRef={playerContainerRef}
+                            >
+                                <DropdownTrigger asChild>
                                     <button
                                         className={style["hls-icon-button"]}
                                         type="button"
-                                        onClick={toggleMute}
                                     >
-                                        {isMuted || volume === 0 ? (
-                                            <PiSpeakerSimpleSlashFill />
-                                        ) : volume > 0.5 ? (
-                                            <PiSpeakerSimpleHighFill />
-                                        ) : (
-                                            <PiSpeakerSimpleLowFill />
-                                        )}
+                                        <FaCog />
                                     </button>
-                                </TooltipTrigger>
+                                </DropdownTrigger>
 
-                                <TooltipContent>Volume</TooltipContent>
-                            </Tooltip>
-
-                            <input
-                                type="range"
-                                min={0}
-                                max={1}
-                                step={0.01}
-                                value={isMuted ? 0 : volume}
-                                onChange={(event) =>
-                                    changeVolume(Number(event.target.value))
-                                }
-                                style={
-                                    {
-                                        "--volume-progress": `${
-                                            isMuted ? 0 : volume * 100
-                                        }%`,
-                                    } as React.CSSProperties
-                                }
-                                className={style["hls-volume"]}
-                            />
-                        </div>
-                    </div>
-
-                    <div className={style["hls-right-actions"]}>
-                        <Dropdown
-                            placement="top"
-                            offsetPlacement={24}
-                            containerRef={playerContainerRef}
-                        >
-                            <DropdownTrigger asChild>
-                                <button
-                                    className={style["hls-icon-button"]}
-                                    type="button"
-                                >
-                                    <FaCog />
-                                </button>
-                            </DropdownTrigger>
-
-                            <DropdownContent>
-                                <DropdownItem>
-                                    <button
-                                        type="button"
-                                        onClick={() => changeResolution(-1)}
-                                    >
-                                        Auto
-                                    </button>
-                                </DropdownItem>
-
-                                {hlsLevels.map((level) => (
-                                    <DropdownItem key={level.index}>
+                                <DropdownContent>
+                                    <DropdownItem>
                                         <button
                                             type="button"
-                                            onClick={() =>
-                                                changeResolution(level.index)
-                                            }
+                                            onClick={() => changeResolution(-1)}
                                         >
-                                            {level.height}p
+                                            Auto
                                         </button>
                                     </DropdownItem>
-                                ))}
-                            </DropdownContent>
-                        </Dropdown>
 
-                        <button
-                            className={style["hls-icon-button"]}
-                            type="button"
-                            onClick={toggleFullscreen}
-                        >
-                            {isFullscreen ? (
-                                <MdFullscreenExit />
-                            ) : (
-                                <MdFullscreen />
-                            )}
-                        </button>
+                                    {hlsLevels.map((level) => (
+                                        <DropdownItem key={level.index}>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    changeResolution(
+                                                        level.index,
+                                                    )
+                                                }
+                                            >
+                                                {level.height}p
+                                            </button>
+                                        </DropdownItem>
+                                    ))}
+                                </DropdownContent>
+                            </Dropdown>
+
+                            <button
+                                className={style["hls-icon-button"]}
+                                type="button"
+                                onClick={toggleFullscreen}
+                            >
+                                {isFullscreen ? (
+                                    <MdFullscreenExit />
+                                ) : (
+                                    <MdFullscreen />
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 };
