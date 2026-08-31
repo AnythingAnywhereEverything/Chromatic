@@ -27,7 +27,7 @@ import {
   DropdownTrigger,
 } from "@/app/_components/ui/chromatic/dropdown";
 import { BsThreeDots } from "react-icons/bs";
-import { formatSocialMediaDate } from "@/app/_components/ui/chromatic/post/dataformat";
+import { formatSocialMediaDate } from "@/app/_components/ui/chromatic/post/helpers/dateFormater";
 import { GoComment, GoDotFill } from "react-icons/go";
 import { MediaGroup } from "@/app/_components/ui/chromatic/post/mediagroup";
 import { DialogSharePost } from "@/app/_components/ui/chromatic/post";

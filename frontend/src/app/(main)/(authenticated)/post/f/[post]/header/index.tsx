@@ -2,7 +2,7 @@ import { deletePost, PostProps } from "@/api/post/getFeed";
 import style from "./header.module.scss";
 import { PostAvatar } from "@/app/_components/ui/chromatic/post/profile";
 import { useRef } from "react";
-import { formatdatemonthyear, formatSocialMediaDate } from "@/app/_components/ui/chromatic/post/dataformat";
+import { formatdatemonthyear, formatSocialMediaDate } from "@/app/_components/ui/chromatic/post/helpers/dateFormater";
 import {
   Dropdown,
   DropdownContent,

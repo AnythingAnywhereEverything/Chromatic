@@ -7,29 +7,29 @@ import style from "./style.module.scss";
 import PostPopup from "./postPopup";
 
 export default function PostGroup() {
-  const [feed, setFeed] = useState<PostProps[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [popupPostId, setPopupPostId] = useState<string | null>(null);
+    const [feed, setFeed] = useState<PostProps[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [popupPostId, setPopupPostId] = useState<string | null>(null);
 
-  // todo: onClick the post Push? to 
-//   const changePathname = (id: string) => {
-//         const currentUrl =
-//             window.location.pathname +
-//             window.location.search +
-//             window.location.hash;
+    // todo: onClick the post Push? to
+    //   const changePathname = (id: string) => {
+    //         const currentUrl =
+    //             window.location.pathname +
+    //             window.location.search +
+    //             window.location.hash;
 
-//         const newUrl = `/post/f/${id}`;
+    //         const newUrl = `/post/f/${id}`;
 
-//         window.history.replaceState(
-//             {
-//                 ...window.history.state,
-//                 previousUrl: currentUrl,
-//             },
-//             "",
-//             newUrl
-//         );
-//             setPopupPostId(id);
-//     };
+    //         window.history.replaceState(
+    //             {
+    //                 ...window.history.state,
+    //                 previousUrl: currentUrl,
+    //             },
+    //             "",
+    //             newUrl
+    //         );
+    //             setPopupPostId(id);
+    //     };
 
     useEffect(() => {
         async function fetchFeed() {
@@ -42,19 +42,13 @@ export default function PostGroup() {
         fetchFeed();
     }, []);
 
-    // todo: fix the popup, I should go do other thing, i'll back clear this nigga..
-  return (
-    <div className={style["feed-layout"]}>
-      {feed?.map((post) => (
-        <div key={post.post_id}
-        // onClick={() => changePathname(post.post_id)}
-        >
-        <Post
-          key={post.post_id}
-          {...post}
-          />
-          </div>
-      ))}
-    </div>
-  );
+    return (
+        <div className={style["feed-layout"]}>
+            {feed?.map((post) => (
+                <div key={post.post_id}>
+                    <Post key={post.post_id} {...post} />
+                </div>
+            ))}
+        </div>
+    );
 }
