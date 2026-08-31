@@ -9,8 +9,8 @@ import BannerBackdrop from "./banner/backdrop";
 import React, { useEffect } from "react";
 import DisplayName from "./displayname";
 import { Post } from "../post";
-import { mediaPostProps } from "@/api/post/getFeed";
 import EditableTextArea from "../textarea";
+import { PostProps } from "@/api/post/getFeed";
 
 export type ProfilePayload = {
   display_name?: string;
@@ -31,7 +31,7 @@ interface ViewProfileBodyProps {
   // overrides the internal payload state
   payload?: ProfilePayload;
   onChange?: (payload: ProfilePayload) => void;
-  recentPost?: mediaPostProps[];
+  recentPost?: PostProps[];
 }
 
 interface AvatarData {
@@ -324,7 +324,7 @@ const ViewProfileBody = ({
 
             {recentPost.slice(0, 2).map((post) => (
               <Post
-                key={post.id}
+                key={post.post_id}
                 {...post}/>
             ))}
           </div>

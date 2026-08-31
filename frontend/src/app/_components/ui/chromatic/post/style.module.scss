@@ -1,9 +1,8 @@
 .container {
     background-color: var(--popover);
     width: 100%;
-    margin-bottom: calc(var(--spacing) * 3);
+    margin-bottom: var(--space-8);
     border-radius: calc(var(--radius) * 2);
-    cursor: pointer;
     transition: background-color 0.2s ease;
 
     &:hover {

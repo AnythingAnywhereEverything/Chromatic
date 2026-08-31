@@ -3,14 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import style from "./style.module.scss";
 import { LuThumbsUp } from "react-icons/lu";
-import { GoComment, GoDotFill } from "react-icons/go";
+import { GoComment } from "react-icons/go";
 import { IoMdShare } from "react-icons/io";
 import {
     IoBookmarkOutline,
     IoClipboardOutline,
     IoClose,
 } from "react-icons/io5";
-import { BsThreeDots } from "react-icons/bs";
 import { deletePost, PostProps } from "@/api/post/getFeed";
 import {
     Dialog,
@@ -21,22 +20,15 @@ import {
 } from "../dialogue";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../tooltip";
 import { TogglePostLike } from "@/api/post/like";
-import { formatSocialMediaDate } from "./dataformat";
-import {
-    Dropdown,
-    DropdownContent,
-    DropdownItem,
-    DropdownTrigger,
-} from "../dropdown";
-import { MediaGroup } from "./mediagroup";
-import { PostAvatar } from "./profile";
-import { useRouter } from "next/navigation";
-import { useUser } from "@/hooks/useUser";
 
-// todo: community will be add soon
+import { MediaGroup } from "./mediagroup";
+import { useUser } from "@/hooks/useUser";
+import PostHeader from "./header";
+
+// NOTE: Add support for community posts, custom popup to display and fetch comments.
 const Post: React.FC<PostProps> = ({
     post_id,
-    author, // owner
+    author, // post owner
     content,
     total_comments,
     total_likes,
@@ -46,18 +38,15 @@ const Post: React.FC<PostProps> = ({
     has_attachment,
     created_at,
     updated_at,
-    attachments,
+    attachments = [],
     tag = [],
-    is_liked,
+    is_liked = false,
 }) => {
     const [open, setOpen] = useState(false);
     const [showReadMoreButton, setShowReadMoreButton] = useState(false);
     const ref = useRef<HTMLSpanElement | null>(null);
-    const [openOption, setOpenOption] = useState(false);
     const [likeState, setLikeState] = useState(is_liked);
     const [likeCount, setLikeCount] = useState(total_likes);
-    const [hoveredMediaId, setHoveredMediaId] = useState<string | null>(null);
-    const [mediaSrc, setMediaSrc] = useState<string | null>(null);
     const rootRef = useRef<HTMLDivElement>(null);
 
     let currentUserId = useUser().data?.id;
@@ -85,35 +74,34 @@ const Post: React.FC<PostProps> = ({
     }, []);
     // mediaSrc is set on hover per-item; no global effect needed
     return (
-        <section className={style["container"]} 
-        key={post_id}
-        >
-            <div className={style["header"]}>
-                <section className={style["profile"]} >
+        <section className={style["container"]}>
+            {/* <div className={style["header"]}>
+                <section className={style["profile"]}>
                     <div className={style["avatar"]} key={author.id}>
-                        <PostAvatar 
-                        userId={author.id} 
-                        username={author.username} 
-                        displayName={author.display_name} 
-                        avatar={author.avatar} 
-                        thumbhash={author.avatar_thumbhash}
-                        containerRef={rootRef}
+                        <PostAvatar
+                            userId={author.id}
+                            username={author.username}
+                            displayName={author.display_name}
+                            avatar={author.avatar}
+                            thumbhash={author.avatar_thumbhash}
+                            containerRef={rootRef}
                         />
                     </div>
                     <div className={style["user-info"]}>
                         <div className={style["username"]}>
-                            <p>
-                                {author.display_name || author.username}
-                            </p>
+                            <p>{author.display_name || author.username}</p>
                         </div>
                         <div className={style["post-date"]}>
-                            <p>
-                                {hasDisplayName && (
-                                    <>
-                                         {author.username} <GoDotFill style={{fontSize: "var(--text-small)"}} />
-                                    </>
-                                )}
-                            </p>
+                            {hasDisplayName && (
+                                <p>
+                                    {author.username}{" "}
+                                    <GoDotFill
+                                        style={{
+                                            fontSize: "var(--text-small)",
+                                        }}
+                                    />
+                                </p>
+                            )}
                             <p>{formatSocialMediaDate(created_at)}</p>
                         </div>
                     </div>
@@ -151,8 +139,18 @@ const Post: React.FC<PostProps> = ({
                         </Dropdown>
                     </div>
                 </section>
-                {/* //todo: dropdown options for user */}
-            </div>
+            </div> */}
+
+            <PostHeader
+                author={{
+                    id: author.id,
+                    username: author.username,
+                    display_name: author.display_name,
+                    avatar: author.avatar,
+                    avatar_thumbhash: author.avatar_thumbhash,
+                }}
+                created_at={created_at}
+            />
 
             <div className={style["main-container"]}>
                 <div className={style["text-container"]}>

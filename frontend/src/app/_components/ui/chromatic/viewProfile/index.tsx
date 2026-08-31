@@ -16,7 +16,7 @@ import ViewProfileBody, { ProfilePayload } from "./body";
 import { Portal } from "@/app/_components/portal";
 import { useUser } from "@/hooks/useUser";
 import { useUserService } from "@/hooks/useUserService";
-import { getUserFeed, mediaPostProps } from "@/api/post/getFeed";
+import { PostProps } from "@/api/post/getFeed";
 
 interface ViewProfileOptions {
     username: string;
@@ -36,7 +36,7 @@ function useViewProfile({
         null,
     );
     const [isOwner, setIsOwner] = useState(false);
-    const [recentPost, setRecentPost] = React.useState<mediaPostProps[]>([]);
+    const [recentPost, setRecentPost] = React.useState<PostProps[]>([]);
 
     // use user service to get the current user id
     const cUser = useProfile();
@@ -179,7 +179,8 @@ const ViewProfile = ({
             formData.append("quote", payload.quote);
         }
 
-        const data = await profileService.updateUserProfile.mutateAsync(formData);
+        const data =
+            await profileService.updateUserProfile.mutateAsync(formData);
         setIsSaving(false);
         contextValue.setProfile(data);
         setPayload({});
@@ -224,7 +225,7 @@ const ViewProfile = ({
                     </DialogContent>
                 )}
             </Dialog>
-            { contextValue.isOwner && 
+            {contextValue.isOwner && (
                 <Portal>
                     <div className={style["unsaved-changes-wrapper"]}>
                         <div
@@ -253,65 +254,10 @@ const ViewProfile = ({
                                 disabled={isSaving}
                             >
                                 {isSaving ? (
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        viewBox="0 0 200 200"
-                                    >
-                                        <circle
-                                            fill="var(--text-neutral)"
-                                            stroke="var(--text-neutral)"
-                                            strokeWidth="15"
-                                            r="15"
-                                            cx="40"
-                                            cy="100"
-                                        >
-                                            <animate
-                                                attributeName="opacity"
-                                                calcMode="spline"
-                                                dur="2"
-                                                values="1;0;1;"
-                                                keySplines=".5 0 .5 1;.5 0 .5 1"
-                                                repeatCount="indefinite"
-                                                begin="-.4"
-                                            ></animate>
-                                        </circle>
-                                        <circle
-                                            fill="var(--text-neutral)"
-                                            stroke="var(--text-neutral)"
-                                            strokeWidth="15"
-                                            r="15"
-                                            cx="100"
-                                            cy="100"
-                                        >
-                                            <animate
-                                                attributeName="opacity"
-                                                calcMode="spline"
-                                                dur="2"
-                                                values="1;0;1;"
-                                                keySplines=".5 0 .5 1;.5 0 .5 1"
-                                                repeatCount="indefinite"
-                                                begin="-.2"
-                                            ></animate>
-                                        </circle>
-                                        <circle
-                                            fill="var(--text-neutral)"
-                                            stroke="var(--text-neutral)"
-                                            strokeWidth="15"
-                                            r="15"
-                                            cx="160"
-                                            cy="100"
-                                        >
-                                            <animate
-                                                attributeName="opacity"
-                                                calcMode="spline"
-                                                dur="2"
-                                                values="1;0;1;"
-                                                keySplines=".5 0 .5 1;.5 0 .5 1"
-                                                repeatCount="indefinite"
-                                                begin="0"
-                                            ></animate>
-                                        </circle>
-                                    </svg>
+                                    <img
+                                        src="/asset/svgs/dot_loading.svg"
+                                        alt="Saving"
+                                    />
                                 ) : (
                                     "Save"
                                 )}
@@ -319,7 +265,7 @@ const ViewProfile = ({
                         </div>
                     </div>
                 </Portal>
-            }
+            )}
         </ViewProfileContext.Provider>
     );
 };

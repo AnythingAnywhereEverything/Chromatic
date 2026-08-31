@@ -1,10 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ImageProps } from "./type";
-import { OptimizationType } from "./type";
-
 import { constructImageUrl, thumbhashB64ToDataURL } from "./helper";
 
 export function Image({
