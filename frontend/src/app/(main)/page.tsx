@@ -1,15 +1,12 @@
 "use client";
 
 import React from "react";
+import MainBody from "./body";
 
 const Home: React.FC = () => {
     return (
         <main>
-            <div>
-                <header>
-                    <h1>This page will soon be replaced.</h1>
-                </header>
-            </div>
+            <MainBody />
         </main>
     );
 };

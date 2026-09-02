@@ -1,17 +1,17 @@
-import style from "./style.module.scss"
-import AuthenticatedLayout from "../layout";
+"use client";
+
+import style from "./style.module.scss";
+import AuthenticatedLayout from "../(authenticated)/layout";
 import PostGroup from "./postGroup";
 import PostRightLayout from "./rightside";
 
-export default async function PostPage() {
+export const PostPage: React.FC = () => {
     return (
-    <AuthenticatedLayout>
         <div className={style["post-layout"]}>
             <div className={style["post-left-layout"]}>
                 <PostGroup />
             </div>
-            <PostRightLayout/>
+            <PostRightLayout />
         </div>
-    </AuthenticatedLayout>
     );
-}
+};

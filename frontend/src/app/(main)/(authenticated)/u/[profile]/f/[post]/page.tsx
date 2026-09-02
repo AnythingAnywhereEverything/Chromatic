@@ -2,7 +2,7 @@ import { getCommentsOnPost, getFocusedPost } from "@/api/post/getFeed";
 import PostContentPage from "./body";
 import type { Metadata } from "next";
 import style from "./content.module.scss"
-import PostRightLayout from "../../rightside";
+import PostRightLayout from "../../../../../feed/rightside";
 export async function generateMetadata({
     params,
 }: {
