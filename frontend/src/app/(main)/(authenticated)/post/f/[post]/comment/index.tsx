@@ -4,7 +4,6 @@ import { commentProps, getCommentsOnPost } from "@/api/post/getFeed";
 import style from "./comment.module.scss";
 import React, { useState } from "react";
 import EditableTextArea from "@/app/_components/ui/chromatic/textarea";
-import { PostAvatar } from "@/app/_components/ui/chromatic/post/profile";
 import {
   getCurrentProfile,
   getPublicUserProfile,
@@ -36,6 +35,7 @@ import { IoBookmarkOutline } from "react-icons/io5";
 import { LuThumbsUp } from "react-icons/lu";
 import { TogglePostLike } from "@/api/post/like";
 import { FaRegPaperPlane } from "react-icons/fa6";
+import { PostAvatar } from "@/app/_components/ui/chromatic/post/header/avatar";
 type CommentSectionProps = {
   postId: string;
 };
@@ -136,7 +136,6 @@ const CreateComment: React.FC = () => {
                 displayName={user.display_name}
                 avatar={user.avatar}
                 thumbhash={user.avatar_thumbhash}
-                containerRef={ref}
               />
             </div>
 
@@ -249,9 +248,6 @@ const CommentFromUser: React.FC<commentProps> = ({ ...comment }) => {
               displayName={comment.display_name}
               avatar={comment.avatar_path}
               thumbhash={comment.avatar_thumbhash}
-              containerRef={containerRefs}
-              containerWidth={36}
-              containerHeight={36}
             />
           </div>
 

@@ -117,7 +117,7 @@ export const getFocusedPost = async(postId: string):Promise<PostProps> => {
 
 export const getCommentsOnPost = async(postId: string):Promise<commentProps[]> => {
     const res = await fetchWithOptionAuth(`v2/posts/${postId}/comments`)
-    if (!res.ok) throw new Error("Failed to get post data")
+    if (!res.ok) throw new Error("Failed to get comments data")
     const data = await res.json();
     return data;
 }

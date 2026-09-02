@@ -10,7 +10,7 @@ import {
     IoClipboardOutline,
     IoClose,
 } from "react-icons/io5";
-import { deletePost, PostProps } from "@/api/post/getFeed";
+import { PostProps } from "@/api/post/getFeed";
 import {
     Dialog,
     DialogClose,
@@ -61,8 +61,13 @@ const Post: React.FC<PostProps> = ({
             );
         }
     }, []);
+
     return (
-        <section className={style["container"]}>
+        <section 
+        className={style["container"]}
+        //  ! remove before push
+        onClick={() => {console.log(post_id)}}
+        >
             <PostHeader
                 author={{
                     id: author.id,
@@ -259,3 +264,7 @@ export function DialogSharePost() {
         </Dialog>
     );
 }
+function useNavigate() {
+    throw new Error("Function not implemented.");
+}
+

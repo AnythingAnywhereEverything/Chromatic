@@ -1,6 +1,5 @@
 import { deletePost, PostProps } from "@/api/post/getFeed";
 import style from "./header.module.scss";
-import { PostAvatar } from "@/app/_components/ui/chromatic/post/profile";
 import { useRef } from "react";
 import { formatdatemonthyear, formatSocialMediaDate } from "@/app/_components/ui/chromatic/post/helpers/dateFormater";
 import {
@@ -12,11 +11,10 @@ import {
 import { BsThreeDots } from "react-icons/bs";
 import { getCacheUserId } from "@/handler/token_handler";
 import { GoDotFill } from "react-icons/go";
-
+import { PostAvatar } from "@/app/_components/ui/chromatic/post/header/avatar";
 export default function PostHeader({
   ...media
 }: PostProps) {
-  const rootRef = useRef<HTMLDivElement>(null);
   const userId = getCacheUserId();
   const hasDisplayName = media.author.display_name || null;
   const handleDeletePost = async () => {
@@ -38,7 +36,6 @@ export default function PostHeader({
             displayName={media.author.display_name}
             avatar={media.author.avatar}
             thumbhash={media.author.avatar_thumbhash}
-            containerRef={rootRef}
           />
         </div>
         <div className={style["user-info"]}>
