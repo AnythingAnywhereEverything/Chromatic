@@ -50,17 +50,6 @@ const Post: React.FC<PostProps> = ({
     const rootRef = useRef<HTMLDivElement>(null);
 
     let currentUserId = useUser().data?.id;
-
-    const hasDisplayName = author.display_name || null;
-    const handleDeletePost = async () => {
-        try {
-            console.log("Deleting post with ID:", post_id);
-            await deletePost(post_id);
-            // Optionally, you can add a callback to remove the post from the UI after deletion
-        } catch (error) {
-            console.error("Failed to delete post:", error);
-        }
-    };
     useEffect(() => {
         setLikeState(is_liked);
     }, [is_liked]);
@@ -72,75 +61,8 @@ const Post: React.FC<PostProps> = ({
             );
         }
     }, []);
-    // mediaSrc is set on hover per-item; no global effect needed
     return (
         <section className={style["container"]}>
-            {/* <div className={style["header"]}>
-                <section className={style["profile"]}>
-                    <div className={style["avatar"]} key={author.id}>
-                        <PostAvatar
-                            userId={author.id}
-                            username={author.username}
-                            displayName={author.display_name}
-                            avatar={author.avatar}
-                            thumbhash={author.avatar_thumbhash}
-                            containerRef={rootRef}
-                        />
-                    </div>
-                    <div className={style["user-info"]}>
-                        <div className={style["username"]}>
-                            <p>{author.display_name || author.username}</p>
-                        </div>
-                        <div className={style["post-date"]}>
-                            {hasDisplayName && (
-                                <p>
-                                    {author.username}{" "}
-                                    <GoDotFill
-                                        style={{
-                                            fontSize: "var(--text-small)",
-                                        }}
-                                    />
-                                </p>
-                            )}
-                            <p>{formatSocialMediaDate(created_at)}</p>
-                        </div>
-                    </div>
-                    <div className={style["option"]}>
-                        <Dropdown>
-                            <DropdownTrigger asChild>
-                                <BsThreeDots />
-                            </DropdownTrigger>
-                            {author.id === currentUserId ? (
-                                <DropdownContent>
-                                    <DropdownItem>Edit Post</DropdownItem>
-                                    <DropdownItem>
-                                        <button
-                                            type="button"
-                                            onClick={handleDeletePost}
-                                        >
-                                            Delete Post
-                                        </button>
-                                    </DropdownItem>
-                                </DropdownContent>
-                            ) : (
-                                <DropdownContent>
-                                    <DropdownItem>
-                                        Follow @{author.username}
-                                    </DropdownItem>
-                                    <DropdownItem>
-                                        Add Friend @{author.username}
-                                    </DropdownItem>
-                                    <DropdownItem>
-                                        Block @{author.username}
-                                    </DropdownItem>
-                                    <DropdownItem>Report</DropdownItem>
-                                </DropdownContent>
-                            )}
-                        </Dropdown>
-                    </div>
-                </section>
-            </div> */}
-
             <PostHeader
                 author={{
                     id: author.id,
@@ -150,6 +72,7 @@ const Post: React.FC<PostProps> = ({
                     avatar_thumbhash: author.avatar_thumbhash,
                 }}
                 created_at={created_at}
+                postId={post_id}
             />
 
             <div className={style["main-container"]}>
@@ -179,7 +102,9 @@ const Post: React.FC<PostProps> = ({
                 <ul className={style["subject-tag"]}>
                     {tag.map((item) => {
                         return (
-                            <li key={item.tag_id}>
+                            <li key={item.tag_id}
+                            style={{backgroundColor: `${item.tag_color}`}}
+                            >
                                 <p>{item.tag_name}</p>
                             </li>
                         );

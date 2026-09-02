@@ -16,6 +16,7 @@ import EmojiPicker, { EmojiStyle, Theme } from "emoji-picker-react";
 import { HiOutlineEmojiHappy } from "react-icons/hi";
 import {
   FloatingFocusManager,
+  FloatingPortal,
   useDismiss,
   useFloating,
   useInteractions,
@@ -195,19 +196,28 @@ const CreateComment: React.FC = () => {
                         size={24}
                         onClick={() => setIsOpenEmoji(!isOpenEmoji)}
                       />
-                      <FloatingFocusManager context={context}>
-                        <div ref={refs.setFloating} {...getFloatingProps()}>
-                          <EmojiPicker
-                            open={isOpenEmoji}
-                            emojiStyle={EmojiStyle.GOOGLE}
-                            theme={Theme.AUTO}
-                            lazyLoadEmojis={true}
-                            autoFocusSearch
-                            className={style["emoji-picker"]}
-                            style={{ position: "absolute" }}
-                          />
-                        </div>
-                      </FloatingFocusManager>
+                      {isOpenEmoji && (
+                        <FloatingPortal>
+                            <FloatingFocusManager
+                                context={context}
+                                modal={false}
+                            >
+                                <div
+                                    ref={refs.setFloating}
+                                    {...getFloatingProps()}
+                                >
+                                    <EmojiPicker
+                                        open
+                                        emojiStyle={EmojiStyle.GOOGLE}
+                                        theme={Theme.AUTO}
+                                        lazyLoadEmojis
+                                        autoFocusSearch
+                                        className={style["emoji-picker"]}
+                                    />
+                                </div>
+                            </FloatingFocusManager>
+                        </FloatingPortal>
+                      )}
                     </label>
                 </section>
           {/* //! accept ONLY images */}

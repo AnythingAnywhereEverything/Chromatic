@@ -6,11 +6,9 @@ import { AlertDialogue } from "@/app/_components/ui/chromatic/confirmation";
 
 import { CreateCommunityBtn } from "@/app/_components/ui/chromatic/createCom";
 
-import { CreatePost } from "@/app/_components/ui/chromatic/createPost";
 
 import {
     PostStatus,
-    PostVisibility,
 } from "@/app/_components/ui/chromatic/createPost/status";
 
 import {
@@ -55,9 +53,7 @@ const TestPage = () => {
 
     const innerRef = React.useRef<HTMLDivElement | null>(null);
 
-    const [testStatus, setTestStatus] = useState<PostVisibility>(
-        PostVisibility.Everyone,
-    );
+
 
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const hlsRef = useRef<Hls | null>(null);
@@ -328,9 +324,6 @@ const TestPage = () => {
                 />
             </section>
 
-            <section>
-                <CreatePost ownerId="1" ownerName="Username" ownerPfp="#" />
-            </section>
 
             <section>
                 <Dropdown>
@@ -344,12 +337,6 @@ const TestPage = () => {
                 </Dropdown>
             </section>
 
-            <section>
-                <PostStatus
-                    visibility={testStatus}
-                    onChange={(value) => setTestStatus(value)}
-                />
-            </section>
 
             <section
                 style={{
