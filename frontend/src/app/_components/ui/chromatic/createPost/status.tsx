@@ -1,62 +1,58 @@
 import React, { act, useState } from "react";
-import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from "../dropdown";
-import style from "./style.module.scss"
+import {
+  Dropdown,
+  DropdownContent,
+  DropdownItem,
+  DropdownTrigger,
+} from "../dropdown";
+import style from "./style.module.scss";
 import { MdArrowDropDown } from "react-icons/md";
 
-export enum PostVisibility {
-  Everyone = "EVERYONE",
-  FriendsOnly = "FRIENDS_ONLY",
-  NoOne = "NO_ONE"
+export enum Visibility {
+  Everyone = "everyone",
+  Friend = "friend",
+  Private = "private",
 }
-
 type Props = {
   title?: string;
-  visibility: PostVisibility;
-  onChange: (value: PostVisibility) => void;
+  visibility: Visibility;
+  onChange: (value: Visibility) => void;
 };
 
-const VISIBILITY_MAP: Record<PostVisibility, string> = {
-  [PostVisibility.Everyone]: 'Everyone',
-  [PostVisibility.FriendsOnly]: 'Friends Only',
-  [PostVisibility.NoOne]: 'Private',
+const VISIBILITY_MAP: Record<Visibility, string> = {
+  [Visibility.Everyone]: "Everyone",
+  [Visibility.Friend]: "Friends",
+  [Visibility.Private]: "Private",
 };
 
-const PostStatus: React.FC<Props> = ({title, visibility, onChange }) => {
-  const [statusShow,setStausShow] = useState(false)
+const PostStatus: React.FC<Props> = ({ title, visibility, onChange }) => {
+  const [statusShow, setStausShow] = useState(false);
   return (
-    <Dropdown 
-    open={statusShow}
-    onOpenChange={setStausShow}>
-      <DropdownTrigger asChild
-        onClick={() => setStausShow(!statusShow)}
-      >
-        <div
-        className={style["status-trigger"]}
-        style={{width: "fit-content", display: "flex"}}
-        >
-          {title !== "" && title ? title : ""}
-          {VISIBILITY_MAP[visibility]}
-          <div style={{alignItems: "center"}}>
-           <MdArrowDropDown
-              style={{ 
-                rotate: statusShow ? "180deg" : "0deg", 
-                transition: "rotate 0.2s ease-in-out" // Makes it spin smoothly
-              }} 
-            />
+    <Dropdown open={statusShow} onOpenChange={setStausShow}>
+      <DropdownTrigger asChild>
+        <div className={style["border"]}>
+          <div
+            className={style["status-trigger"]}
+            onClick={() => setStausShow(!statusShow)}
+          >
+            {title !== "" && title ? title : ""}
+            {VISIBILITY_MAP[visibility]}
           </div>
         </div>
-
       </DropdownTrigger>
 
-      <DropdownContent 
-      className={"status-body"}
-      >
-        {(Object.keys(VISIBILITY_MAP) as PostVisibility[]).map((key) => (
+      <DropdownContent className={"status-body"}>
+        {(Object.keys(VISIBILITY_MAP) as Visibility[]).map((key) => (
           <DropdownItem
-          className={style["status-item"]}
+            className={style["status-item"]}
             key={key}
-            onSelect={() => onChange(key)} 
+            onSelect={() => onChange(key)}
           >
+            <input
+              type="checkbox"
+              onChange={() => onChange(key)}
+              checked={visibility === key}
+            />
             {VISIBILITY_MAP[key]}
           </DropdownItem>
         ))}
