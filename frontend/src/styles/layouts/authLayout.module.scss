@@ -21,6 +21,11 @@
         font-weight: var(--font-medium);
         color: var(--foreground);
     }
+
+    @media (max-width: 600px) {
+        width: 100%;
+        padding-inline: var(--space-16);
+    }
 }
 
 .wrapper {

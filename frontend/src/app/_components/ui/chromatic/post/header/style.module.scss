@@ -30,6 +30,15 @@
     display: flex;
     flex-direction: row;
     gap: var(--space-8);
+
+    span {
+        display: flex;
+        align-items: center;
+    }
+    svg {
+        width: var(--size-12);
+        height: var(--size-12);
+    }
 }
 
 .avatar {

@@ -1,16 +1,13 @@
 "use client";
 
-import {
-    IoHome,
-    IoCompass,
-    IoHomeOutline,
-    IoCompassOutline,
-    IoChatboxEllipses,
-    IoChatboxEllipsesOutline,
-} from "react-icons/io5";
 import Link from "next/link";
-import { FaPlus } from "react-icons/fa6";
-import { HiMiniUserGroup, HiOutlineUserGroup } from "react-icons/hi2";
+import { FaCompass } from "react-icons/fa6";
+import {
+    HiMiniChatBubbleLeftRight,
+    HiMiniHome,
+    HiMiniUserGroup,
+    HiPlus,
+} from "react-icons/hi2";
 import style from "./style.module.scss";
 import { usePathname } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
@@ -26,32 +23,28 @@ export default function BottomBar() {
         <div className={style["bottom-bar"]}>
             <BottomBarButtons
                 href="/"
-                icon={<IoHomeOutline />}
-                iconEnabled={<IoHome />}
+                icon={<HiMiniHome />}
                 active={firstPathSegment === ""}
             />
             <BottomBarButtons
                 href="/explore"
-                icon={<IoCompassOutline />}
-                iconEnabled={<IoCompass />}
+                // force resize since compass is bigger than the other icons
+                icon={<FaCompass style={{ width: 22, height: 22 }} />}
                 active={firstPathSegment === "explore"}
             />
             <BottomBarButtons
                 href="/groups"
-                icon={<HiOutlineUserGroup />}
-                iconEnabled={<HiMiniUserGroup />}
+                icon={<HiMiniUserGroup />}
                 active={firstPathSegment === "groups"}
             />
             <BottomBarButtons
                 href="/create"
-                icon={<FaPlus />}
-                iconEnabled={<FaPlus />}
+                icon={<HiPlus />}
                 active={firstPathSegment === "create"}
             />
             <BottomBarButtons
                 href="/messages"
-                icon={<IoChatboxEllipsesOutline />}
-                iconEnabled={<IoChatboxEllipses />}
+                icon={<HiMiniChatBubbleLeftRight />}
                 active={firstPathSegment === "messages"}
             />
             <BottomBarProfile />
@@ -76,11 +69,36 @@ function BottomBarProfile() {
     }
     const { id: userId, username, avatar, avatar_thumbhash } = user.data;
 
+    const handlePointerDown = (e: React.PointerEvent<HTMLAnchorElement>) => {
+        const button = e.currentTarget;
+        const bar = button.parentElement;
+
+        if (!bar) return;
+
+        const buttonRect = button.getBoundingClientRect();
+        const barRect = bar.getBoundingClientRect();
+
+        const effect = document.createElement("span");
+
+        effect.className = style["interaction-effect"];
+
+        effect.style.left = `${buttonRect.left - barRect.left}px`;
+        effect.style.top = `${buttonRect.top - barRect.top}px`;
+        effect.style.width = `${buttonRect.width}px`;
+        effect.style.height = `${buttonRect.height}px`;
+
+        bar.appendChild(effect);
+
+        effect.addEventListener("animationend", () => {
+            effect.remove();
+        });
+    };
+
     // construct the avatar URL using the userId and avatar hash
     const avatarUrl = `avatars/${userId}/${parseStaticImage(avatar || "")}`;
 
     return (
-        <Link href={`/u/${username}`} className={style["profile-link"]}>
+        <Link href={`/u/${username}`} className={style["profile-link"]} onPointerDown={handlePointerDown}>
             {avatar ? (
                 <Image
                     src={avatarUrl}
@@ -88,13 +106,19 @@ function BottomBarProfile() {
                     alt={`${username}'s profile`}
                     thumbhash={avatar_thumbhash || undefined}
                     className={style["profile-image"]}
-                    width={32}
-                    height={32}
+                    // Give image 4x higher resolution so it looks sharp on high-DPI screens
+                    width={128}
+                    height={128}
                     containerWidth={32}
                     containerHeight={32}
                 />
             ) : (
-                <UserIdAvatar userId={userId} name={username} size={32} />
+                <UserIdAvatar
+                    userId={userId}
+                    name={username}
+                    className={style["profile-image"]}
+                    size={32}
+                />
             )}
         </Link>
     );
@@ -103,19 +127,46 @@ function BottomBarProfile() {
 interface BottomBarButtonsProps {
     href: string;
     icon: React.ReactNode;
-    iconEnabled: React.ReactNode;
     active: boolean;
 }
 
 function BottomBarButtons({
     href,
     icon,
-    iconEnabled,
     active,
 }: BottomBarButtonsProps) {
+    const handlePointerDown = (e: React.PointerEvent<HTMLAnchorElement>) => {
+        const button = e.currentTarget;
+        const bar = button.parentElement;
+
+        if (!bar) return;
+
+        const buttonRect = button.getBoundingClientRect();
+        const barRect = bar.getBoundingClientRect();
+
+        const effect = document.createElement("span");
+
+        effect.className = style["interaction-effect"];
+
+        effect.style.left = `${buttonRect.left - barRect.left}px`;
+        effect.style.top = `${buttonRect.top - barRect.top}px`;
+        effect.style.width = `${buttonRect.width}px`;
+        effect.style.height = `${buttonRect.height}px`;
+
+        bar.appendChild(effect);
+
+        effect.addEventListener("animationend", () => {
+            effect.remove();
+        });
+    };
+
     return (
-        <Link href={href} className={style["item"]}>
-            {active ? iconEnabled : icon}
+        <Link
+            href={href}
+            className={`${style["item"]} ${active ? style["active"] : ""}`}
+            onPointerDown={handlePointerDown}
+        >
+            {icon}
         </Link>
     );
 }

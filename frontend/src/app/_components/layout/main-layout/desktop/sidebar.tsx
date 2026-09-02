@@ -3,15 +3,12 @@
 import React from "react";
 import style from "./style.module.scss";
 import {
-    IoCompass,
-    IoCompassOutline,
-    IoHome,
-    IoHomeOutline,
-    IoChatboxEllipsesOutline,
-    IoChatboxEllipses,
-} from "react-icons/io5";
-import { HiOutlineUserGroup, HiMiniUserGroup } from "react-icons/hi2";
-import { FaBell, FaRegBell } from "react-icons/fa6";
+    HiOutlineUserGroup,
+    HiMiniUserGroup,
+    HiMiniChatBubbleLeftRight,
+    HiMiniHome,
+} from "react-icons/hi2";
+import { FaBell, FaCompass, FaRegBell } from "react-icons/fa6";
 import { usePathname } from "next/navigation"; // pages router
 import Link from "next/link";
 import { useUser } from "@/hooks/useUser";
@@ -22,6 +19,15 @@ import { UserIdAvatar } from "@/app/_components/ui/chromatic/initialAvatar";
 const SidebarNavigator: React.FC = () => {
     const pathname = usePathname();
     const firstPathSegment = pathname.split("/")[1];
+
+    
+    const user = useUser();
+    
+    if (!user || !user.data) {
+        return null;
+    }
+    const profile_path = `/u/${user.data.username}`;
+
     // Custom hook to get user data
 
     const handleMouseEnter = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -60,36 +66,31 @@ const SidebarNavigator: React.FC = () => {
 
             <div className={style["sidebar-items"]}>
                 <SidebarItem
-                    icon={<IoHomeOutline />}
-                    iconEnable={<IoHome />}
+                    icon={<HiMiniHome />}
                     active={firstPathSegment === ""}
                     label="Home"
                     href="/"
                 />
                 <SidebarItem
-                    icon={<IoCompassOutline />}
-                    iconEnable={<IoCompass />}
+                    icon={<FaCompass style={{ width: 22, height: 22 }} />}
                     active={firstPathSegment === "explore"}
                     label="Explore"
                     href="/explore"
                 />
                 <SidebarItem
-                    icon={<HiOutlineUserGroup />}
-                    iconEnable={<HiMiniUserGroup />}
+                    icon={<HiMiniUserGroup />}
                     active={firstPathSegment === "groups"}
                     label="Groups"
                     href="/groups"
                 />
                 <SidebarItem
-                    icon={<IoChatboxEllipsesOutline />}
-                    iconEnable={<IoChatboxEllipses />}
+                    icon={<HiMiniChatBubbleLeftRight />}
                     active={firstPathSegment === "messages"}
                     label="Messages"
                     href="/messages"
                 />
                 <SidebarItem
-                    icon={<FaRegBell />}
-                    iconEnable={<FaBell />}
+                    icon={<FaBell />}
                     active={firstPathSegment === "notifications"}
                     label="Notifications"
                     href="/notifications"
@@ -97,7 +98,10 @@ const SidebarNavigator: React.FC = () => {
             </div>
 
             <div className={style["sidebar-footer"]}>
-                <SidebarProfile />
+                <SidebarProfile
+                    userData={user.data}
+                    active={firstPathSegment === profile_path.split("/")[1]}
+                />
             </div>
         </nav>
     );
@@ -112,20 +116,20 @@ function parseStaticImage(url: string): string {
     return url;
 }
 
-function SidebarProfile() {
-    const user = useUser();
-
-    if (!user || !user.data) {
-        return null;
-    }
-    const { id: userId, username, avatar, avatar_thumbhash } = user.data;
+function SidebarProfile({
+    active,
+    userData,
+}: {
+    active: boolean;
+    userData: any;
+}) {
+    const { id: userId, username, avatar, avatar_thumbhash } = userData;
 
     // construct the avatar URL using the userId and avatar hash
     const avatarUrl = `avatars/${userId}/${parseStaticImage(avatar || "")}`;
 
     return (
-        <div className={style["sidebar-profile"]}>
-            <Link href={`/u/${username}`} className={style["profile-link"]}>
+            <Link href={`/u/${username}`} className={`${style["sidebar-profile"]} ${active ? style["active"] : ""}`}>
                 <div className={style["profile-container"]}>
                     {avatar ? (
                         <Image
@@ -134,22 +138,22 @@ function SidebarProfile() {
                             alt={`${username}'s profile`}
                             thumbhash={avatar_thumbhash || undefined}
                             className={style["profile-image"]}
-                            width={44}
-                            height={44}
-                            containerWidth={44}
-                            containerHeight={44}
+                            // scale up 4x for sharper quality
+                            width={160}
+                            height={160}
+                            containerWidth={40}
+                            containerHeight={40}
                         />
                     ) : (
                         <UserIdAvatar
                             userId={userId}
                             name={username}
-                            size={44}
+                            size={40}
                         />
                     )}
                 </div>
                 <span className={style["label"]}>Profile</span>
             </Link>
-        </div>
     );
 }
 
@@ -160,7 +164,6 @@ function getFirstPathSegment(pathname: string): string {
 
 interface SidebarItemProps {
     icon: React.ReactNode;
-    iconEnable?: React.ReactNode;
     active: boolean;
     label: string;
     href: string;
@@ -168,21 +171,19 @@ interface SidebarItemProps {
 
 const SidebarItem: React.FC<SidebarItemProps> = ({
     icon,
-    iconEnable,
     active,
     label,
     href,
 }) => {
     return (
-        <div className={style["item"]}>
-            <Link href={href}>
-                <div className={style["icon-container"]}>
-                    {active && iconEnable ? iconEnable : icon}
-                </div>
+        <Link
+            href={href}
+            className={`${style["item"]} ${active ? style["active"] : ""}`}
+        >
+            <div className={style["icon-container"]}>{icon}</div>
 
-                <span className={style["label"]}>{label}</span>
-            </Link>
-        </div>
+            <span className={style["label"]}>{label}</span>
+        </Link>
     );
 };
 
