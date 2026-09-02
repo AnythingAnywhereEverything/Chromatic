@@ -26,26 +26,16 @@ function formatSocialMediaDate(dateInput: Date | string | number): string {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    // * More than 10 days: "1 Jan 26"
-    if (diffDays > 10) {
-        return date.toLocaleDateString("en-GB", {
-            timeZone: userTimeZone,
-            day: "numeric",
-            month: "short",
-            year: "2-digit",
-        });
-    }
-
     if (diffDays >= 1) {
-        return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
+        return formatdatemonthyear(date);
     }
 
     if (diffHours >= 1) {
-        return `${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`;
+        return `${diffHours}h`;
     }
 
     if (diffMins >= 1) {
-        return `${diffMins} ${diffMins === 1 ? "min" : "mins"} ago`;
+        return `${diffMins}m`;
     }
 
     return "Just now";
@@ -53,12 +43,24 @@ function formatSocialMediaDate(dateInput: Date | string | number): string {
 
 function formatdatemonthyear(dateInput: Date | string | number): string {
     const date = parseUtcDate(dateInput);
-
-    return date.toLocaleDateString("en-GB", {
+    const dateYear = Number(
+        new Intl.DateTimeFormat("en-US", {
+            timeZone: userTimeZone,
+            year: "numeric",
+        }).format(date)
+    );
+    const currentYear = Number(
+        new Intl.DateTimeFormat("en-US", {
+            timeZone: userTimeZone,
+            year: "numeric",
+        }).format(new Date())
+    );
+    return date.toLocaleDateString("en-US", {
         timeZone: userTimeZone,
         day: "numeric",
         month: "short",
-        year: "2-digit",
+        // * Only show year when the date is from a different year.
+        ...(dateYear !== currentYear ? { year: "2-digit" } : {}),
     });
 }
 
@@ -74,6 +76,7 @@ function formatFullDateWithExactTime(dateInput: Date | string | number): string 
         hour: "numeric",
         minute: "2-digit",
     }).replace(" at ", " at ");
+
 }
 
 export {

@@ -73,6 +73,7 @@ const Post: React.FC<PostProps> = ({
                 }}
                 created_at={created_at}
                 postId={post_id}
+                visibility={visibility}
             />
 
             <div className={style["main-container"]}>

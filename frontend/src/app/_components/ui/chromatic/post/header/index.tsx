@@ -8,10 +8,14 @@ interface PostHeaderProps {
     };
     created_at: string;
     postId: string;
+    visibility: string;
 }
 import { useRef } from "react";
 import { useUser } from "@/hooks/useUser";
-import { formatSocialMediaDate, formatFullDateWithExactTime } from "../helpers/dateFormater";
+import {
+    formatSocialMediaDate,
+    formatFullDateWithExactTime,
+} from "../helpers/dateFormater";
 import {
     Dropdown,
     DropdownContent,
@@ -23,10 +27,20 @@ import style from "./style.module.scss";
 import { BsThreeDots } from "react-icons/bs";
 import { PostAvatar } from "./avatar";
 import Link from "next/link";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../../tooltip";
 import { deletePost } from "@/api/post/getFeed";
+import {
+    Tooltip,
+    TooltipArrow,
+    TooltipContent,
+    TooltipTrigger,
+} from "../../tooltip";
+import { FaGlobeAmericas, FaLock, FaUserFriends } from "react-icons/fa";
 
-const PostHeader: React.FC<PostHeaderProps> = ({ author, created_at, postId }) => {
+const PostHeader: React.FC<PostHeaderProps> = ({
+    author,
+    created_at, postId,
+    visibility,
+}) => {
     const currentUserId = useUser().data?.id;
     const hasDisplayName = author.display_name || null;
 
@@ -41,41 +55,80 @@ const PostHeader: React.FC<PostHeaderProps> = ({ author, created_at, postId }) =
 
     return (
         <header className={style["header"]}>
-            <div className={style["author-container"]}>
-                <div>
-                    <PostAvatar
-                        userId={author.id}
-                        username={author.username}
-                        displayName={author.display_name}
-                        avatar={author.avatar}
-                        thumbhash={author.avatar_thumbhash || ""}
-                        className={style["avatar"]}
-                        width={40}
-                        height={40}
-                    />
+            <Tooltip placement="top-start" allowHovering={true} offset={8}>
+                <div className={style["author-container"]}>
+                    <TooltipTrigger>
+                        <PostAvatar
+                            userId={author.id}
+                            username={author.username}
+                            displayName={author.display_name}
+                            avatar={author.avatar}
+                            thumbhash={author.avatar_thumbhash || ""}
+                            className={style["avatar"]}
+                            width={40}
+                            height={40}
+                        />
+                    </TooltipTrigger>
+                    <div className={style["post-info"]}>
+                        <Link
+                            href={`/u/${author.username}`}
+                            className={style["username"]}
+                        >
+                            <p>{author.display_name || author.username}</p>
+                        </Link>
+                        <p className={style["post-meta"]}>
+                            {hasDisplayName && (
+                                <>
+                                    <span>{author.username}</span>
+                                    <span>•</span>
+                                </>
+                            )}
+                            <Tooltip>
+                                <TooltipTrigger>
+                                    <span>
+                                        {formatSocialMediaDate(created_at)}
+                                    </span>
+                                </TooltipTrigger>
+                                <TooltipContent
+                                    className={style["tooltip-content"]}
+                                >
+                                    <p>
+                                        {formatFullDateWithExactTime(
+                                            created_at,
+                                        )}
+                                    </p>
+                                </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                                <TooltipTrigger>
+                                    <span>
+                                        {visibility === "Everyone" ? (
+                                            <FaGlobeAmericas />
+                                        ) : visibility === "Friend" ? (
+                                            <FaUserFriends />
+                                        ) : (
+                                            <FaLock />
+                                        )}
+                                    </span>
+                                </TooltipTrigger>
+                                <TooltipContent
+                                    className={style["tooltip-content"]}
+                                >
+                                    <p>
+                                        {visibility}
+                                    </p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </p>
+                    </div>
                 </div>
-                <div className={style["post-info"]}>
-                    <Link href={`/u/${author.username}`} className={style["username"]}>
-                        <p>{author.display_name || author.username}</p>
-                    </Link>
-                    <p className={style["post-meta"]}>
-                        {hasDisplayName && (
-                            <>
-                                <span>{author.username}</span>
-                                <span>•</span>
-                            </>
-                        )}
-                        <Tooltip>
-                            <TooltipTrigger>
-                                <span>{formatSocialMediaDate(created_at)}</span>
-                            </TooltipTrigger>
-                            <TooltipContent className={style["tooltip-content"]}>
-                                <p>{formatFullDateWithExactTime(created_at)}</p>
-                            </TooltipContent>
-                        </Tooltip>
+                <TooltipContent>
+                    <TooltipArrow />
+                    <p>
+                        User: @{author.username}
                     </p>
-                </div>
-            </div>
+                </TooltipContent>
+            </Tooltip>
             <div className={style["option"]}>
                 <Dropdown>
                     <DropdownTrigger asChild>
