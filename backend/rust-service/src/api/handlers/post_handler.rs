@@ -33,6 +33,7 @@ pub enum PostStatus {
 }
 #[derive(serde::Deserialize, sqlx::Type, Debug, serde::Serialize)]
 #[sqlx(type_name = "post_visibility", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum PostVisibility {
     Everyone,
     Friend,
@@ -95,7 +96,7 @@ impl MediaTypeAttachment {
 
 #[derive(serde::Deserialize, Debug, Multipart)]
 pub struct CreatePostRequest {
-    pub content: String,
+    pub content: Option<String>,
     #[multipart]
     pub media_src: Option<FileContainer>,
     pub repost_from: Option<i64>,
@@ -207,11 +208,15 @@ pub async fn create_new_post_handler(
 
     let mut tx = state.db_pool.begin().await?;
 
-    if extracted.content.len() > 2500 {
-        return Err(PostServiceError::PostTextContentTooLarge.into());
+    let content = extracted.content;
+
+    if let Some(content) = content.as_ref() {
+        if content.len() > 2500 {
+            return Err(PostServiceError::PostTextContentTooLarge.into());
+        }
     }
 
-    let content = extracted.content;
+    let content = content.as_ref();
 
     if let Some(container) = &mut extracted.media_src {
         container
@@ -262,7 +267,7 @@ pub async fn create_new_post_handler(
         &mut tx,
         new_post_id,
         user_id,
-        &content,
+        content.map(|x| x.as_str()),
         extracted.repost_from,
         !extracted.media_src.is_none(),
         extracted.repost_from.is_some(),
@@ -285,12 +290,9 @@ pub async fn create_new_post_handler(
     let post = post_repo::find::get_post_by_id(&mut tx, *new_post_id, Some(user_id))
         .await?;
 
-    // post.current_user_id = Some(user_id.to_string());
     Ok(Json(post))
 }
 
-// todo: impl to cache later if everything stable
-// * test create null update to has tags
 pub async fn update_post_handler(
     State(state): State<SharedState>,
     Path((version, post_id)): Path<(String, i64)>,
@@ -310,7 +312,7 @@ pub async fn update_post_handler(
         .extract::<CreatePostRequest>(media_src, None)
         .await?;
 
-    if extracted.content.len() > 2500 {
+    if extracted.content.as_ref().unwrap_or(&String::new()).len() > 2500 {
         return Err(PostServiceError::PostTextContentTooLarge.into());
     }
 
@@ -359,10 +361,18 @@ pub async fn update_post_handler(
     }
     tracing::trace!("Old post: {:?}", old_post);
 
-    let content = if extracted.content != old_post.content {
-        extracted.content
-    } else {
-        old_post.content
+    // Properly compute the content to pass to the repository: prefer a new
+    // content when provided and different, otherwise keep the old content
+    // (or None if the old content was None).
+    let content: Option<String> = match extracted.content {
+        Some(new_content) => {
+            if Some(new_content.clone()) != old_post.content {
+                Some(new_content)
+            } else {
+                old_post.content.clone()
+            }
+        }
+        None => old_post.content.clone(),
     };
 
     let _ = post_repo::post::update_post(&mut tx, post_id, user_id, content, extracted.visibility)
@@ -377,7 +387,7 @@ pub async fn delete_post_handler(
     State(state): State<SharedState>,
     Path((version, post_id)): Path<(String, i64)>,
     req_auth: RequestAuth,
-) -> Result<StatusCode, APIError> {
+) -> Result<(), APIError> {
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
 
@@ -396,14 +406,8 @@ pub async fn delete_post_handler(
         return Err(PostServiceError::CommentNotFoundOrUnauthorized.into());
     }
 
-    Ok(StatusCode::NO_CONTENT)
+    Ok(())
 }
-// pub async fn get_like_handler(
-//     State(state): State<SharedState>,
-//     Path((version, post_id)): Path<(String, i64)>,
-// ) -> Result<> {
-
-// }
 
 pub async fn post_liked_handler(
     State(state): State<SharedState>,

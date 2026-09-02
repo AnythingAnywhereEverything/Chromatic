@@ -12,15 +12,6 @@ use crate::{
     },
 };
 
-
-// todo: func get YOUR FRIEND post
-// todo: func get feed comment :d
-
-// ? How am I gonna balanced the feed between friends and normal since there's no ML for the feed
-// * Schuding them for show some of there friends post
-// ? Do feed setting to let user edit the feed to show friend first, no friend, normal
-
-// todo: get recent post on pfp.. fetch on profile page???
 pub async fn get_feed_public(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     cursor_id: Option<i64>,
@@ -128,15 +119,6 @@ pub async fn get_feed_public(
     .await
 }
 
-// pub async fn get_friend_post(
-//     tx: &mut Transaction<'_,sqlx::Postgres>,
-//     user_id: i64,
-
-// ) {
-
-// }
-
-// * case the friends is impl completed
 pub async fn get_post_by_id_old(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     post_id: i64,
@@ -270,7 +252,7 @@ pub async fn create_post(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     id: &i64,
     user_id: i64,
-    content: &str,
+    content: Option<&str>,
     repost_from: Option<i64>,
     has_attachment: bool,
     is_repost: bool,
@@ -321,7 +303,7 @@ pub async fn update_post(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     id: i64,
     user_id: i64,
-    content: String,
+    content: Option<String>,
     visibility: PostVisibility,
 ) -> Result<CreatePostRow, sqlx::Error> {
     sqlx::query_as::<_, CreatePostRow>(
@@ -350,7 +332,9 @@ pub async fn delete_post(
 ) -> Result<u64, sqlx::Error> {
     let delete = sqlx::query(
         r#"
-            DELETE FROM media_posts
+            UPDATE media_posts
+            SET status = 'inactive',
+            deleted_at = now()
             WHERE id = $1 AND user_id = $2
         "#,
     )
@@ -477,9 +461,7 @@ pub async fn delete_tag_attachment(
 // -------------------------------------
 // * Small like patch
 // -------------------------------------
-// ? Does this working fine????
 
-// Pagnigation cursor
 pub async fn get_info_like_person(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     post_id: i64,
@@ -639,7 +621,7 @@ pub async fn toggle_bookmark(
         .bind(media_id)
         .bind(user_id)
         .execute(tx.as_mut())
-        .await?; // ! ensure the record exists or handle 0 rows affected if needed
+        .await?;
     }
 
     Ok(())

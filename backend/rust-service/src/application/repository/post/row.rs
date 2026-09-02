@@ -15,7 +15,7 @@ pub struct PostRow {
     pub author: Json<UserProfileRow>,
 
     pub post_id: String,
-    pub content: String,
+    pub content: Option<String>,
 
     pub total_likes: i32,
     pub total_comments: i32,
@@ -44,7 +44,7 @@ pub struct PostRow {
 pub struct RepostedPostRow {
     pub id: String,
     pub author: Json<UserProfileRow>,
-    pub content: String,
+    pub content: Option<String>,
     pub is_reposted: bool,
     pub visibility: PostVisibility,
 
@@ -81,7 +81,7 @@ pub struct CommentRow {
 pub struct CreatePostRow {
     pub id: i64,
     pub user_id: i64,
-    pub content: String,
+    pub content: Option<String>,
     pub total_likes: i32,
     pub total_comments: i32,
     pub reposted_from: Option<i64>,
@@ -130,7 +130,7 @@ pub struct CreateCommentResult {
     pub id: i64,
     pub post_id: i64,
     pub user_id: i64,
-    pub content: String,
+    pub content: Option<String>,
     pub has_attachment: bool,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
