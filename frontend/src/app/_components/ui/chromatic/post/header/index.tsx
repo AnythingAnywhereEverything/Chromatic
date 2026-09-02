@@ -7,6 +7,7 @@ interface PostHeaderProps {
         avatar_thumbhash: string | null;
     };
     created_at: string;
+    postId: string;
 }
 import { useRef } from "react";
 import { useUser } from "@/hooks/useUser";
@@ -23,10 +24,20 @@ import { BsThreeDots } from "react-icons/bs";
 import { PostAvatar } from "./avatar";
 import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../tooltip";
+import { deletePost } from "@/api/post/getFeed";
 
-const PostHeader: React.FC<PostHeaderProps> = ({ author, created_at }) => {
+const PostHeader: React.FC<PostHeaderProps> = ({ author, created_at, postId }) => {
     const currentUserId = useUser().data?.id;
     const hasDisplayName = author.display_name || null;
+
+    const handleDeletePost = async () => {
+        try {
+            console.log("Deleting post with ID:", postId);
+            await deletePost(postId);
+        } catch (error) {
+            console.error("Failed to delete post:", error);
+        }
+    };
 
     return (
         <header className={style["header"]}>
@@ -54,14 +65,14 @@ const PostHeader: React.FC<PostHeaderProps> = ({ author, created_at }) => {
                                 <span>•</span>
                             </>
                         )}
-                    <Tooltip>
-                        <TooltipTrigger>
-                            <span>{formatSocialMediaDate(created_at)}</span>
-                        </TooltipTrigger>
-                        <TooltipContent className={style["tooltip-content"]}>
-                            <p>{formatFullDateWithExactTime(created_at)}</p>
-                        </TooltipContent>
-                    </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger>
+                                <span>{formatSocialMediaDate(created_at)}</span>
+                            </TooltipTrigger>
+                            <TooltipContent className={style["tooltip-content"]}>
+                                <p>{formatFullDateWithExactTime(created_at)}</p>
+                            </TooltipContent>
+                        </Tooltip>
                     </p>
                 </div>
             </div>
@@ -74,7 +85,9 @@ const PostHeader: React.FC<PostHeaderProps> = ({ author, created_at }) => {
                         <DropdownContent>
                             <DropdownItem>Edit Post</DropdownItem>
                             <DropdownItem>
-                                <button type="button" onClick={() => {}}>
+                                <button 
+                                type="button" 
+                                onClick={handleDeletePost}>
                                     Delete Post
                                 </button>
                             </DropdownItem>
