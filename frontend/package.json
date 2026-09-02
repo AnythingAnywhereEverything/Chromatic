@@ -43,6 +43,7 @@
   },
   "scripts": {
     "dev": "cross-env PORT=5173 next dev",
+    "dev-https": "cross-env PORT=5173 next dev --experimental-https",
     "build": "PORT=5173 next build",
     "start": "PORT=5173 next start"
   },
