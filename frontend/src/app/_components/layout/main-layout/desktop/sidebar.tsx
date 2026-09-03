@@ -40,10 +40,6 @@ const SidebarNavigator: React.FC = () => {
         item.classList.remove(style["hovered"]);
     };
 
-    //get user theme for logo
-    const userTheme =
-        typeof window !== "undefined" ? localStorage.getItem("theme") : null;
-
     return (
         <nav
             className={style["sidebar"]}
@@ -52,11 +48,7 @@ const SidebarNavigator: React.FC = () => {
         >
             <div className={style["sidebar-logo"]}>
                 <Image
-                    src={
-                        userTheme === "dark"
-                            ? "/asset/icon-light.png"
-                            : "/asset/icon-dark.png"
-                    }
+                    src="/asset/logo_no_border.svg"
                     no_cdn
                     alt="Absolute Cinema"
                     containerWidth={40}

@@ -1,8 +1,7 @@
 .container {
     background-color: var(--popover);
     width: 100%;
-    margin-bottom: var(--space-8);
-    border-radius: calc(var(--radius) * 2);
+    border-radius: var(--radius);
     transition: background-color 0.2s ease;
 
     &:hover {

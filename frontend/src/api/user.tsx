@@ -1,6 +1,6 @@
 import { fetchWithAuth, getCacheUserId, getToken } from "@/handler/token_handler";
 
-interface UserResponse {
+export interface UserResponse {
   id: string;
   username: string;
   display_name: string;

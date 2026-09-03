@@ -1,7 +1,8 @@
 import { CreatePostPayload } from "@/app/_components/ui/chromatic/createPost";
 import { fetchWithAuth, fetchWithOptionAuth } from "@/handler/token_handler";
+import { PostProps } from "./getFeed";
 
-export async function CreatePost (payload: FormData): Promise<CreatePostPayload | null> {
+export async function CreatePost (payload: FormData): Promise<PostProps | null> {
     if (payload === undefined) {
         return null;
     }
