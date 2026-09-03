@@ -4,12 +4,34 @@
     justify-content: center;
     flex-direction: row;
     align-items: stretch;
+    padding-top: var(--space-32);
+
+    @media (max-width: 768px) {
+        padding-top: var(--space-16);
+        padding-inline: var(--space-16);
+    }
 }
+@media (max-width: 1024px) {
+    .post-left-layout {
+        max-width: 100%;
+    }
+
+    .post-right-layout {
+        display: none;
+    }
+}
+
 .post-left-layout{
-    width: calc(var(--spacing) * 150);
+    max-width: var(--breakpoint-640);
+    width: 100%;
 }
+
+
 .feed-layout{
-    max-width: 1080px;
+    max-width: var(--breakpoint-1024);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
     width: 100%;
 }
 
