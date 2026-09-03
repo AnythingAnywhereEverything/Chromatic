@@ -1,0 +1,23 @@
+.emoji-picker {
+    --epr-emoji-size: var(--size-24) !important;
+    --epr-emoji-font-size: var(--size-24) !important;
+
+    --epr-border-radius: var(--radius-sm) !important;
+    --epr-picker-border-color: var(--border) !important;
+    
+    --epr-highlight-color: var(--primary) !important;
+
+    --epr-bg-color: var(--popover) !important;
+    --epr-category-label-bg-color: var(--popover) !important;
+    --epr-search-input-bg-color: var(--input) !important;
+    
+    --epr-hover-bg-color: color-mix(in srgb, var(--muted) 80%, transparent) !important;
+    --epr-focus-bg-color: color-mix(in srgb, var(--muted) 80%, transparent) !important;
+    
+    --epr-text-color: var(--text-neutral) !important;
+
+    --epr-skin-tone-picker-menu-color: var(--popover) !important;
+    --epr-skin-tone-size: var(--size-24) !important;
+
+    --epr-category-icon-active-color: transparent !important;
+}
