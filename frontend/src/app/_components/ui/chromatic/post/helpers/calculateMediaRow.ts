@@ -31,7 +31,6 @@ function fitSingle(
     containerWidth: number,
     containerHeight: number,
 ): FittedMedia {
-    console.log("containerWidth:", containerWidth, "containerHeight:", containerHeight);
     const minWidth = containerWidth * MIN_WIDTH_RATIO;
     const minHeight = containerHeight * MIN_HEIGHT_RATIO;
     const maxHeight = containerHeight * SINGLE_MAX_HEIGHT_RATIO;
@@ -187,11 +186,7 @@ export function calculateMediaRow({
 
     // * Two images may be able to fit together in a visually useful way.
     if (medias.length === 2) {
-        console.log("Trying to fit two images together:", medias);
-        console.log("Container width:", containerWidth, "Container height:", containerHeight, "Gap:", gap);
         const fitted = tryFitTwo(medias, containerWidth, containerHeight, gap);
-
-        console.log("Fitted result:", fitted);
 
         if (fitted) {
             return fitted;

@@ -5,5 +5,7 @@ type HlsPlayerProps = {
     media: Media;
     width: number;
     height: number;
+    containerWidth: number;
+    containerHeight: number;
 };
 export type { HlsPlayerProps };

@@ -687,7 +687,7 @@ export const HlsPlayer = ({ id, media, width, height }: HlsPlayerProps) => {
                     <div className={style["hls-actions"]}>
                         <div className={style["hls-left-actions"]}>
                             <Tooltip
-                                gap={24}
+                                offset={24}
                                 parent={playerContainerRef.current}
                             >
                                 <TooltipTrigger asChild>
@@ -722,7 +722,7 @@ export const HlsPlayer = ({ id, media, width, height }: HlsPlayerProps) => {
 
                             <div className={style["hls-volume-container"]}>
                                 <Tooltip
-                                    gap={24}
+                                    offset={24}
                                     parent={playerContainerRef.current}
                                 >
                                     <TooltipTrigger asChild>

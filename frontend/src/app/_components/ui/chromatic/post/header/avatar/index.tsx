@@ -28,7 +28,6 @@ const PostAvatar = ({
         const avatarSrc = `avatars/${userId}/${avatar.startsWith("a_") 
             ? avatar.replace(".webp", ".png") 
             : avatar}`;
-        console.log("avatarSrc", avatarSrc);
         return (
             <Image
                 src={avatarSrc}

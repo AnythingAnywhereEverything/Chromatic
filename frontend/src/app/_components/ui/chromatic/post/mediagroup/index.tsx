@@ -28,7 +28,7 @@ function makeStaticURL(objects: MediaObjects[]): string {
     if (objects === undefined || objects.length === 0) {
         return "";
     }
-    // loop get all from media object, pioritize thumbnail 
+    // loop get all from media object, pioritize thumbnail
     for (let i = 0; i < objects.length; i++) {
         if (objects[i].kind === "Thumbnail") {
             return objects[i].storage_key + "/" + objects[i].name;
@@ -63,16 +63,35 @@ function GetAllMediaDimensions(
 
     let fittedMedias = calculateMediaRow(calculatorProps);
 
-    media.forEach((item, i) => {
-        item.media_object_metadata.width = fittedMedias[i].w;
-        item.media_object_metadata.height = fittedMedias[i].h;
-    });
+    // make the media immutable by creating a new array with updated dimensions
+    media = media.map((item, i) => ({
+        ...item,
+        media_object_metadata: {
+            ...item.media_object_metadata,
+            width: fittedMedias[i].w,
+            height: fittedMedias[i].h,
+        },
+    }));
 
     return media;
 }
 
-function MediaLayout({ media, containerWidthRatio ,containerHeightRatio }: MediaGroupProps ) {
+interface ImageContainerSize {
+    width: number;
+    height: number;
+}
+
+function MediaLayout({
+    media,
+    containerWidthRatio,
+    containerHeightRatio,
+}: MediaGroupProps) {
     const [medias, setMedia] = React.useState<Media[]>([]);
+
+    const [imageContainers, setImageContainers] = React.useState<
+        Record<string, ImageContainerSize>
+    >({});
+
     const [activeIndex, setActiveIndex] = React.useState(0);
     const [translateX, setTranslateX] = React.useState(0);
     const [hasOverflow, setHasOverflow] = React.useState(false);
@@ -80,34 +99,78 @@ function MediaLayout({ media, containerWidthRatio ,containerHeightRatio }: Media
     const ImageGroupRef = React.useRef<HTMLDivElement | null>(null);
     const ImageGridRef = React.useRef<HTMLUListElement | null>(null);
 
-    React.useEffect(() => {
+    const initializedRef = React.useRef(false);
+
+    React.useLayoutEffect(() => {
         const element = ImageGroupRef.current;
 
         if (!element) {
             return;
         }
 
-        const updateImages = (width: number) => {
-            if (width <= 0) {
-                return;
-            }
-            
-            const height =
-                width * ((containerHeightRatio || CONTAINER_HEIGHT_RATIO) / (containerWidthRatio|| CONTAINER_WIDTH_RATIO));
+        const widthRatio = containerWidthRatio || CONTAINER_WIDTH_RATIO;
+        const heightRatio = containerHeightRatio || CONTAINER_HEIGHT_RATIO;
+        const getContainerHeight = (width: number) =>
+            width * (heightRatio / widthRatio);
 
-            setMedia(GetAllMediaDimensions(media, width, height));
+        const initialWidth = element.clientWidth;
+
+        if (initialWidth <= 0) {
+            return;
+        }
+
+        if (!initializedRef.current) {
+            initializedRef.current = true;
+            const initialHeight = getContainerHeight(initialWidth);
+            const initializedMedia = GetAllMediaDimensions(
+                media,
+                initialWidth,
+                initialHeight,
+            );
+
+            setMedia(initializedMedia);
+            setImageContainers(
+                Object.fromEntries(
+                    initializedMedia.map((item) => [
+                        item.id,
+                        {
+                            width: item.media_object_metadata.width || 0,
+                            height: item.media_object_metadata.height || 0,
+                        },
+                    ]),
+                ),
+            );
+
             setActiveIndex(0);
             setTranslateX(0);
-        };
-
-        updateImages(element.clientWidth);
+        }
 
         const observer = new ResizeObserver((entries) => {
             const width = entries[0]?.contentRect.width;
 
-            if (width) {
-                updateImages(width);
+            if (!width || width <= 0) {
+                return;
             }
+
+            setImageContainers((current) => {
+                const next: Record<string, ImageContainerSize> = {};
+
+                // recalculate container sizes using getAllMediaDimensions
+                const recalculatedMedia = GetAllMediaDimensions(
+                    media,
+                    width,
+                    getContainerHeight(width),
+                );
+
+                recalculatedMedia.forEach((item) => {
+                    next[item.id] = {
+                        width: item.media_object_metadata.width || 0,
+                        height: item.media_object_metadata.height || 0,
+                    };
+                });
+
+                return next;
+            });
         });
 
         observer.observe(element);
@@ -115,7 +178,7 @@ function MediaLayout({ media, containerWidthRatio ,containerHeightRatio }: Media
         return () => {
             observer.disconnect();
         };
-    }, [media]);
+    }, [media, containerWidthRatio, containerHeightRatio]);
 
     React.useLayoutEffect(() => {
         const container = ImageGroupRef.current;
@@ -146,7 +209,7 @@ function MediaLayout({ media, containerWidthRatio ,containerHeightRatio }: Media
         const targetTranslate = Math.min(item.offsetLeft, maxTranslate);
 
         setTranslateX(targetTranslate);
-    }, [medias, activeIndex]);
+    }, [medias, activeIndex, imageContainers]);
 
     const scrollMedia = (direction: "left" | "right") => {
         setActiveIndex((currentIndex) => {
@@ -159,6 +222,7 @@ function MediaLayout({ media, containerWidthRatio ,containerHeightRatio }: Media
     };
 
     const showLeftController = hasOverflow && activeIndex > 0;
+
     const showRightController = hasOverflow && activeIndex < medias.length - 1;
 
     return (
@@ -183,20 +247,33 @@ function MediaLayout({ media, containerWidthRatio ,containerHeightRatio }: Media
                     }}
                 >
                     {medias.map((item) => {
-                        const isAnimated = item.flags & MediaFlags.IsAnimated;
-                        let url = makeStaticURL(item.media_objects);
+                        const animated = isAnimated(item);
+                        const url = makeStaticURL(item.media_objects);
+                        const imageWidth = item.media_object_metadata.width;
+                        const imageHeight = item.media_object_metadata.height;
+                        const container = imageContainers[item.id];
+
+                        const containerWidth = container?.width || imageWidth;
+                        const containerHeight =
+                            container?.height || imageHeight;
 
                         if (item.file_type === "Hls") {
                             return (
                                 <li
                                     className={style["image-item"]}
                                     key={item.id}
+                                    style={{
+                                        width: containerWidth,
+                                        height: containerHeight,
+                                    }}
                                 >
                                     <HlsPlayer
                                         id={item.id}
                                         media={item}
-                                        width={item.media_object_metadata.width}
-                                        height={item.media_object_metadata.height}
+                                        width={imageWidth}
+                                        height={imageHeight}
+                                        containerWidth={containerWidth}
+                                        containerHeight={containerHeight}
                                     />
                                 </li>
                             );
@@ -207,22 +284,19 @@ function MediaLayout({ media, containerWidthRatio ,containerHeightRatio }: Media
                                 containerClassName={style["image-item"]}
                                 key={item.id}
                                 src={url}
-                                format={isAnimated ? "webp" : undefined}
-                                animated_src={
-                                    isAnimated
-                                        ? url
-                                        : undefined
-                                }
+                                format={animated ? "webp" : undefined}
+                                animated_src={animated ? url : undefined}
                                 alt="Media"
-                                containerWidth={item.media_object_metadata.width}
-                                containerHeight={item.media_object_metadata.height}
-                                width={item.media_object_metadata.width}
-                                height={item.media_object_metadata.height}
-                                thumbhash={item.media_objects[0]?.thumbhash || undefined}
+                                containerWidth={containerWidth}
+                                containerHeight={containerHeight}
+                                width={imageWidth}
+                                height={imageHeight}
+                                thumbhash={
+                                    item.media_objects[0]?.thumbhash ||
+                                    undefined
+                                }
                                 optimizationType={
-                                    isAnimated
-                                        ? "animated_in_viewport"
-                                        : "static"
+                                    animated ? "animated_in_viewport" : "static"
                                 }
                                 viewportThreshold={0.2}
                             />
@@ -245,16 +319,21 @@ function MediaLayout({ media, containerWidthRatio ,containerHeightRatio }: Media
     );
 }
 
-export const MediaGroup = ({ media, containerWidthRatio, containerHeightRatio }: MediaGroupProps) => {
+export const MediaGroup = ({
+    media,
+    containerWidthRatio,
+    containerHeightRatio,
+}: MediaGroupProps) => {
     if (media.length === 0) {
         return null;
     }
 
     return (
         <div className={style["media-group"]}>
-            <MediaLayout media={media} 
-            containerWidthRatio={containerWidthRatio} 
-            containerHeightRatio={containerHeightRatio}
+            <MediaLayout
+                media={media}
+                containerWidthRatio={containerWidthRatio}
+                containerHeightRatio={containerHeightRatio}
             />
         </div>
     );
