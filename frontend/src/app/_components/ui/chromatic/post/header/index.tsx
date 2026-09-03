@@ -102,9 +102,9 @@ const PostHeader: React.FC<PostHeaderProps> = ({
                             <Tooltip>
                                 <TooltipTrigger>
                                     <span>
-                                        {visibility === "Everyone" ? (
+                                        {visibility === "everyone" ? (
                                             <FaGlobeAmericas />
-                                        ) : visibility === "Friend" ? (
+                                        ) : visibility === "friend" ? (
                                             <FaUserFriends />
                                         ) : (
                                             <FaLock />
