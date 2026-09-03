@@ -1,8 +1,7 @@
 "use client";
 
 import style from "./style.module.scss";
-import AuthenticatedLayout from "../(authenticated)/layout";
-import PostGroup from "./postGroup";
+import PostGroup from "./feedLayout";
 import PostRightLayout from "./rightside";
 
 export const PostPage: React.FC = () => {
@@ -11,7 +10,9 @@ export const PostPage: React.FC = () => {
             <div className={style["post-left-layout"]}>
                 <PostGroup />
             </div>
-            <PostRightLayout />
+            <div className={style["post-right-layout"]}>
+                <PostRightLayout />
+            </div>
         </div>
     );
 };
