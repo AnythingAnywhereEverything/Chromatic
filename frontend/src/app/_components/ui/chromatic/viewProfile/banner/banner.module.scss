@@ -46,7 +46,6 @@
     pointer-events: none;
 }
 
-
 .edit-button {
     position: absolute;
     width: calc(var(--spacing) * 8);
@@ -94,7 +93,7 @@
 }
 
 .edit-banner-button,
-.reset-banner-button  {
+.reset-banner-button {
     color: var(--text-neutral);
     transition: background-color 0.3s ease;
 
@@ -122,21 +121,29 @@
 
 .dropdown-content {
     opacity: 0;
-    visibility: hidden;
     pointer-events: none;
-    transform: scale(0.95) translateX(-6px) !important;
+    transform: scale(0.95) translateX(-6px);
+    background-color: var(--popover);
+    border: 1px solid var(--border);
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease;
+    border-radius: var(--radius-xs);
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    width: max-content;
 }
 
 .dropdown-content[data-state="open"] {
     opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-    transform: scale(1) translateX(0) !important;
+    pointer-events: all;
+    transform: scale(1) translateX(0);
 }
 
 .dropdown-content[data-state="closed"] {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-    transform: scale(1) translateX(-6px) !important;
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(1) translateX(-6px);
 }
