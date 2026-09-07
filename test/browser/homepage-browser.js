@@ -22,13 +22,13 @@ const TOKEN = __ENV.TOKEN;
 export default async function () {
     const context = await browser.newContext();
 
+    await context.addInitScript(
+        `localStorage.setItem("token", ${JSON.stringify(TOKEN)});`,
+    );
+
+    const page = await context.newPage();
+
     try {
-        await context.addInitScript(
-            `localStorage.setItem("token", ${JSON.stringify(TOKEN)});`,
-        );
-
-        const page = await context.newPage();
-
         await page.goto(`${BASE_URL}/`, {
             waitUntil: "domcontentloaded",
         });
@@ -37,6 +37,7 @@ export default async function () {
             "browser page loaded": () => page.url().includes("/"),
         });
     } finally {
+        await page.close();
         await context.close();
     }
 }
