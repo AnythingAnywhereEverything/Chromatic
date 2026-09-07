@@ -11,11 +11,11 @@ export const useGetUserFeed = (userId: string, interest_tags: string[]) => {
         isFetchingNextPage
     } = useInfiniteQuery({
         queryKey: ['post-feed', 'for-user'],
-        queryFn: ({ pageParam }) => getUserFeed(pageParam),
+        queryFn: ({ pageParam }) => getUserFeed(),
         initialPageParam: 1,
         // * matches getUserFeed pageParam default (1), was 0 before
         getNextPageParam: (lastPage, allPages) =>
-           lastPage.media.length < 15 ? undefined : lastPage.currentPage + 1,
+           lastPage.length < 15 ? undefined : lastPage,
     });
 
     const loadMoreRef = useRef(null);

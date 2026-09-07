@@ -13,6 +13,12 @@ import {
     DialogDescription,
     DialogHeading,
     DialogTrigger,
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogHeading,
+    DialogTrigger,
 } from "../dialogue";
 import Form from "next/form";
 import { Portal } from "@/app/_components/portal";
@@ -110,11 +116,24 @@ function CreatePostComponent({ author, onPostCreated }: CreatePostProps) {
         if (visibility != undefined) {
             formData.append("visibility", visibility);
         }
+        const formData = new FormData();
+        if (text != undefined) {
+            formData.append("content", text);
+        }
+        if (allMedia != undefined) {
+            allMedia.forEach((file) => {
+                formData.append("media_src", file);
+            });
+        }
+        if (visibility != undefined) {
+            formData.append("visibility", visibility);
+        }
 
         try {
             setIsSubmittable(false);
             setIsPending(true);
 
+            const res = await CreatePost(formData);
             const res = await CreatePost(formData);
 
             if (res) {
