@@ -9,7 +9,9 @@ mkdir -p "$SCRIPT_DIR/results/browser"
 
 echo "=== HTTP TEST ==="
 
+K6_WEB_DASHBOARD=true \
 K6_WEB_DASHBOARD_EXPORT="$SCRIPT_DIR/results/http/homepage-results.html" \
+K6_WEB_DASHBOARD_PERIOD=1s \
     k6 run \
     -e BASE_URL=http://localhost \
     -e TOKEN="$TOKEN" \
@@ -22,7 +24,9 @@ echo ""
 
 echo "=== BROWSER TEST ==="
 
+K6_WEB_DASHBOARD=true \
 K6_WEB_DASHBOARD_EXPORT="$SCRIPT_DIR/results/browser/homepage-results.html" \
+K6_WEB_DASHBOARD_PERIOD=1s \
 K6_BROWSER_ARGS='enable-gpu,gpu-rasterization,enable-zero-copy,ignore-gpu-blocklist' \
     k6 run \
     -e BASE_URL=http://localhost \
