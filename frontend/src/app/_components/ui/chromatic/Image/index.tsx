@@ -42,11 +42,25 @@ export function Image({
             no_cdn
                 ? animated_src
                 : animated_src
-                  ? constructImageUrl(animated_src, width, height, undefined, size)
+                  ? constructImageUrl(
+                        animated_src,
+                        width,
+                        height,
+                        undefined,
+                        size,
+                    )
                   : undefined,
-        [animated_src, width, height, size],
+        [animated_src, width, height, size, no_cdn],
     );
 
+    const thumbhashUrl = useMemo(
+        () => (thumbhash ? thumbhashB64ToDataURL(thumbhash) : undefined),
+        [thumbhash],
+    );
+
+    /*
+     * Track whether the page is active.
+     */
     useEffect(() => {
         const updatePageActive = () => {
             setPageActive(
@@ -67,16 +81,10 @@ export function Image({
         };
     }, []);
 
-    const thumbhashUrl = useMemo(
-        () => (thumbhash ? thumbhashB64ToDataURL(thumbhash) : undefined),
-        [thumbhash],
-    );
-
+    /*
+     * Strictly control when the image is allowed to load.
+     */
     useEffect(() => {
-        if (optimizationType !== "animated_in_viewport") {
-            return;
-        }
-
         const element = imageContainerRef.current;
 
         if (!element) {
@@ -85,17 +93,23 @@ export function Image({
 
         const observer = new IntersectionObserver(
             ([entry]) => {
-                setInViewport(entry.intersectionRatio >= viewportThreshold);
+                setInViewport(
+                    entry.isIntersecting &&
+                        entry.intersectionRatio >= viewportThreshold,
+                );
             },
             {
-                threshold: [0, viewportThreshold, 1],
+                threshold: [0, viewportThreshold],
+                rootMargin: "300px 0px",
             },
         );
 
         observer.observe(element);
 
         return () => observer.disconnect();
-    }, [optimizationType, viewportThreshold]);
+    }, [viewportThreshold]);
+
+    const shouldLoadStatic = inViewport;
 
     const shouldLoadAnimated =
         !!animatedImageUrl &&
@@ -131,26 +145,29 @@ export function Image({
                 }
             }}
         >
-            <img
-                {...props}
-                src={imageUrl}
-                width={containerWidth}
-                height={containerHeight}
-                onLoad={(event) => {
-                    setLoaded(true);
-                    onLoad?.(event);
-                }}
-                style={{
-                    position: "relative",
-                    display: "block",
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    opacity: showAnimated ? 0 : 1,
-                    transition: `opacity ${delay}ms ease-out`,
-                    ...style,
-                }}
-            />
+            {shouldLoadStatic && (
+                <img
+                    {...props}
+                    src={imageUrl}
+                    width={containerWidth}
+                    height={containerHeight}
+                    decoding="async"
+                    onLoad={(event) => {
+                        setLoaded(true);
+                        onLoad?.(event);
+                    }}
+                    style={{
+                        position: "relative",
+                        display: "block",
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        opacity: showAnimated ? 0 : 1,
+                        transition: `opacity ${delay}ms ease-out`,
+                        ...style,
+                    }}
+                />
+            )}
 
             {shouldLoadAnimated && animatedImageUrl && pageActive && (
                 <img
@@ -159,6 +176,7 @@ export function Image({
                     width={containerWidth}
                     height={containerHeight}
                     aria-hidden
+                    decoding="async"
                     onLoad={() => {
                         setAnimatedLoaded(true);
                     }}
@@ -180,6 +198,7 @@ export function Image({
                     {...props}
                     src={thumbhashUrl}
                     aria-hidden
+                    alt=""
                     style={{
                         position: "absolute",
                         inset: 0,
