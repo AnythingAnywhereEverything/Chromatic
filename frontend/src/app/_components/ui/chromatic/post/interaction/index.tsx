@@ -8,7 +8,7 @@ import {
     IoLogoTwitter,
 } from "react-icons/io5";
 import style from "./interaction.module.scss";
-import { LuShare2, LuThumbsUp } from "react-icons/lu";
+import { LuRepeat, LuShare2, LuThumbsUp } from "react-icons/lu";
 import { TogglePostLike } from "@/api/post/like";
 import { useState } from "react";
 import React, { useRef } from "react";
@@ -77,6 +77,14 @@ const BottomPostInteraction = React.memo(function BottomPostInteraction({
                             <MdOutlineChatBubbleOutline />
                         </i>
                         {total_comments > 0 ? total_comments : null}
+                    </InteractButton>
+                    <InteractButton
+                        name="Repost"
+                        className={`${style["button"]} ${style["repost-button"]}`}
+                    >
+                        <i>
+                            <LuRepeat />
+                        </i>
                     </InteractButton>
                 </section>
                 <section className={style["interaction"]}>

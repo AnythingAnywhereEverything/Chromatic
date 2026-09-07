@@ -21,6 +21,14 @@
             }
         }
 
+        .repost-button {
+            color: var(--text-neutral);
+
+            &:hover {
+                color: var(--color-purple);
+            }
+        }
+
         .comment-button {
             color: var(--text-neutral);
 
