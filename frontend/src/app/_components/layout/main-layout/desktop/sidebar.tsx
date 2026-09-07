@@ -14,15 +14,13 @@ import Link from "next/link";
 import { useUser } from "@/hooks/useUser";
 import { Image } from "@/app/_components/ui/chromatic/Image";
 import { UserIdAvatar } from "@/app/_components/ui/chromatic/initialAvatar";
+import { UserSetting } from "@/app/_components/ui/chromatic/setting";
 // OR usePathname if app router
 
 const SidebarNavigator: React.FC = () => {
     const pathname = usePathname();
     const firstPathSegment = pathname.split("/")[1];
-
-    
     const user = useUser();
-    
     if (!user || !user.data) {
         return null;
     }
@@ -121,7 +119,11 @@ function SidebarProfile({
     const avatarUrl = `avatars/${userId}/${parseStaticImage(avatar || "")}`;
 
     return (
-            <Link href={`/u/${username}`} className={`${style["sidebar-profile"]} ${active ? style["active"] : ""}`}>
+        <>
+            <Link
+                href={`/u/${username}`}
+                className={`${style["sidebar-profile"]} ${active ? style["active"] : ""}`}
+            >
                 <div className={style["profile-container"]}>
                     {avatar ? (
                         <Image
@@ -146,6 +148,8 @@ function SidebarProfile({
                 </div>
                 <span className={style["label"]}>Profile</span>
             </Link>
+            <UserSetting />
+        </>
     );
 }
 

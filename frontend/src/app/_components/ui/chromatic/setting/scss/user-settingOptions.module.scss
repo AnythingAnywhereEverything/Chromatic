@@ -1,0 +1,36 @@
+.setting-options{
+    flex-shrink: 0;
+    position: relative;
+    border: 1px solid var(--border);
+}
+.setting-profile{
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    padding: var(--space-4) var(--space-8);
+    img{
+        border-radius: 50%;
+    }
+}
+
+.profile {
+    display: flex;
+    flex-direction: column;
+    .username{
+        font-size: var(--text-small);
+        opacity: 0.4;
+    }
+}
+
+.options{
+    display: flex;
+    flex-direction: column;
+    list-style-type: none;
+    li{
+        padding: var(--space-8) var(--space-4);
+    }
+}
+
+.option.active{
+    background-color: var(--muted);
+}

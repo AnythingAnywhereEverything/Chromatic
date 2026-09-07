@@ -1,0 +1,8 @@
+.setting-container{
+    background-color: var(--background);
+    display: grid;
+    grid-template-areas: "setting-options" "content";
+    grid-template-columns: 1fr 4fr;
+    padding: var(--space-8);
+    border-radius: var(--radius);
+}

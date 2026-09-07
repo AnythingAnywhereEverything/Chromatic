@@ -1,0 +1,45 @@
+.account-setting {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-32);
+}
+
+.content-header {
+    border: 1px solid var(--border);
+}
+.profile,
+.password-security,
+.account-deactivation
+ {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-12);
+}
+.username,
+.email,
+.phone,
+.password,
+.device,
+.deactivation,
+.delete
+{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.editor {
+    display: flex;
+    gap: var(--space-12);
+    align-items: center;
+}
+.edit-button {
+    background-color: var(--muted);
+    padding: var(--space-4) var(--space-8);
+    cursor: pointer;
+}
+
+.password{
+    .edit-button{
+        padding-inline: var(--space-40);
+    }
+}
