@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct UserRow {
@@ -23,9 +24,11 @@ pub struct UserProfileMinimalRow {
 
 // strip sensitive data out for profile
 // sensitive data should be in credential (e.g., password, email)
+#[skip_serializing_none]
 #[derive(Debug, sqlx::FromRow, Deserialize, Serialize)]
 pub struct UserProfileRow {
     pub id: String,
+    // skip optional fields for minimal profile
     pub username: Option<String>,
     pub display_name: Option<String>,
     pub bio: Option<String>,

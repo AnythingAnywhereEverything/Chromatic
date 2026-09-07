@@ -1,6 +1,7 @@
 use chrono::NaiveDateTime;
 use serde::Deserialize;
 use serde::Serialize;
+use serde_with::skip_serializing_none;
 use sqlx::types::Json;
 
 use crate::api::handlers::post_handler::PostVisibility;
@@ -40,6 +41,7 @@ pub struct PostRow {
     pub updated_at: NaiveDateTime,
 }
 
+#[skip_serializing_none]
 #[derive(sqlx::FromRow, Debug, Deserialize, Serialize)]
 pub struct RepostedPostRow {
     pub id: String,

@@ -1,5 +1,6 @@
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 #[derive(Debug, sqlx::Type, Serialize)]
 #[sqlx(type_name = "media_status", rename_all = "lowercase")]
@@ -196,6 +197,7 @@ impl Default for MediaRow {
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+#[skip_serializing_none]
 pub struct MediaObjectsRow {
     pub kind: MediaKind,
     pub storage_key: String,
@@ -209,6 +211,7 @@ pub struct MediaObjectsRow {
     pub updated_at: NaiveDateTime,
     pub deleted_at: Option<NaiveDateTime>,
 }
+#[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct MediaObjectMetadataRow {
     pub width: Option<i32>,
@@ -219,6 +222,7 @@ pub struct MediaObjectMetadataRow {
     pub updated_at: NaiveDateTime,
 }
 
+#[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct MediaHls {
     pub master_playlist: String,
@@ -226,6 +230,7 @@ pub struct MediaHls {
     pub updated_at: NaiveDateTime,
 }
 
+#[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct MediaHlsPlaylist {
     pub resolution: String,
@@ -251,6 +256,7 @@ impl Default for MediaHlsPlaylist {
     }
 }
 
+#[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct MediaFullDataRow {
     pub id: String,
@@ -271,6 +277,7 @@ pub struct MediaFullDataRow {
     pub updated_at: NaiveDateTime,
     pub deleted_at: Option<NaiveDateTime>,
 }
+#[skip_serializing_none]
 #[derive(sqlx::FromRow, Debug, Serialize, Deserialize)]
 pub struct Attachment {
     pub id: String,
