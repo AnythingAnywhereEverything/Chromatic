@@ -103,21 +103,6 @@
     }
 }
 
-.unsaved-cancel-button {
-    background-color: color-mix(in oklab, var(--input) 70%, transparent);
-    &:hover {
-        background-color: color-mix(in oklab, var(--input) 90%, transparent);
-    }
-}
-
-.unsaved-save-button {
-    background-color: var(--primary);
-    color: var(--primary-foreground);
-    &:hover {
-        background-color: color-mix(in oklab, var(--primary) 80%, transparent);
-    }
-}
-
 .unsaved-cancel-button,
 .unsaved-save-button {
     border: none;
@@ -135,6 +120,21 @@
     &:disabled {
         opacity: 0.5;
         pointer-events: none;
+    }
+}
+
+.unsaved-cancel-button {
+    background-color: color-mix(in oklab, var(--input) 70%, transparent);
+    &:hover {
+        background-color: color-mix(in oklab, var(--input) 90%, transparent);
+    }
+}
+
+.unsaved-save-button {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    &:hover {
+        background-color: color-mix(in oklab, var(--primary) 80%, transparent);
     }
 }
 
