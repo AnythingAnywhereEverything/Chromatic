@@ -32,10 +32,10 @@ pub async fn user_status(
     // if not exists, insert new row, else update existing row
     sqlx::query(
         r#"
-        INSERT INTO user_profiles (user_id, quote, updated_at)
+        INSERT INTO user_statuses (user_id, message, updated_at)
         VALUES ($2, $1, now())
         ON CONFLICT (user_id)
-        DO UPDATE SET quote = $1, updated_at = now()
+        DO UPDATE SET message = $1, updated_at = now()
         "#,
     )
     .bind(new_quote)
