@@ -1,8 +1,34 @@
-use sqlx::{Transaction, Postgres};
+use sqlx::{Postgres, Transaction};
 
 use crate::application::repository::{RepositoryResult, post::row::PostRow};
 
-
+pub async fn get_user_posts(
+    tx: &mut Transaction<'_, Postgres>,
+    target_id: i64,
+    user_id: i64,
+    before: chrono::DateTime<chrono::Utc>,
+    limit: i32,
+) -> Result<Vec<PostRow>, sqlx::Error> {
+    let posts = sqlx::query_as::<_, PostRow>(
+        r#"
+            SELECT gp.*
+            FROM media_posts p
+                CROSS JOIN LATERAL get_post_by_id(p.id, $2) gp
+            WHERE p.deleted_at IS NULL
+                AND p.user_id = $1
+                AND p.created_at < $3
+            ORDER BY p.created_at DESC
+            LIMIT $4;
+        "#,
+    )
+    .bind(target_id)
+    .bind(user_id)
+    .bind(before)
+    .bind(limit)
+    .fetch_all(tx.as_mut())
+    .await?;
+    Ok(posts)
+}
 
 pub async fn get_feed_for_user(
     tx: &mut Transaction<'_, Postgres>,
@@ -112,7 +138,7 @@ impl PostQOpts {
 
             ignore_deleted: false,
             limit: None,
-            mode: FetchMode::All
+            mode: FetchMode::All,
         }
     }
 }
@@ -291,9 +317,9 @@ pub async fn get_post_by_id_experiment(
 
     match opts.mode {
         FetchMode::One => {
-            let target_id = opts.target_id.ok_or_else(|| {
-                sqlx::Error::Protocol("target_id must be provided".into())
-            })?;
+            let target_id = opts
+                .target_id
+                .ok_or_else(|| sqlx::Error::Protocol("target_id must be provided".into()))?;
 
             query.push_str(" WHERE m.id = $1");
 
@@ -348,6 +374,6 @@ pub async fn get_post_by_id_experiment(
             let rows = db_query.fetch_all(tx.as_mut()).await?;
 
             Ok(PostQueryResult::Many(rows))
-    }
+        }
     }
 }

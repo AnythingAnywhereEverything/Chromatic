@@ -2,16 +2,26 @@ use axum::{
     Json,
     extract::{Multipart, Path, Query, State},
 };
-use hyper::StatusCode;
 use multipart_derive::Multipart;
 
 use crate::{
     api::{
-        APIError, APIErrorKind::PostError, RequestAuth, dtos::post_dtos::{ LikeDTO, PostDTO}, version,
-    }, application::{
+        APIError,
+        RequestAuth,
+        version,
+    },
+    application::{
         repository::{
-            media::{self as media_repo, row::{MediaStatus, MediaType, ProcessingState}}, post::{self as post_repo, find::{FetchMode, PostQOpts}, row::PostRow},
-        }, service::{
+            media::{
+                self as media_repo,
+                row::{MediaType, ProcessingState},
+            },
+            post::{
+                self as post_repo,
+                row::PostRow,
+            },
+        },
+        service::{
             errors::{AuthServiceError, PostServiceError},
             media::{
                 self,
@@ -21,7 +31,8 @@ use crate::{
                     ImageProcessorType, MediaProcessorOptions, ResizeStyle, VideoPostProcessorType,
                 },
             },
-        }, state::SharedState,
+        },
+        state::SharedState,
     },
 };
 #[derive(serde::Deserialize, sqlx::Type, Debug)]
@@ -40,12 +51,7 @@ pub enum PostVisibility {
     Private,
 }
 
-#[derive(
-    serde::Deserialize,
-    serde::Serialize,
-    sqlx::Type,
-    Debug,
-)]
+#[derive(serde::Deserialize, serde::Serialize, sqlx::Type, Debug)]
 #[sqlx(type_name = "tag_attachment_types", rename_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum TagTarget {
@@ -55,13 +61,13 @@ pub enum TagTarget {
 }
 
 impl ToString for TagTarget {
-   fn to_string(&self) -> String {
-       match self {
-           TagTarget::User => "user".to_string(),
-           TagTarget::Post => "post".to_string(),
-           TagTarget::Guild => "guild".to_string(),
-       }
-   }
+    fn to_string(&self) -> String {
+        match self {
+            TagTarget::User => "user".to_string(),
+            TagTarget::Post => "post".to_string(),
+            TagTarget::Guild => "guild".to_string(),
+        }
+    }
 }
 
 impl ToString for PostVisibility {
@@ -127,6 +133,41 @@ impl PostVisibility {
     }
 }
 
+#[derive(serde::Deserialize, Debug)]
+pub struct UserPostQuery {
+    pub limit: Option<i32>,
+    // example frontend query ?=before=2024-06-05T12:00:00
+    pub before: chrono::DateTime<chrono::Utc>,
+}
+
+pub async fn get_user_posts_handler(
+    State(state): State<SharedState>,
+    Path((version, target_id)): Path<(String, i64)>,
+    req_auth: RequestAuth,
+    query: Query<UserPostQuery>,
+) -> Result<Json<Vec<PostRow>>, APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+
+    let user_id = match req_auth.user {
+        Some(user) => Some(user.user_id),
+        None => None,
+    };
+
+    let mut tx = state.db_pool.begin().await?;
+
+    let posts = post_repo::find::get_user_posts(
+        &mut tx,
+        target_id,
+        user_id.unwrap_or_default(),
+        query.before,
+        query.limit.unwrap_or(8) as i32,
+    )
+    .await?;
+
+    Ok(Json(posts))
+}
+
 pub async fn get_feed_post_handler(
     State(state): State<SharedState>,
     Path(version): Path<String>,
@@ -140,10 +181,15 @@ pub async fn get_feed_post_handler(
         Some(user) => Some(user.user_id),
         None => None,
     };
-    
+
     let mut tx = state.db_pool.begin().await?;
 
-    let all_post = post_repo::find::get_feed_for_user(&mut tx, user_id.unwrap_or_default(), query.limit.unwrap_or(8) as i32).await?;
+    let all_post = post_repo::find::get_feed_for_user(
+        &mut tx,
+        user_id.unwrap_or_default(),
+        query.limit.unwrap_or(8) as i32,
+    )
+    .await?;
 
     Ok(Json(all_post))
 }
@@ -164,10 +210,9 @@ pub async fn get_info_post_handler(
     let mut tx = state.db_pool.begin().await?;
 
     let post = post_repo::find::get_post_by_id(&mut tx, post_id, user_id).await?;
-    
+
     Ok(Json(post))
 }
-
 
 #[axum::debug_handler]
 pub async fn create_new_post_handler(
@@ -189,12 +234,8 @@ pub async fn create_new_post_handler(
         max_files: Some(5),
         validation: Some(
             ValidationOptions::new_whitelist()
-                .add_type(media::inspector::FileType::Category(
-                    MediaType::Image,
-                ))
-                .add_type(media::inspector::FileType::Category(
-                    MediaType::Video,
-                )),
+                .add_type(media::inspector::FileType::Category(MediaType::Image))
+                .add_type(media::inspector::FileType::Category(MediaType::Video)),
         ),
         field_options: None,
     };
@@ -226,8 +267,9 @@ pub async fn create_new_post_handler(
                 ContainerConfig::new()
                     .set_generate_thumbhash(true)
                     .set_processing_options(
-                        MediaProcessorOptions::new().set_fflags_video_gpu_accel(true)
-                        .set_fflags_video_thumbnail(true)
+                        MediaProcessorOptions::new()
+                            .set_fflags_video_gpu_accel(true)
+                            .set_fflags_video_thumbnail(true)
                             .set_image_processors(vec![ImageProcessorType::Resize {
                                 style: ResizeStyle::Absolute {
                                     width: 1024,
@@ -245,12 +287,8 @@ pub async fn create_new_post_handler(
 
         for media in container.resolve_files() {
             // set to complete the media processing
-            media_repo::update::processing_state(
-                &mut tx,
-                &media.id,
-                &ProcessingState::Completed,
-            )
-            .await?;
+            media_repo::update::processing_state(&mut tx, &media.id, &ProcessingState::Completed)
+                .await?;
             post_repo::post::add_has_attachment(
                 &mut tx,
                 *new_post_id,
@@ -278,8 +316,7 @@ pub async fn create_new_post_handler(
     if !post_tags.is_empty() {
         tracing::trace!("Entering add tags stage");
         for tag in post_tags {
-            post_repo::post::add_tags_target(&mut tx, *new_post_id, TagTarget::Post, tag)
-                .await?;
+            post_repo::post::add_tags_target(&mut tx, *new_post_id, TagTarget::Post, tag).await?;
         }
     }
     tx.commit().await?;
@@ -287,8 +324,7 @@ pub async fn create_new_post_handler(
     tracing::trace!("Committing transaction and fetching post by ID");
 
     let mut tx = state.db_pool.begin().await?;
-    let post = post_repo::find::get_post_by_id(&mut tx, *new_post_id, Some(user_id))
-        .await?;
+    let post = post_repo::find::get_post_by_id(&mut tx, *new_post_id, Some(user_id)).await?;
 
     Ok(Json(post))
 }
@@ -329,33 +365,24 @@ pub async fn update_post_handler(
             .filter_map(|tag| tag.tag_id.parse::<i64>().ok())
             .collect();
 
-        let new_tag_ids: std::collections::HashSet<i64> =
-            new_tags.iter().copied().collect();
+        let new_tag_ids: std::collections::HashSet<i64> = new_tags.iter().copied().collect();
 
         // * Delete old tags that are no longer present.
         for old_tag in &old_tags {
-            let old_tag_id = old_tag.tag_id.parse::<i64>().map_err(|_| PostServiceError::TagIdNotFound)?;
+            let old_tag_id = old_tag
+                .tag_id
+                .parse::<i64>()
+                .map_err(|_| PostServiceError::TagIdNotFound)?;
 
             if !new_tag_ids.contains(&old_tag_id) {
-                post_repo::post::delete_tag_attachment(
-                    &mut tx,
-                    post_id,
-                    old_tag_id,
-                )
-                .await?;
+                post_repo::post::delete_tag_attachment(&mut tx, post_id, old_tag_id).await?;
             }
         }
 
         // * Add new tags that weren't already attached.
         for tag_id in new_tags {
             if !old_tag_ids.contains(&tag_id) {
-                post_repo::post::add_tags_target(
-                    &mut tx,
-                    post_id,
-                    TagTarget::Post,
-                    tag_id,
-                )
-                .await?;
+                post_repo::post::add_tags_target(&mut tx, post_id, TagTarget::Post, tag_id).await?;
             }
         }
     }
@@ -414,7 +441,7 @@ pub async fn post_liked_handler(
     Path((version, target_id)): Path<(String, i64)>,
     req_auth: RequestAuth,
     Json(req): Json<LikeRequest>,
-) -> Result<Json<LikeDTO>, APIError> {
+) -> Result<(), APIError> {
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
 
@@ -425,15 +452,19 @@ pub async fn post_liked_handler(
 
     let mut tx = state.db_pool.begin().await?;
     tracing::info!(user_id, target_id, req.is_like, "liking post");
-    let post_like =
-        post_repo::post::like_post_repo(&mut tx, user_id, target_id, req.is_like, &"post".to_string()).await?;
+
+    post_repo::post::like_post_repo(
+        &mut tx,
+        user_id,
+        target_id,
+        req.is_like,
+        &"post".to_string(),
+    )
+    .await?;
 
     tx.commit().await?;
 
-    Ok(Json(LikeDTO {
-        id: post_like.id.to_string(),
-        total_liked: post_like.total_likes,
-    }))
+    Ok(())
 }
 
 pub async fn bookmark_handler(
@@ -452,7 +483,8 @@ pub async fn bookmark_handler(
 
     let mut tx = state.db_pool.begin().await?;
     let _bookmark =
-        post_repo::post::toggle_bookmark(&mut tx, target_id, user_id, payload.is_bookmark).await;
+        post_repo::post::toggle_bookmark(&mut tx, target_id, user_id, payload.is_bookmark).await?;
+    tx.commit().await?;
 
     Ok(())
 }
