@@ -1,6 +1,7 @@
 import { getPublicUserProfile } from "@/api/user/profile";
 import { fetchWithAuth, fetchWithOptionAuth } from "@/handler/token_handler";
 import ProfileBanner from "./profileBanner";
+import ProfileBody from "./body";
 
 export const generateMetadata = async ({ params }: { params: Promise<{ profile: string }> }) => {
     const resolvedParams = await params;
@@ -56,8 +57,6 @@ export default async function ProfilePage({
 }) {
 
     return (
-        <>
-            <ProfileBanner params={await params} />
-        </>
+        <ProfileBody params={await params} />
     );
 }
