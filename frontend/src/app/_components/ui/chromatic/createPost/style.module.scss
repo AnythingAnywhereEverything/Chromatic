@@ -242,7 +242,27 @@
 .visibility-body {
     padding: var(--space-8);
     border-radius: var(--radius-sm);
+    background-color: var(--popover);
     cursor: default;
+    pointer-events: all;
+    border: 1px solid var(--border);
+    transform: scale(0.95);
+    opacity: 0;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+
+    &[data-state="open"] {
+        transform: scale(1.0);
+        opacity: 1;
+    }
+
+    &[data-state="closed"] {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+
 }
 
 .visibility-trigger {
@@ -310,6 +330,9 @@
             transparent
         );
     }
+
+    user-select: none;
+    transition: background-color 0.2s ease;
 
     cursor: pointer;
     border-radius: var(--radius-xs);
