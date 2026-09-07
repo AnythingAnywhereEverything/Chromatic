@@ -48,6 +48,7 @@ const Post: React.FC<PostProps> = ({
     const ref = useRef<HTMLSpanElement | null>(null);
     const [likeState, setLikeState] = useState(is_liked);
     const [likeCount, setLikeCount] = useState(total_likes);
+    const [isDeleted, setIsDeleted] = useState(false);
     const rootRef = useRef<HTMLDivElement>(null);
 
     let currentUserId = useUser().data?.id;
@@ -63,79 +64,88 @@ const Post: React.FC<PostProps> = ({
         }
     }, []);
 
+    const handleDeletePost = () => {
+        setIsDeleted(true);
+    };
+
     return (
-        <section
-            className={style["container"]}
-            //  ! remove before push
-            onClick={() => {
-                console.log(post_id);
-            }}
-        >
-            <PostHeader
-                author={{
-                    id: author.id,
-                    username: author.username,
-                    display_name: author.display_name,
-                    avatar: author.avatar,
-                    avatar_thumbhash: author.avatar_thumbhash,
+        <>
+            {!isDeleted && (
+            <section
+                className={style["container"]}
+                //  ! remove before push
+                onClick={() => {
+                    console.log(post_id);
                 }}
-                created_at={created_at}
-                postId={post_id}
-                visibility={visibility}
-            />
+            >
+                <PostHeader
+                    author={{
+                        id: author.id,
+                        username: author.username,
+                        display_name: author.display_name,
+                        avatar: author.avatar,
+                        avatar_thumbhash: author.avatar_thumbhash,
+                    }}
+                    created_at={created_at}
+                    postId={post_id}
+                    visibility={visibility}
+                    onDelete={handleDeletePost}
+                />
 
-            <div className={style["main-container"]}>
-                {content && content.length > 0 && (
-                    <div className={style["text-container"]}>
-                        <span
-                            className={`${style["content"]} ${!open ? style["is-collapsed"] : ""}`}
-                            ref={ref}
-                        >
-                            {content}
-                        </span>
-                        <div>
-                            {showReadMoreButton && (
-                                <button
-                                    type="button"
-                                    onClick={() => setOpen(!open)}
-                                    className={style["read-more-btn"]}
-                                >
-                                    {open ? "Show less" : "Read more"}
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* //*--------------------has attachment cp---------------- */}
-                {has_attachment && <MediaGroup media={attachments} />}
-                {/* //todo: */}
-                <ul className={style["subject-tag"]}>
-                    {tag.map((item) => {
-                        return (
-                            <li
-                                key={item.tag_id}
-                                style={{ backgroundColor: `${item.tag_color}` }}
+                <div className={style["main-container"]}>
+                    {content && content.length > 0 && (
+                        <div className={style["text-container"]}>
+                            <span
+                                className={`${style["content"]} ${!open ? style["is-collapsed"] : ""}`}
+                                ref={ref}
                             >
-                                <p>{item.tag_name}</p>
-                            </li>
-                        );
-                    })}
-                </ul>
-            </div>
+                                {content}
+                            </span>
+                            <div>
+                                {showReadMoreButton && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setOpen(!open)}
+                                        className={style["read-more-btn"]}
+                                    >
+                                        {open ? "Show less" : "Read more"}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
-            <div className={style["separator"]} />
+                    {/* //*--------------------has attachment cp---------------- */}
+                    {has_attachment && <MediaGroup media={attachments} />}
+                    {/* //todo: */}
+                    <ul className={style["subject-tag"]}>
+                        {tag.map((item) => {
+                            return (
+                                <li
+                                    key={item.tag_id}
+                                    style={{ backgroundColor: `${item.tag_color}` }}
+                                >
+                                    <p>{item.tag_name}</p>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </div>
 
-            <BottomPostInteraction
-                {...{
-                    username: author.username,
-                    post_id,
-                    is_liked,
-                    total_likes,
-                    total_comments,
-                }}
-            />
-        </section>
+                <div className={style["separator"]} />
+
+                <BottomPostInteraction
+                    {...{
+                        username: author.username,
+                        post_id,
+                        is_liked,
+                        total_likes,
+                        total_comments,
+                    }}
+                />
+            </section>
+            )}
+        </>
     );
 };
 
