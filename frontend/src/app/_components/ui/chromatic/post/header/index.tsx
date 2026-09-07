@@ -9,6 +9,7 @@ interface PostHeaderProps {
     created_at: string;
     postId: string;
     visibility: string;
+    onDelete: () => void;
 }
 import { useRef } from "react";
 import { useUser } from "@/hooks/useUser";
@@ -40,14 +41,15 @@ const PostHeader: React.FC<PostHeaderProps> = ({
     author,
     created_at, postId,
     visibility,
+    onDelete,
 }) => {
     const currentUserId = useUser().data?.id;
     const hasDisplayName = author.display_name || null;
 
     const handleDeletePost = async () => {
         try {
-            console.log("Deleting post with ID:", postId);
             await deletePost(postId);
+            onDelete();
         } catch (error) {
             console.error("Failed to delete post:", error);
         }

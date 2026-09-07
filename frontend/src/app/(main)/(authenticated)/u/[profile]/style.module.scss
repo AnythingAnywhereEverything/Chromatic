@@ -83,3 +83,12 @@
         height: 100%;
     }
 }
+
+.profile-main-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    width: 100%;
+    gap: var(--space-12);
+    margin-block: var(--space-8);
+}

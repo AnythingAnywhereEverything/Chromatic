@@ -16,3 +16,19 @@ export async function CreatePost (payload: FormData): Promise<PostProps | null> 
     const data = await res.json();
     return data; 
 }
+
+export async function GetUserPosts(target_id: string, before: Date, limit?: number): Promise<PostProps[] | null> {
+    const query = new URLSearchParams();
+    query.append("before", before.toISOString());
+    if (limit !== undefined) {
+        query.append("limit", limit.toString());
+    }
+
+    const res = await fetchWithOptionAuth(`v2/posts/user/${target_id}?${query.toString()}`, {
+        method: "GET",
+    });
+
+    if(!res.ok) return null;
+    const data = await res.json();
+    return data;
+}
