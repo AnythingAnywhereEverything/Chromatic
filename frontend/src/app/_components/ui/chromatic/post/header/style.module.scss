@@ -3,7 +3,8 @@
     justify-content: space-between;
     align-items: center;
     flex-direction: row;
-    padding: var(--space-12);
+    padding-top: var(--space-12);
+    padding-inline: var(--space-12);
     background-color: var(--color-popover);
 }
 

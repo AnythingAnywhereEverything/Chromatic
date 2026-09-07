@@ -96,7 +96,7 @@ function PostContentPage({ params }: { params: { post: string } }) {
                                 })}
                             </ul>
                         </article>
-                        <BottomPostInteraction {...post} />
+                        <BottomPostInteraction {...post} username={post.author.username} />
 
                         <CommentSection postId={params.post} />
                     </section>

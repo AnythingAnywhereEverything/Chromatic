@@ -24,6 +24,7 @@ import { TogglePostLike } from "@/api/post/like";
 import { MediaGroup } from "./mediagroup";
 import { useUser } from "@/hooks/useUser";
 import PostHeader from "./header";
+import BottomPostInteraction from "./interaction";
 
 // NOTE: Add support for community posts, custom popup to display and fetch comments.
 const Post: React.FC<PostProps> = ({
@@ -63,10 +64,12 @@ const Post: React.FC<PostProps> = ({
     }, []);
 
     return (
-        <section 
-        className={style["container"]}
-        //  ! remove before push
-        onClick={() => {console.log(post_id)}}
+        <section
+            className={style["container"]}
+            //  ! remove before push
+            onClick={() => {
+                console.log(post_id);
+            }}
         >
             <PostHeader
                 author={{
@@ -82,25 +85,27 @@ const Post: React.FC<PostProps> = ({
             />
 
             <div className={style["main-container"]}>
-                <div className={style["text-container"]}>
-                    <span
-                        className={`${style["content"]} ${!open ? style["is-collapsed"] : ""}`}
-                        ref={ref}
-                    >
-                        {content}
-                    </span>
-                    <div>
-                        {showReadMoreButton && (
-                            <button
-                                type="button"
-                                onClick={() => setOpen(!open)}
-                                className={style["read-more-btn"]}
-                            >
-                                {open ? "Show less" : "Read more"}
-                            </button>
-                        )}
+                {content && content.length > 0 && (
+                    <div className={style["text-container"]}>
+                        <span
+                            className={`${style["content"]} ${!open ? style["is-collapsed"] : ""}`}
+                            ref={ref}
+                        >
+                            {content}
+                        </span>
+                        <div>
+                            {showReadMoreButton && (
+                                <button
+                                    type="button"
+                                    onClick={() => setOpen(!open)}
+                                    className={style["read-more-btn"]}
+                                >
+                                    {open ? "Show less" : "Read more"}
+                                </button>
+                            )}
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* //*--------------------has attachment cp---------------- */}
                 {has_attachment && <MediaGroup media={attachments} />}
@@ -108,8 +113,9 @@ const Post: React.FC<PostProps> = ({
                 <ul className={style["subject-tag"]}>
                     {tag.map((item) => {
                         return (
-                            <li key={item.tag_id}
-                            style={{backgroundColor: `${item.tag_color}`}}
+                            <li
+                                key={item.tag_id}
+                                style={{ backgroundColor: `${item.tag_color}` }}
                             >
                                 <p>{item.tag_name}</p>
                             </li>
@@ -118,70 +124,17 @@ const Post: React.FC<PostProps> = ({
                 </ul>
             </div>
 
-            <div className={style["bottom-container"]}>
-                <section className={style["interaction"]}>
-                    <div style={{ userSelect: "none" }}>
-                        {/* //todo: Add animation if possible*/}
-                        <button
-                            type="button"
-                            style={{ cursor: "pointer" }}
-                            onClick={async () => {
-                                try {
-                                    const nextLikeState = !likeState;
+            <div className={style["separator"]} />
 
-                                    console.log({
-                                        post_id,
-                                        is_liked: likeState,
-                                        likeState,
-                                        nextLikeState,
-                                    });
-
-                                    const response = await TogglePostLike(
-                                        post_id,
-                                        nextLikeState,
-                                    );
-
-                                    setLikeState(nextLikeState);
-                                    setLikeCount(response.total_liked);
-                                } catch (error) {
-                                    console.error(
-                                        "Failed to toggle like:",
-                                        error,
-                                    );
-                                }
-                            }}
-                        >
-                            <LuThumbsUp />
-                        </button>
-                        {/* //todo: onClick get panigation user liked on post */}
-                        <button
-                            className={style["has-hover"]}
-                            style={{ cursor: "pointer" }}
-                            type="button"
-                        >
-                            {likeCount || 0}
-                        </button>
-                    </div>
-                    <div style={{ userSelect: "none", cursor: "pointer" }}>
-                        {/* //todo: onClick pass to specific post and fetch comment */}
-                        <button type="button">
-                            <GoComment />
-                        </button>
-                        {total_comments || 0}
-                    </div>
-                </section>
-
-                <section className={style["interaction"]}>
-                    {/* //todo: dialog for share *if possible */}
-                    <button type="button" style={{ cursor: "pointer" }}>
-                        <DialogSharePost />
-                    </button>
-                    {/* //todo: bookmark ofc why not xdddddddddddd */}
-                    <button type="button" style={{ cursor: "pointer" }}>
-                        <IoBookmarkOutline />
-                    </button>
-                </section>
-            </div>
+            <BottomPostInteraction
+                {...{
+                    username: author.username,
+                    post_id,
+                    is_liked,
+                    total_likes,
+                    total_comments,
+                }}
+            />
         </section>
     );
 };
@@ -267,4 +220,3 @@ export function DialogSharePost() {
 function useNavigate() {
     throw new Error("Function not implemented.");
 }
-
