@@ -92,8 +92,9 @@
     color: var(--text-natural);
     opacity: 0.5;
 
-    transition: opacity 0.3s ease,
-                background-color 0.3s ease;
+    transition:
+        opacity 0.3s ease,
+        background-color 0.3s ease;
 
     &.active {
         background-color: var(--muted);
@@ -114,6 +115,8 @@
     font-size: var(--text-base);
     margin-left: calc(var(--spacing) * -2);
     font-weight: bold;
+    width: 100%;
+    text-align: left;
     transition: all 0.3s ease;
 }
 
@@ -121,7 +124,7 @@
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: var(--space-41);
+    gap: var(--space-4);
     padding: var(--space-8);
     border-radius: var(--radius-xs);
     color: var(--text-natural);
@@ -146,7 +149,6 @@
         border-radius: 50%;
         align-items: center;
         z-index: 1;
-
     }
 }
 

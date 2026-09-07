@@ -20,6 +20,7 @@ export const useAuthService = () => {
             clearToken();
             clearCacheUserId();
             queryClient.removeQueries({ queryKey: ["user"] });
+            queryClient.removeQueries({ queryKey: ["profile"] });
         },
     });
 

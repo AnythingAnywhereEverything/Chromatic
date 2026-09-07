@@ -57,10 +57,10 @@ export async function register(data: RegisterData): Promise<RegisterResponse> {
     return response;
 }
 
-export async function logout(router: ReturnType<typeof useRouter>) {
-    const res = await fetchWithAuth("v2/auth/logout");
+export async function logout() {
+    const res = await fetchWithAuth("v2/auth/logout", {
+        method: "POST",
+    });
 
     if (!res.ok) throw new Error("Logout failed");
-
-    router.push("/auth/signin");
 }

@@ -286,8 +286,16 @@ export class ImageProcessor {
                     : this.vips.Image.newFromBuffer(input);
 
             const isAnimated =
-                (mime === "image/gif" || mime === "image/webp") &&
-                image.getInt("n-pages") > 1;
+                mime === "image/gif" || mime === "image/webp"
+                    ? (() => {
+                          try {
+                              return image.getInt("n-pages") > 1;
+                          } catch {
+                              // * Missing n-pages means the image was loaded as a single page.
+                              return false;
+                          }
+                      })()
+                    : false;
 
             result = isAnimated
                 ? this.processAnimated(image, cropStyle, position)

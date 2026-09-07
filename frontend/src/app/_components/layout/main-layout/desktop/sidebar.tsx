@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import style from "./style.module.scss";
 import {
     HiOutlineUserGroup,
@@ -9,40 +9,57 @@ import {
     HiMiniHome,
 } from "react-icons/hi2";
 import { FaBell, FaCompass, FaRegBell } from "react-icons/fa6";
-import { usePathname } from "next/navigation"; // pages router
+import { usePathname, useRouter } from "next/navigation"; // pages router
 import Link from "next/link";
 import { useUser } from "@/hooks/useUser";
 import { Image } from "@/app/_components/ui/chromatic/Image";
 import { UserIdAvatar } from "@/app/_components/ui/chromatic/initialAvatar";
 import { UserSetting } from "@/app/_components/ui/chromatic/setting";
+import { IoSettingsSharp } from "react-icons/io5";
+import { IoMdMenu } from "react-icons/io";
+import {
+    Dropdown,
+    DropdownContent,
+    DropdownItem,
+    DropdownTrigger,
+} from "@/app/_components/ui/chromatic/dropdown";
+import { logout } from "@/api/auth";
+import { useAuthService } from "@/hooks/useAuthService";
 // OR usePathname if app router
 
 const SidebarNavigator: React.FC = () => {
     const pathname = usePathname();
     const firstPathSegment = pathname.split("/")[1];
+    const router = useRouter();
+    const authService = useAuthService();
+
     const user = useUser();
+
+
+    const [hovering, setHovering] = useState(false);
+    const [settingOpen, setSettingOpen] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
+
     if (!user || !user.data) {
         return null;
     }
+
     const profile_path = `/u/${user.data.username}`;
 
-    // Custom hook to get user data
-
-    const handleMouseEnter = (event: React.MouseEvent<HTMLDivElement>) => {
-        const item = event.currentTarget;
-        item.classList.add(style["hovered"]);
-    };
-
-    const handleMouseLeave = (event: React.MouseEvent<HTMLDivElement>) => {
-        const item = event.currentTarget;
-        item.classList.remove(style["hovered"]);
+    const handleLogout = () => {
+        try {
+            authService.logout();
+            router.push("/auth/signin");
+        } catch (error) {
+            console.error("Logout failed:", error);
+        }
     };
 
     return (
         <nav
-            className={style["sidebar"]}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
+            className={`${hovering || menuOpen ? style["hovered"] : ""} ${style["sidebar"]}`}
+            onMouseEnter={() => setHovering(true)}
+            onMouseLeave={() => setHovering(false)}
         >
             <div className={style["sidebar-logo"]}>
                 <Image
@@ -55,31 +72,31 @@ const SidebarNavigator: React.FC = () => {
             </div>
 
             <div className={style["sidebar-items"]}>
-                <SidebarItem
+                <SidebarPageItem
                     icon={<HiMiniHome />}
                     active={firstPathSegment === ""}
                     label="Home"
                     href="/"
                 />
-                <SidebarItem
+                <SidebarPageItem
                     icon={<FaCompass style={{ width: 22, height: 22 }} />}
                     active={firstPathSegment === "explore"}
                     label="Explore"
                     href="/explore"
                 />
-                <SidebarItem
+                <SidebarPageItem
                     icon={<HiMiniUserGroup />}
                     active={firstPathSegment === "groups"}
                     label="Groups"
                     href="/groups"
                 />
-                <SidebarItem
+                <SidebarPageItem
                     icon={<HiMiniChatBubbleLeftRight />}
                     active={firstPathSegment === "messages"}
                     label="Messages"
                     href="/messages"
                 />
-                <SidebarItem
+                <SidebarPageItem
                     icon={<FaBell />}
                     active={firstPathSegment === "notifications"}
                     label="Notifications"
@@ -92,7 +109,51 @@ const SidebarNavigator: React.FC = () => {
                     userData={user.data}
                     active={firstPathSegment === profile_path.split("/")[1]}
                 />
+                <Dropdown
+                    placement="top"
+                    open={menuOpen}
+                    onOpenChange={(open) => {
+                        setMenuOpen(open)
+                    }}
+                >
+                    <DropdownTrigger
+                        asChild
+                        onClick={() => setMenuOpen(!menuOpen)}
+                    >
+                        <SidebarButtonItem
+                            icon={<IoMdMenu />}
+                            active={false}
+                            label="Settings"
+                        />
+                    </DropdownTrigger>
+                    <DropdownContent>
+                        <DropdownItem>
+                            <button
+                                onClick={() => {
+                                    setMenuOpen(!menuOpen);
+                                    setSettingOpen(true);
+                                }}
+                                onBlur={() => setHovering(false)}
+                            >
+                                Open Settings
+                            </button>
+                        </DropdownItem>
+                        <DropdownItem>
+                            <button onClick={handleLogout}>
+                                Logout
+                            </button>
+                        </DropdownItem>
+                    </DropdownContent>
+                </Dropdown>
             </div>
+            <UserSetting
+                open={settingOpen}
+                onOpenChange={(open) => {
+                    console.log("UserSetting open state changed:", open);
+                    setHovering(open);
+                    setSettingOpen(open);
+                }}
+            />
         </nav>
     );
 };
@@ -119,43 +180,31 @@ function SidebarProfile({
     const avatarUrl = `avatars/${userId}/${parseStaticImage(avatar || "")}`;
 
     return (
-        <>
-            <Link
-                href={`/u/${username}`}
-                className={`${style["sidebar-profile"]} ${active ? style["active"] : ""}`}
-            >
-                <div className={style["profile-container"]}>
-                    {avatar ? (
-                        <Image
-                            src={avatarUrl}
-                            animated_src={avatarUrl.replace(".png", ".webp")}
-                            alt={`${username}'s profile`}
-                            thumbhash={avatar_thumbhash || undefined}
-                            className={style["profile-image"]}
-                            // scale up 4x for sharper quality
-                            width={160}
-                            height={160}
-                            containerWidth={40}
-                            containerHeight={40}
-                        />
-                    ) : (
-                        <UserIdAvatar
-                            userId={userId}
-                            name={username}
-                            size={40}
-                        />
-                    )}
-                </div>
-                <span className={style["label"]}>Profile</span>
-            </Link>
-            <UserSetting />
-        </>
+        <Link
+            href={`/u/${username}`}
+            className={`${style["sidebar-profile"]} ${active ? style["active"] : ""}`}
+        >
+            <div className={style["profile-container"]}>
+                {avatar ? (
+                    <Image
+                        src={avatarUrl}
+                        animated_src={avatarUrl.replace(".png", ".webp")}
+                        alt={`${username}'s profile`}
+                        thumbhash={avatar_thumbhash || undefined}
+                        className={style["profile-image"]}
+                        // scale up 4x for sharper quality
+                        width={160}
+                        height={160}
+                        containerWidth={40}
+                        containerHeight={40}
+                    />
+                ) : (
+                    <UserIdAvatar userId={userId} name={username} size={40} />
+                )}
+            </div>
+            <span className={style["label"]}>Profile</span>
+        </Link>
     );
-}
-
-function getFirstPathSegment(pathname: string): string {
-    const segments = pathname.split("/").filter(Boolean);
-    return segments.length > 0 ? segments[0] : "";
 }
 
 interface SidebarItemProps {
@@ -165,7 +214,7 @@ interface SidebarItemProps {
     href: string;
 }
 
-const SidebarItem: React.FC<SidebarItemProps> = ({
+const SidebarPageItem: React.FC<SidebarItemProps> = ({
     icon,
     active,
     label,
@@ -180,6 +229,29 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
 
             <span className={style["label"]}>{label}</span>
         </Link>
+    );
+};
+
+type SidebarButtonItemProps = {
+    icon: React.ReactNode;
+    active: boolean;
+    label: string;
+} & React.ButtonHTMLAttributes<HTMLButtonElement>;
+
+const SidebarButtonItem: React.FC<SidebarButtonItemProps> = ({
+    icon,
+    active,
+    label,
+    ...props
+}) => {
+    return (
+        <button
+            {...props}
+            className={`${style["item"]} ${active ? style["active"] : ""}`}
+        >
+            <div className={style["icon-container"]}>{icon}</div>
+            <span className={style["label"]}>{label}</span>
+        </button>
     );
 };
 

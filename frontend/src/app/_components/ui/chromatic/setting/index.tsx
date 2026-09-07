@@ -12,13 +12,23 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../tooltip";
 import style from "./scss/setting.module.scss";
 import { ComponentType, ReactNode, useEffect, useState } from "react";
 import { UserSettingOption } from "./userSettingOptions";
-import { AccountSettingContent, SettingContentProps } from "./content/accountSetting";
+import {
+    AccountSettingContent,
+    SettingContentProps,
+} from "./content/accountSetting";
 import { useUser } from "@/hooks/useUser";
 import { UserResponse } from "@/api/user";
 import { NotificationSetting } from "./content/notificationSetting";
 
-
-function UserSetting() {
+function UserSetting({
+    children,
+    open,
+    onOpenChange,
+}: {
+    children?: ReactNode;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}) {
     const SettingMap: Record<
         string,
         {
@@ -46,16 +56,17 @@ function UserSetting() {
 
     const [user, setUser] = useState<UserResponse | null>(null);
     const [settingContent, setSettingContent] = useState("account");
+
     const currentUser = useUser();
-    // ? not quite a good idea
+
     const CurrentSetting = SettingMap[settingContent]?.component;
     const currentSetting = SettingMap[settingContent];
 
     useEffect(() => {
-        if (currentUser && currentUser.data) {
+        if (currentUser?.data) {
             setUser(currentUser.data);
         }
-    }, [currentUser, currentUser.data]);
+    }, [currentUser]);
 
     useEffect(() => {
         if (!SettingMap[settingContent]) {
@@ -63,22 +74,12 @@ function UserSetting() {
         }
     }, [settingContent]);
 
-    if (!user) {
-        return;
+    if (!user || !CurrentSetting || !currentSetting) {
+        return null;
     }
-    return (
-        <Dialog outsidePress={false}>
-            <DialogTrigger asChild>
-                <button type="button">
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <IoSettingsSharp />
-                        </TooltipTrigger>
-                        <TooltipContent>User setting</TooltipContent>
-                    </Tooltip>
-                </button>
-            </DialogTrigger>
 
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className={style["setting-container"]}>
                 <UserSettingOption
                     option={settingContent}
@@ -86,8 +87,12 @@ function UserSetting() {
                     onChangeOption={setSettingContent}
                     list={Object.keys(SettingMap)}
                 />
+
                 <section className={style["content"]}>
-                    <CurrentSetting title={currentSetting.title} user={user} />
+                    <CurrentSetting
+                        title={currentSetting.title}
+                        user={user}
+                    />
                 </section>
             </DialogContent>
         </Dialog>
