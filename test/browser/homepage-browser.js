@@ -29,15 +29,13 @@ export default async function () {
 
         const page = await context.newPage();
 
-        while (true) {
-            await page.goto(`${BASE_URL}/`, {
-                waitUntil: "domcontentloaded",
-            });
+        await page.goto(`${BASE_URL}/`, {
+            waitUntil: "domcontentloaded",
+        });
 
-            check(page, {
-                "browser page loaded": () => page.url().includes("/"),
-            });
-        }
+        check(page, {
+            "browser page loaded": () => page.url().includes("/"),
+        });
     } finally {
         await context.close();
     }
