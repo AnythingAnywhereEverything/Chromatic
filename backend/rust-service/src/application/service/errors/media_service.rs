@@ -228,6 +228,15 @@ pub enum MediaProcessorError {
     #[error("Failed to process the media.")]
     ProcessingFailed,
 
+    #[error("Failed to get Width.")]
+    GetWidthFailed,
+
+    #[error("Failed to get Height.")]
+    GetHeightFailed,
+
+    #[error("Failed to get video duration.")]
+    GetDurationFailed,
+
     #[error("Failed to read file.")]
     IoError(#[from] std::io::Error),
 

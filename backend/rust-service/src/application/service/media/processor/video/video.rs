@@ -77,7 +77,7 @@ async fn get_video_height(path: &Path) -> Result<i32, MediaProcessorError> {
             "-show_entries",
             "stream=height",
             "-of",
-            "csv=p=0",
+            "default=noprint_wrappers=1:nokey=1",
         ])
         .arg(path)
         .output()
@@ -86,7 +86,7 @@ async fn get_video_height(path: &Path) -> Result<i32, MediaProcessorError> {
     let height = String::from_utf8_lossy(&output.stdout)
         .trim()
         .parse::<i32>()
-        .map_err(|_| MediaProcessorError::ProcessingFailed)?;
+        .map_err(|_| MediaProcessorError::GetHeightFailed)?;
 
     Ok(height)
 }
@@ -101,7 +101,7 @@ async fn get_video_width(path: &Path) -> Result<i32, MediaProcessorError> {
             "-show_entries",
             "stream=width",
             "-of",
-            "csv=p=0",
+            "default=noprint_wrappers=1:nokey=1",
         ])
         .arg(path)
         .output()
@@ -110,7 +110,7 @@ async fn get_video_width(path: &Path) -> Result<i32, MediaProcessorError> {
     let width = String::from_utf8_lossy(&output.stdout)
         .trim()
         .parse::<i32>()
-        .map_err(|_| MediaProcessorError::ProcessingFailed)?;
+        .map_err(|_| MediaProcessorError::GetWidthFailed)?;
 
     Ok(width)
 }
@@ -138,7 +138,7 @@ pub async fn get_video_duration(path: &Path) -> Result<f32, MediaProcessorError>
     let duration = String::from_utf8_lossy(&output.stdout)
         .trim()
         .parse::<f32>()
-        .map_err(|_| MediaProcessorError::ProcessingFailed)?;
+        .map_err(|_| MediaProcessorError::GetDurationFailed)?;
 
     tracing::debug!("Extracted video duration: {} seconds", duration);
 

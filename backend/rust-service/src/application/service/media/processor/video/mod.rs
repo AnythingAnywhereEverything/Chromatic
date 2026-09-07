@@ -58,8 +58,11 @@ impl VideoProcessor {
 
         match processes {
             VideoPostProcessorType::HLS { segment_time } => {
-                let output_dir = job_dir_path.join("hls");
-                video::process_video_hls(file.id().unwrap(),segment_time as f32, output_dir, source_path.clone(), self.gpu_accel, target_path, persistent, pool).await?;
+                let output_dir: std::path::PathBuf = job_dir_path.join("hls");
+                video::process_video_hls(file.id().unwrap(),segment_time as f32, output_dir, source_path.clone(), self.gpu_accel, target_path, persistent, pool).await.map_err(|e| {
+                    tracing::error!("HLS processing failed: {:?}", e);
+                    e
+                })?;
                 Ok(())
             }
             _ => Ok(()),
