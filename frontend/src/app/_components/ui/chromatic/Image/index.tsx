@@ -109,7 +109,7 @@ export function Image({
         return () => observer.disconnect();
     }, [viewportThreshold]);
 
-    const shouldLoadStatic = inViewport;
+    const shouldLoadStatic = inViewport || loaded;
 
     const shouldLoadAnimated =
         !!animatedImageUrl &&
