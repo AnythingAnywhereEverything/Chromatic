@@ -30,11 +30,11 @@ import { useAuthService } from "@/hooks/useAuthService";
 const SidebarNavigator: React.FC = () => {
     const pathname = usePathname();
     const firstPathSegment = pathname.split("/")[1];
+    const profilePathSegment = pathname.slice(3); //
     const router = useRouter();
     const authService = useAuthService();
 
     const user = useUser();
-
 
     const [hovering, setHovering] = useState(false);
     const [settingOpen, setSettingOpen] = useState(false);
@@ -107,13 +107,13 @@ const SidebarNavigator: React.FC = () => {
             <div className={style["sidebar-footer"]}>
                 <SidebarProfile
                     userData={user.data}
-                    active={firstPathSegment === profile_path.split("/")[1]}
+                    active={profilePathSegment === user.data.username}
                 />
                 <Dropdown
                     placement="top"
                     open={menuOpen}
                     onOpenChange={(open) => {
-                        setMenuOpen(open)
+                        setMenuOpen(open);
                     }}
                 >
                     <DropdownTrigger
@@ -126,9 +126,10 @@ const SidebarNavigator: React.FC = () => {
                             label="Settings"
                         />
                     </DropdownTrigger>
-                    <DropdownContent>
+                    <DropdownContent className={style["dropdown-content"]}>
                         <DropdownItem>
                             <button
+                                className={style["dropdown-button"]}
                                 onClick={() => {
                                     setMenuOpen(!menuOpen);
                                     setSettingOpen(true);
@@ -139,7 +140,10 @@ const SidebarNavigator: React.FC = () => {
                             </button>
                         </DropdownItem>
                         <DropdownItem>
-                            <button onClick={handleLogout}>
+                            <button
+                                className={`${style["dropdown-button"]} ${style["dropdown-logout"]}`}
+                                onClick={handleLogout}
+                            >
                                 Logout
                             </button>
                         </DropdownItem>

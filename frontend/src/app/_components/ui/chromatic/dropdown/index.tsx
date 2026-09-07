@@ -24,7 +24,7 @@ const DropdownContent = ({
 }: React.ComponentProps<typeof DropdownPrimitive.Content>) => {
     return (
         <DropdownPrimitive.Content
-            className={`${styles["content"]} ${className ?? ""}`}
+            className={className ? className : styles["content"]}
             data-component="dropdown-content"
             {...props}
         />
