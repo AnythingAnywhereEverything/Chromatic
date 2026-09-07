@@ -51,34 +51,10 @@ function parseStaticImage(url: string) {
     return url;
 }
 
-function ProfileBanner({ params }: { params: { profile: string } }) {
-    const [profile, setProfile] = useState<PublicUserProfileResponse | null>(
+function ProfileBanner({ profile, isOwner }: { profile: PublicUserProfileResponse, isOwner: boolean }) {
+    const [profileData, setProfileData] = useState<PublicUserProfileResponse | null>(
         null,
     );
-
-    const [isOwner, setIsOwner] = useState(false);
-
-    const userProfile = useProfile();
-
-    useEffect(() => {
-        const fetchProfile = async () => {
-            const profileOf = params.profile;
-            const response = await getPublicUserProfile(profileOf);
-
-            // if owner, use profile from user service
-            if (userProfile?.data?.id === response?.id && userProfile?.data) {
-                console.log("Using profile from user service");
-                setProfile(userProfile.data);
-                setIsOwner(true);
-                return;
-            }
-
-            setProfile(response);
-        };
-        fetchProfile();
-    }, [params.profile, userProfile?.data]); // refetch when the profile param changes or when the user profile data changes
-
-    // create banner container ref
 
     if (!profile) {
         return <ProfileBannerSkeleton />;
