@@ -8,7 +8,7 @@ echo "=== HTTP TEST ==="
 k6 run \
     -e BASE_URL=http://localhost \
     -e TOKEN="$TOKEN" \
-    "$SCRIPT_DIR/test/https/homepage-http.js"
+    "$SCRIPT_DIR/https/homepage-http.js"
 
 echo ""
 echo "=== BROWSER TEST ==="
@@ -17,7 +17,7 @@ K6_BROWSER_ARGS='enable-gpu,gpu-rasterization,enable-zero-copy,ignore-gpu-blockl
     k6 run \
     -e BASE_URL=http://localhost \
     -e TOKEN="$TOKEN" \
-    "$SCRIPT_DIR/test/browser/homepage-browser.js"
+    "$SCRIPT_DIR/browser/homepage-browser.js"
 
 echo ""
 echo "=== ALL TESTS COMPLETE ==="
