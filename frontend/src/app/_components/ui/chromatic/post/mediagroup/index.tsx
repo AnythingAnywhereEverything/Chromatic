@@ -7,6 +7,7 @@ import {
 } from "../helpers/calculateMediaRow";
 import { HlsPlayer } from "../../hlsPlayer";
 import { Media, MediaObjects } from "@/api/types/media";
+import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 
 // BIT MASKING LAYER
 const MediaFlags = {
@@ -234,7 +235,7 @@ function MediaLayout({
                     onClick={() => scrollMedia("left")}
                     aria-label="Previous media"
                 >
-                    ‹
+                    <IoIosArrowBack />
                 </button>
             )}
 
@@ -312,7 +313,7 @@ function MediaLayout({
                     onClick={() => scrollMedia("right")}
                     aria-label="Next media"
                 >
-                    ›
+                    <IoIosArrowForward />{" "}
                 </button>
             )}
         </div>
