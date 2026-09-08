@@ -1,10 +1,9 @@
 "use client";
+import { useEffect, useState } from "react";
 import {
-    getPublicUserProfile,
     PublicUserProfileResponse,
 } from "@/api/user/profile";
 import ProfileBanner from "./profileBanner";
-import { useState, useEffect } from "react";
 import { useProfile } from "@/hooks/useProfile";
 import PostGroup from "./posts/postgroup";
 import { ProfileInfo } from "./profileInfo/profileinfo";
@@ -12,35 +11,21 @@ import { ProfileInfo } from "./profileInfo/profileinfo";
 import style from "./style.module.scss";
 
 interface ProfileBodyProps {
-    params: {
-        profile: string;
-    };
+    profile: PublicUserProfileResponse;
 }
 
-export default function ProfileBody({ params }: ProfileBodyProps) {
-    const [profile, setProfile] = useState<PublicUserProfileResponse | null>(
-        null,
-    );
+export default function ProfileBody({ profile: initialProfile }: ProfileBodyProps) {
     const userProfile = useProfile();
-    const [isOwner, setIsOwner] = useState(false);
+    const [profile, setProfile] = useState(initialProfile);
+    const isOwner = userProfile?.data?.id === profile?.id;
 
+    // watch for profile service data update
     useEffect(() => {
-        const fetchProfile = async () => {
-            const profileOf = params.profile;
-            const response = await getPublicUserProfile(profileOf);
+        if (isOwner) {
 
-            // if owner, use profile from user service
-            if (userProfile?.data?.id === response?.id && userProfile?.data) {
-                console.log("Using profile from user service");
-                setProfile(userProfile.data);
-                setIsOwner(true);
-                return;
-            }
-
-            setProfile(response);
-        };
-        fetchProfile();
-    }, [params.profile, userProfile?.data]);
+            setProfile(userProfile?.data ?? initialProfile);
+        }
+    }, [userProfile?.data]);
 
     if (!profile) {
         return null;

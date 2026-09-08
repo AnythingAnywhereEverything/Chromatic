@@ -1,21 +1,27 @@
+import { cache } from "react";
 import { getPublicUserProfile } from "@/api/user/profile";
-import { fetchWithAuth, fetchWithOptionAuth } from "@/handler/token_handler";
-import ProfileBanner from "./profileBanner";
 import ProfileBody from "./body";
 
-export const generateMetadata = async ({ params }: { params: Promise<{ profile: string }> }) => {
-    const resolvedParams = await params;
-    const profileOf = resolvedParams.profile;
+const getProfile = cache(async (profile: string) => {
+    return getPublicUserProfile(profile);
+});
 
-    let response = await getPublicUserProfile(profileOf);
+export const generateMetadata = async ({
+    params,
+}: {
+    params: Promise<{ profile: string }>;
+}) => {
+    const { profile: profileOf } = await params;
+
+    const response = await getProfile(profileOf);
 
     if (!response) {
         return {
             title: "User not found",
-        }
+        };
     }
 
-    let images = [];
+    const images = [];
 
     if (response.avatar) {
         images.push({
@@ -41,22 +47,25 @@ export const generateMetadata = async ({ params }: { params: Promise<{ profile: 
             description: `${response.display_name} (@${response.username}) - ${response.bio || "No bio"}`,
             url: `${process.env.NEXT_PUBLIC_URL}${profileOf}`,
             siteName: "Chromatic",
-            images: images,
+            images,
             locale: "en-US",
             type: "website",
         },
-    }
-}
-
-
+    };
+};
 
 export default async function ProfilePage({
-  params,
+    params,
 }: {
-  params: Promise<{ profile: string }>;
+    params: Promise<{ profile: string }>;
 }) {
+    const { profile } = await params;
 
-    return (
-        <ProfileBody params={await params} />
-    );
+    const response = await getProfile(profile);
+
+    if (!response) {
+        return null;
+    }
+
+    return <ProfileBody profile={response} />;
 }
