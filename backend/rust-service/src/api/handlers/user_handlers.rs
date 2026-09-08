@@ -32,9 +32,7 @@ pub async fn get_user_profile_handler(
         None => None,
     };
 
-    let mut tx = state.db_pool.begin().await?;
-
-    let user = user_repo::find::profile_full_by_username(&mut tx, &username, user_id).await?;
+    let user = ProfileService::get_profile_username(&state, username, user_id).await?;
 
     Ok(Json(user.into()))
 }

@@ -1,4 +1,5 @@
 use axum::extract::multipart::MultipartError;
+use deadpool_redis::PoolError;
 use thiserror::Error;
 
 use crate::{
@@ -50,4 +51,13 @@ pub enum ProfileServiceError {
 
     #[error(transparent)]
     TokioJoinError(#[from] tokio::task::JoinError),
+
+    #[error(transparent)]
+    RedisPoolError(#[from] PoolError),
+
+    #[error(transparent)]
+    RedisError(#[from] redis::RedisError),
+
+    #[error(transparent)]
+    SerializationError(#[from] serde_json::Error),
 }

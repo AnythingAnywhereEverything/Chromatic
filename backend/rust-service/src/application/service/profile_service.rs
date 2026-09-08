@@ -1,29 +1,50 @@
+use redis::AsyncTypedCommands;
+
 use crate::{
     application::{
         repository::{
-            media::{self as media_repo, row::ProcessingState}, user::{self as user_repo, find::URDQOpts, row::UserProfileRow},
-        }, service::{
-            errors::ProfileServiceError, media::{
+            media::{self as media_repo, row::ProcessingState},
+            user::{self as user_repo, find::URDQOpts, row::UserProfileRow},
+        },
+        service::{
+            errors::ProfileServiceError,
+            media::{
                 model::{
-                    FileContainer, container::{ContainerConfig, NamingStrategy, RecentMediaType},
-                }, processor::types::{CropStyle, ImageProcessorType, MediaProcessorOptions},
+                    FileContainer,
+                    container::{ContainerConfig, NamingStrategy, RecentMediaType},
+                },
+                processor::types::{CropStyle, ImageProcessorType, MediaProcessorOptions},
             },
-        }, state::AppState,
-    }, domain::user::types::{Bio, DisplayName, Quotes},
+        },
+        state::AppState,
+    },
+    domain::user::types::{Bio, DisplayName, Quotes},
 };
 pub struct ProfileService;
 
 impl ProfileService {
-    pub async fn get_profile(
+    pub async fn get_profile_username(
         state: &AppState,
-        user_id: i64,
+        username: String,
         requester: Option<i64>,
     ) -> Result<UserProfileRow, ProfileServiceError> {
+        let mut conn = state.redis.get().await?;
+        let key = format!("profile:{}", username);
+
+        if let Some(value) = conn.get(&key).await? {
+            // update the expiration time for the cached profile
+            conn.expire(&key, 3600).await?;
+            let profile: UserProfileRow = serde_json::from_str(&value)?;
+            return Ok(profile);
+        }
+
         let mut tx = state.db_pool.begin().await?;
-
-        let profile = user_repo::find::profile_full_by_id(&mut tx, user_id, requester).await?;
-
+        let profile =
+            user_repo::find::profile_full_by_username(&mut tx, &username, requester).await?;
         tx.commit().await?;
+        // cache the profile in Redis
+        let value = serde_json::to_string(&profile)?;
+        let _: () = conn.set_ex(key, value, 3600).await?;
 
         Ok(profile)
     }
@@ -107,20 +128,20 @@ impl ProfileService {
             avatar
                 .set_uploader_id(user_id)
                 .set_target_path(format!("avatars/{}", user_id))
-                .set_config(option
-                    .set_check_conflict(RecentMediaType::Avatar)
-                    .set_processing_options(
-                    MediaProcessorOptions::new().set_image_processors(vec![
-                        ImageProcessorType::Crop {
-                            style: CropStyle::Ratio {
-                                width: 1,
-                                height: 1,
-                                scale: 1.0,
-                            },
-                            position: Some((0.5, 0.5)),
-                        },
-                    ]),
-                ));
+                .set_config(
+                    option
+                        .set_check_conflict(RecentMediaType::Avatar)
+                        .set_processing_options(MediaProcessorOptions::new().set_image_processors(
+                            vec![ImageProcessorType::Crop {
+                                style: CropStyle::Ratio {
+                                    width: 1,
+                                    height: 1,
+                                    scale: 1.0,
+                                },
+                                position: Some((0.5, 0.5)),
+                            }],
+                        )),
+                );
 
             to_upload.push(avatar);
         }
@@ -130,20 +151,20 @@ impl ProfileService {
             banner
                 .set_uploader_id(user_id)
                 .set_target_path(format!("banners/{}", user_id))
-                .set_config(option
-                    .set_check_conflict(RecentMediaType::Banner)
-                    .set_processing_options(
-                    MediaProcessorOptions::new().set_image_processors(vec![
-                        ImageProcessorType::Crop {
-                            style: CropStyle::Ratio {
-                                width: 5,
-                                height: 2,
-                                scale: 1.0,
-                            },
-                            position: Some((0.5, 0.5)),
-                        },
-                    ]),
-                ));
+                .set_config(
+                    option
+                        .set_check_conflict(RecentMediaType::Banner)
+                        .set_processing_options(MediaProcessorOptions::new().set_image_processors(
+                            vec![ImageProcessorType::Crop {
+                                style: CropStyle::Ratio {
+                                    width: 5,
+                                    height: 2,
+                                    scale: 1.0,
+                                },
+                                position: Some((0.5, 0.5)),
+                            }],
+                        )),
+                );
 
             to_upload.push(banner);
         }
@@ -164,11 +185,9 @@ impl ProfileService {
                 .await?;
 
                 let media_to_delete = if is_avatar {
-                    user_repo::update::avatar_media_id(&mut tx, user_id, Some(media.id))
-                        .await?
+                    user_repo::update::avatar_media_id(&mut tx, user_id, Some(media.id)).await?
                 } else {
-                    user_repo::update::banner_media_id(&mut tx, user_id, Some(media.id))
-                        .await?
+                    user_repo::update::banner_media_id(&mut tx, user_id, Some(media.id)).await?
                 };
                 if let Some(media_id) = media_to_delete {
                     let path =
@@ -186,6 +205,16 @@ impl ProfileService {
 
         let mut tx = state.db_pool.begin().await?;
         let profile = user_repo::find::profile_full_by_id(&mut tx, user_id, None).await?;
+
+        // update cache
+        let mut conn = state.redis.get().await?;
+        let cache_key = format!(
+            "profile:{}",
+            &profile.username.clone().unwrap_or_else(|| "".to_string())
+        );
+        let cache_value = serde_json::to_string(&profile)?;
+        conn.set_ex(&cache_key, &cache_value, 3600).await?;
+
         tx.commit().await?;
 
         Ok(profile)
