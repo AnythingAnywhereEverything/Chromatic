@@ -11,13 +11,20 @@
         align-items: center;
         font-size: 1.15rem;
 
-        .like-button,
         .share-button,
         .bookmark-button {
             color: var(--text-neutral);
 
             &:hover {
                 color: var(--color-blue);
+            }
+        }
+
+        .like-button {
+            color: var(--text-neutral);
+
+            &:hover {
+                color: var(--color-red);
             }
         }
 

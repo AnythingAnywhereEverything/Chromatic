@@ -20,10 +20,11 @@ import {
     DialogTrigger,
 } from "../../dialogue";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../tooltip";
-import { MdOutlineChatBubbleOutline } from "react-icons/md";
+import { MdOutlineChatBubbleOutline, MdThumbUpOffAlt } from "react-icons/md";
 import { base64ToUrlBase64, bnToB64 } from "@lib/base64";
-import { FaLink } from "react-icons/fa";
+import { FaHeart, FaLink, FaRegHeart } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
+import { IoMdThumbsUp } from "react-icons/io";
 
 interface BottomPostInteractionProps {
     username: string;
@@ -65,7 +66,13 @@ const BottomPostInteraction = React.memo(function BottomPostInteraction({
                         onClick={handleLike}
                     >
                         <i>
-                            <LuThumbsUp />
+                            {
+                                likeState ? (
+                                    <FaHeart />
+                                ) : (
+                                    <FaRegHeart />
+                                )
+                            }
                         </i>
                         {likeCount > 0 ? likeCount : null}
                     </InteractButton>
