@@ -11,37 +11,43 @@ export async function generateMetadata({
     const resolvedParams = await params;
     const postOf = resolvedParams.post;
 
-    const response = await getFocusedPost(postOf);
+    try {
+        const response = await getFocusedPost(postOf);
 
-    if (!response) {
+        if (!response) {
+            return {
+                title: "Post not found",
+            };
+        }
+
+        const postImages = [];
+
+        if (response.has_attachment) {
+            const mediaObject = response.attachments[0]?.media_objects[0]; 
+            postImages.push({
+                url: `${process.env.NEXT_PUBLIC_CDN_URL}/${mediaObject?.storage_key}/${mediaObject?.name}`,
+                width: 400,
+                height: 400,
+            });
+        }
+
+        return {
+            title: `${response.author.display_name} (${response.author.username})'s post`,
+            description: response.content,
+            openGraph: {
+                title: `${response.author.display_name} (${response.author.username})'s post`,
+                description: response.content,
+                url: `${process.env.NEXT_PUBLIC_URL}/f/${postOf}`,
+                images: postImages,
+                locale: "en-US",
+                type: "website",
+            },
+        };
+    } catch (error) {
         return {
             title: "Post not found",
         };
     }
-
-    const postImages = [];
-
-    if (response.has_attachment) {
-        const mediaObject = response.attachments[0]?.media_objects[0]; 
-        postImages.push({
-            url: `${process.env.NEXT_PUBLIC_CDN_URL}/${mediaObject?.storage_key}/${mediaObject?.name}`,
-            width: 400,
-            height: 400,
-        });
-    }
-
-    return {
-        title: `${response.author.display_name} (${response.author.username})'s post`,
-        description: response.content,
-        openGraph: {
-            title: `${response.author.display_name} (${response.author.username})'s post`,
-            description: response.content,
-            url: `${process.env.NEXT_PUBLIC_URL}/f/${postOf}`,
-            images: postImages,
-            locale: "en-US",
-            type: "website",
-        },
-    };
 }
 
 export default async function PostPage({
