@@ -9,10 +9,18 @@ const GuardTopBar = () => {
                 <h1>Chromatic</h1>
             </div>
             <div className={style["auth-buttons"]}>
-                <Link className={style["signin-button"]} href="/auth/signin">
+                <Link
+                    prefetch={false}
+                    className={style["signin-button"]}
+                    href="/auth/signin"
+                >
                     Sign In
                 </Link>
-                <Link className={style["signup-button"]} href="/auth/signup">
+                <Link
+                    prefetch={false}
+                    className={style["signup-button"]}
+                    href="/auth/signup"
+                >
                     Sign Up
                 </Link>
             </div>
