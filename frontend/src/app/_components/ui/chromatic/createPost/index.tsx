@@ -32,6 +32,8 @@ interface CreatePostProps {
 }
 
 function CreatePostComponent({ author, onPostCreated }: CreatePostProps) {
+    const MAX_TEXT_LENGTH = 2500;
+    
     const [text, setText] = useState("");
     const [hasEdited, setHasEdited] = useState(false);
 
@@ -41,7 +43,6 @@ function CreatePostComponent({ author, onPostCreated }: CreatePostProps) {
     const [visibility, setVisibility] = useState<Visibility>(
         Visibility.Everyone,
     );
-
     const [isSubmittable, setIsSubmittable] = useState(false);
     const [isPending, setIsPending] = useState(false);
 
@@ -231,6 +232,7 @@ function CreatePostComponent({ author, onPostCreated }: CreatePostProps) {
                         <textarea
                             placeholder="Which topic do you want to discuss?"
                             value={text}
+                            maxLength={MAX_TEXT_LENGTH}
                             onChange={handleTextChange}
                             onPaste={handlePaste}
                             ref={textareaRef}
