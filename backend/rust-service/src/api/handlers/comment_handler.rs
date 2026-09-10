@@ -7,13 +7,10 @@ use multipart_derive::Multipart;
 
 use crate::{
     api::{
-        APIError, RequestAuth,
-        dtos::{post_dtos::CommentDTO},
-        handlers::post_handler::MediaTypeAttachment,
-        version,
+        APIError, RequestAuth, dtos::post_dtos::CommentDTO, version,
     }, application::{
         repository::{
-            media::{self as media_repo, row::{MediaStatus, MediaType}}, post::{self as post_repo},
+            media::{self as media_repo, row::{MediaStatus, MediaType}}, post::{self as post_repo, row::MediaTypeAttachment},
         }, service::{
             errors::{AuthServiceError, CommentServiceError}, media::{
                 extractor::{ExtractorFileOptions, ValidationOptions}, inspector::FileType, model::{FileContainer, container::ContainerConfig}, processor::types::{ImageProcessorType, MediaProcessorOptions, ResizeStyle},
