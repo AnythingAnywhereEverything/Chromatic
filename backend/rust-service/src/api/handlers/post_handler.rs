@@ -176,20 +176,12 @@ pub async fn delete_post_handler(
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
 
-    let mut tx = state.db_pool.begin().await?;
-
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
         None => return Err(AuthServiceError::InvalidCredentials.into()),
     };
 
-    post_repo::find::get_post_by_id(&mut tx, post_id, Some(user_id)).await?;
-    let delete = post_repo::post::delete_post(&mut tx, post_id, user_id).await?;
-    tx.commit().await?;
-
-    if delete == 0 {
-        return Err(PostServiceError::CommentNotFoundOrUnauthorized.into());
-    }
+    PostService.delete_post(&state, post_id, user_id).await?;
 
     Ok(())
 }
