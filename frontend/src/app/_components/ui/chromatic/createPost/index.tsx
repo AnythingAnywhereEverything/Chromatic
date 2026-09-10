@@ -103,7 +103,7 @@ function CreatePostComponent({ author, onPostCreated }: CreatePostProps) {
         }
         if (allMedia != undefined) {
             allMedia.forEach((file) => {
-                formData.append("media_src", file);
+                formData.append("files", file);
             });
         }
         if (visibility != undefined) {
