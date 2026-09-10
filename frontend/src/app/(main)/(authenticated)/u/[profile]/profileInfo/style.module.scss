@@ -1,6 +1,10 @@
+.info-wrapper {
+}
+
 .profile-info {
-    max-width: var(--breakpoint-xxxs);
+    position: sticky;
     width: 100%;
+    top: var(--space-12);
     padding: var(--space-12);
     background: var(--popover);
     height: fit-content;

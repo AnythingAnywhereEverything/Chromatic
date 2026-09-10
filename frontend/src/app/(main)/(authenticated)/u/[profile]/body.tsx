@@ -32,12 +32,12 @@ export default function ProfileBody({ profile: initialProfile }: ProfileBodyProp
     }
 
     return (
-        <div>
+        <>
             <ProfileBanner profile={profile} isOwner={isOwner} />
             <div className={style["profile-main-container"]}>
                 <ProfileInfo profile={profile} isOwner={isOwner} /> 
                 <PostGroup profile={profile} isOwner={isOwner} /> 
             </div>
-        </div>
+        </>
     );
 }
