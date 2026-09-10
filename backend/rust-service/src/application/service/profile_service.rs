@@ -55,6 +55,33 @@ impl ProfileService {
         Ok(profile)
     }
 
+    pub async fn get_profile_by_id(
+        state: &AppState,
+        user_id: i64,
+        requester: Option<i64>,
+    ) -> Result<UserProfileRow, ProfileServiceError> {
+        let mut conn = state.redis.get().await?;
+        let id_key = format!("profile:id:{}", user_id);
+
+        if let Some(value) = conn.get(&id_key).await? {
+            conn.expire(&id_key, 3600).await?;
+            let profile: UserProfileRow = serde_json::from_str(&value)?;
+            return Ok(profile);
+        }
+
+        let mut tx: sqlx::Transaction<'_, sqlx::Postgres> = state.db_pool.begin().await?;
+        let profile = user_repo::find::profile_full_by_id(&mut tx, user_id, requester).await?;
+        tx.commit().await?;
+
+        // cache the profile in Redis
+        let username_key = format!("profile:username:{}", profile.username);
+        let value = serde_json::to_string(&profile)?;
+        let _: () = conn.set_ex(&id_key, &value, 3600).await?;
+        let _: () = conn.set_ex(&username_key, &id_key, 3600).await?;
+
+        Ok(profile)
+    }
+
     pub async fn update_post_counts(
         state: &AppState,
         user_id: i64,
@@ -66,12 +93,12 @@ impl ProfileService {
 
         // update cache in Redis
         let mut conn = state.redis.get().await?;
-        let key = format!("profile:{}", user_id);
-        if let Some(value) = conn.get(&key).await? {
+        let id_key = format!("profile:id:{}", user_id);
+        if let Some(value) = conn.get(&id_key).await? {
             let mut profile: UserProfileRow = serde_json::from_str(&value)?;
             profile.posts_count = Some(profile.posts_count.unwrap_or(0) + increment);
             let value = serde_json::to_string(&profile)?;
-            let _: () = conn.set_ex(key, value, 3600).await?;
+            let _: () = conn.set_ex(&id_key, &value, 3600).await?;
         }
 
         Ok(())
