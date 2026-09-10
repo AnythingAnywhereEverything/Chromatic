@@ -9,20 +9,10 @@ pub async fn post(
 ) -> RepositoryResult<u64> {
     let delete = sqlx::query(
         r#"
-        WITH soft_deleted AS (
             UPDATE media_posts
             SET status = 'inactive',
             deleted_at = now()
             WHERE id = $1 AND user_id = $2
-            RETURNING *
-        ),
-        updated_count AS (
-            UPDATE user_profiles
-            SET posts_count = posts_count - 1
-            WHERE user_id = (SELECT user_id FROM soft_deleted)
-        )
-        SELECT *
-        FROM soft_deleted
         "#,
     )
     .bind(id)

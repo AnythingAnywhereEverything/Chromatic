@@ -254,28 +254,19 @@ pub async fn create_post(
 ) -> Result<CreatePostRow, sqlx::Error> {
     sqlx::query_as::<_, CreatePostRow>(
         r#"
-        WITH inserted_post AS (
-            INSERT INTO media_posts (
-                id,
-                user_id,
-                content,
-                reposted_from,
-                is_repost,
-                has_attachment,
-                created_at,
-                updated_at,
-                visibility
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), $7)
-            RETURNING *
-        ),
-        updated_count AS (
-            UPDATE user_profiles
-            SET posts_count = posts_count + 1
-            WHERE user_id = (SELECT user_id FROM inserted_post)
-            RETURNING posts_count
+        INSERT INTO media_posts (
+            id,
+            user_id,
+            content,
+            reposted_from,
+            is_repost,
+            has_attachment,
+            created_at,
+            updated_at,
+            visibility
         )
-        SELECT
+        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), $7)
+        RETURNING
             id,
             user_id,
             content,
@@ -289,8 +280,6 @@ pub async fn create_post(
             visibility,
             '[]'::json AS media_attachment,
             '[]'::json AS tags
-        FROM inserted_post,
-        updated_count
         "#,
     )
     .bind(id)
