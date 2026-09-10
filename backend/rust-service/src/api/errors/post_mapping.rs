@@ -19,8 +19,33 @@ impl From <PostServiceError> for APIError{
                 .kind(APIErrorKind::PostError)
             ),
             PostServiceError::CreatePostFailed => (
-                StatusCode::INTERNAL_SERVER_ERROR,
+                StatusCode::BAD_REQUEST,
                 APIErrorEntry::new("Failed to create post")
+                .kind(APIErrorKind::PostError)
+            ),
+            PostServiceError::PostNotFound => (
+                StatusCode::NOT_FOUND,
+                APIErrorEntry::new("Post not found")
+                .kind(APIErrorKind::PostError)
+            ),
+            PostServiceError::RedisError(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                APIErrorEntry::new(&format!("Redis Error: {}", e.to_string()))
+                .kind(APIErrorKind::PostError)
+            ),
+            PostServiceError::Database(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                APIErrorEntry::new(&format!("Database Error: {}", e.to_string()))
+                .kind(APIErrorKind::PostError)
+            ),
+            PostServiceError::UpdatePostFailed => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                APIErrorEntry::new("Failed to update post")
+                .kind(APIErrorKind::PostError)
+            ),
+            PostServiceError::DeletePostFailed => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                APIErrorEntry::new("Failed to delete post")
                 .kind(APIErrorKind::PostError)
             ),
             _ => (
