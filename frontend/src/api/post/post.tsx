@@ -32,3 +32,13 @@ export async function GetUserPosts(target_id: string, before: Date, limit?: numb
     const data = await res.json();
     return data;
 }
+
+export const deletePost = async (postId: string): Promise<void> => {
+    const res = await fetchWithAuth(`v2/posts/${postId}`, {
+        method: "DELETE",
+    });
+
+    if (!res.ok) {
+        throw new Error(`Failed to delete post: ${res.status}`);
+    }
+};

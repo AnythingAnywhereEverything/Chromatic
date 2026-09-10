@@ -2,29 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import style from "./style.module.scss";
-import { LuThumbsUp } from "react-icons/lu";
-import { GoComment } from "react-icons/go";
-import { IoMdShare } from "react-icons/io";
-import {
-    IoBookmarkOutline,
-    IoClipboardOutline,
-    IoClose,
-} from "react-icons/io5";
 import { PostProps } from "@/api/post/getFeed";
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogHeading,
-    DialogTrigger,
-} from "../dialogue";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../tooltip";
-import { TogglePostLike } from "@/api/post/like";
 
 import { MediaGroup } from "./mediagroup";
 import { useUser } from "@/hooks/useUser";
 import PostHeader from "./header";
 import BottomPostInteraction from "./interaction";
+import { deletePost } from "@/api/post/post";
 
 // NOTE: Add support for community posts, custom popup to display and fetch comments.
 const Post: React.FC<PostProps> = ({
@@ -64,8 +48,17 @@ const Post: React.FC<PostProps> = ({
         }
     }, []);
 
-    const handleDeletePost = () => {
+    const markPostAsDeleted = () => {
         setIsDeleted(true);
+    };
+
+    const handleDeletePost = async () => {
+        try {
+            await deletePost(post_id);
+            markPostAsDeleted();
+        } catch (error) {
+            console.error("Failed to delete post:", error);
+        }
     };
 
     return (
@@ -87,7 +80,6 @@ const Post: React.FC<PostProps> = ({
                         avatar_thumbhash: author.avatar_thumbhash,
                     }}
                     created_at={created_at}
-                    postId={post_id}
                     visibility={visibility}
                     onDelete={handleDeletePost}
                 />
@@ -150,83 +142,3 @@ const Post: React.FC<PostProps> = ({
 };
 
 export { Post };
-
-export function DialogSharePost() {
-    const [linkToCopy, setLinkToCopy] = useState(
-        "asidnsadjasodaijdiajsidjasidjajdoiasjidjsadjiasjdiaj",
-    );
-    const [isCopied, setIsCopied] = useState(true);
-    const [errorText, setErrorText] = useState("");
-
-    async function copyToClipBoard() {
-        try {
-            await navigator.clipboard.writeText(linkToCopy);
-            setIsCopied(true);
-            setTimeout(() => setIsCopied(false), 2000);
-        } catch (err) {
-            setErrorText("Faield to copy link : " + err);
-            setTimeout(() => setErrorText(""), 5000);
-        }
-    }
-
-    const dialogRef = useRef<HTMLDivElement | null>(null);
-
-    return (
-        <Dialog overlayClassName={style["link-dialog-overlay"]}>
-            <DialogTrigger asChild>
-                <IoMdShare />
-            </DialogTrigger>
-
-            <DialogContent className={style["link-container"]}>
-                <DialogHeading className={style["header"]}>
-                    <DialogClose className={style["box"]}>
-                        <IoClose />
-                    </DialogClose>
-                    <p className={style["title"]}>Share</p>
-                    <div className={style["box"]}></div>
-                </DialogHeading>
-                <section className={style["main"]}>
-                    <section className={style["clip-board"]}>
-                        <div className={style["board"]} ref={dialogRef}>
-                            {/* //fixme : tooltip somehow is showing behind z-index 999*/}
-                            <Tooltip parent={dialogRef.current} open={isCopied}>
-                                <TooltipTrigger asChild>
-                                    {isCopied}
-                                </TooltipTrigger>
-
-                                <TooltipContent
-                                    style={{
-                                        zIndex: 9999,
-                                        position: "relative",
-                                        top: "-10px",
-                                        left: "-10px",
-                                    }}
-                                >
-                                    asdmadiaidsjdjsajdiasjdsaijdaijadss
-                                </TooltipContent>
-                            </Tooltip>
-
-                            <input
-                                type="text"
-                                value={linkToCopy}
-                                onChange={(e) => setLinkToCopy(e.target.value)}
-                                onClick={copyToClipBoard}
-                                readOnly
-                            />
-                            <div className={style["copy-button"]}>
-                                <button type="button" onClick={copyToClipBoard}>
-                                    {/* //todo: on complete changing icon */}
-                                    <IoClipboardOutline />
-                                </button>
-                            </div>
-                        </div>
-                    </section>
-                    <div>{errorText}</div>
-                </section>
-            </DialogContent>
-        </Dialog>
-    );
-}
-function useNavigate() {
-    throw new Error("Function not implemented.");
-}
