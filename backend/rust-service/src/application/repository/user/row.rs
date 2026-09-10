@@ -5,14 +5,14 @@ use serde_with::skip_serializing_none;
 pub struct UserRow {
     pub id: i64,
     pub email: String,
-    pub username: Option<String>,
+    pub username: String,
 }
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct UserProfileMinimalRow {
     pub id: i64,
     pub email: Option<String>,
-    pub username: Option<String>,
+    pub username: String,
     pub display_name: Option<String>,
     pub bio: Option<String>,
     pub avatar: Option<String>, // hash name
@@ -29,7 +29,7 @@ pub struct UserProfileMinimalRow {
 pub struct UserProfileRow {
     pub id: String,
     // skip optional fields for minimal profile
-    pub username: Option<String>,
+    pub username: String,
     pub display_name: Option<String>,
     pub bio: Option<String>,
     pub quote: Option<String>,
