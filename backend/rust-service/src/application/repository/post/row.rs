@@ -91,27 +91,22 @@ pub struct RepostedPostRow {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
+
 #[derive(sqlx::FromRow, Debug, Deserialize, Serialize)]
 pub struct CommentRow {
-    pub comment_id: i64,
-    pub post_id: i64,
-    pub user_id: i64,
-    pub username: String,
-    pub display_name: String,
+    pub id: String,
+    pub post_id: String,
+    
+    pub author: Json<UserProfileRow>,
     pub total_likes: i32,
     pub is_liked: bool,
 
-    pub avatar_path: Option<String>,
-    pub avatar_mime: Option<String>,
-    pub avatar_thumbhash: Option<String>,
-
-    pub followers_count: i32,
-    pub following_count: i32,
-    pub content: String,
+    pub content: Option<String>,
     pub has_attachment: bool,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
-    pub media_attachment: Json<Vec<MediaFullDataRow>>,
+    pub attachments: Json<Vec<Attachment>>,
+
 }
 
 #[derive(sqlx::FromRow, Debug, Deserialize)]
@@ -171,7 +166,6 @@ pub struct CreateCommentResult {
     pub has_attachment: bool,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
-    pub total_comments: i32,
     pub total_likes: i32,
 }
 

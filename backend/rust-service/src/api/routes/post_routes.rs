@@ -20,8 +20,9 @@ pub fn routes() -> Router<SharedState> {
     
     .route("/{id}/comments", get(get_comment_handler))
     .route("/{id}/comments", post(create_new_comment_handler))
-    .route("/{id}/comments", put(update_comment_handler))
-    .route("/{id}/comments", delete(delete_comment_handler))
+    .route("/{id}/comments/{comment_id}", put(update_comment_handler))
+    .route("/{id}/comments/{comment_id}", delete(delete_comment_handler))
+    .route("/{id}/comments/{comment_id}/like", post(liked_comment_handler))
 
     .route("/user/{target_id}", get(get_user_posts_handler))
 }

@@ -1,16 +1,15 @@
 use axum::{
     Json,
     extract::{Multipart, Path, State},
-    http::StatusCode,
 };
 use multipart_derive::Multipart;
 
 use crate::{
     api::{
-        APIError, RequestAuth, dtos::post_dtos::CommentDTO, version,
+        APIError, RequestAuth, dtos::post_dtos::CommentDTO, handlers::post_handler::LikeRequest, version,
     }, application::{
         repository::{
-            media::{self as media_repo, row::{MediaStatus, MediaType}}, post::{self as post_repo, row::MediaTypeAttachment},
+            media::{self as media_repo, row::{MediaType, ProcessingState,}}, post::{self as post_repo, row::{CommentRow, MediaTypeAttachment}},
         }, service::{
             errors::{AuthServiceError, CommentServiceError}, media::{
                 extractor::{ExtractorFileOptions, ValidationOptions}, inspector::FileType, model::{FileContainer, container::ContainerConfig}, processor::types::{ImageProcessorType, MediaProcessorOptions, ResizeStyle},
@@ -23,7 +22,7 @@ use crate::{
 pub struct CreateCommentRequest {
     pub content: String,
     #[multipart]
-    pub media_src: Option<FileContainer>,
+    pub files: Option<FileContainer>,
 }
 
 pub async fn get_comment_handler(
@@ -31,7 +30,7 @@ pub async fn get_comment_handler(
     Path((version, post_id)): Path<(String, i64)>,
     req_auth: RequestAuth,
     
-) -> Result<Json<Vec<CommentDTO>>, APIError> {
+) -> Result<Json<Vec<CommentRow>>, APIError> {
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
 
@@ -50,15 +49,15 @@ pub async fn get_comment_handler(
     //     comment.current_user_id = user_id.map(|id | id.to_string())
     // }
 
-    Ok(Json(vec![]))
+    Ok(Json(comments))
 }
 
 pub async fn create_new_comment_handler(
     State(state): State<SharedState>,
     Path((version, post_id)): Path<(String, i64)>,
     req_auth: RequestAuth,
-    media_src: Multipart,
-) -> Result<Json<CommentDTO>, APIError> {
+    files: Multipart,
+) -> Result<Json<CommentRow>, APIError> {
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
 
@@ -78,14 +77,14 @@ pub async fn create_new_comment_handler(
 
     let mut extracted = state
         .multi_extractor
-        .extract::<CreateCommentRequest>(media_src, Some(ext_opts))
+        .extract::<CreateCommentRequest>(files, Some(ext_opts))
         .await?;
 
     tracing::debug!("Extracted payload: {:#?}", extracted);
 
     let new_comment_id = state.snowflake_generator.generate_id()?;
 
-    let img_container = &mut extracted.media_src;
+    let img_container = &mut extracted.files;
 
     let mut tx = state.db_pool.begin().await?;
     let has_attachment = img_container.is_some();
@@ -126,7 +125,7 @@ pub async fn create_new_comment_handler(
 
         // save all the id state
         for file in container.files_mut() {
-            media_repo::update::media_status(&mut tx, &file.id().unwrap(), &MediaStatus::Completed)
+            media_repo::update::processing_state(&mut tx, &file.id().unwrap(), &ProcessingState::Completed)
                 .await?;
             post_repo::post::add_has_attachment(
                 &mut tx,
@@ -139,8 +138,12 @@ pub async fn create_new_comment_handler(
     }
 
     tx.commit().await?;
-    todo!();
-    // Ok(Json(get_comment))
+
+    let mut tx = state.db_pool.begin().await?;
+    let get_comment = post_repo::comment::get_comment_by_id(&mut tx, new_comment_id, Some(user_id)).await?;
+    tx.commit().await?;
+
+    Ok(Json(get_comment))
 }
 
 pub async fn update_comment_handler(
@@ -162,15 +165,15 @@ pub async fn update_comment_handler(
 
 pub async fn delete_comment_handler(
     State(state): State<SharedState>,
-    Path((version, comment_id)): Path<(String, i64)>,
+    Path((version, _post_id, comment_id)): Path<(String, i64, i64)>,
     req_auth: RequestAuth,
-) -> Result<StatusCode, APIError> {
+) -> Result<(), APIError> {
     let _api_version = version::parse_version(&version)?;
 
     let user_id = match req_auth.user {
         Some(user) => user.user_id,
-        // ! hardcoded fallback id might be a security risk in production
-        None => 81727418892554240,
+        None => return Err(AuthServiceError::InvalidCredentials.into()),
+
     };
     let mut tx = state.db_pool.begin().await?;
 
@@ -181,5 +184,37 @@ pub async fn delete_comment_handler(
         return Err(CommentServiceError::CommentNotFoundOrUnauthorized.into());
     }
 
-    Ok(StatusCode::NO_CONTENT)
+    Ok(())
+}
+
+
+pub async fn liked_comment_handler(
+    State(state): State<SharedState>,
+    Path((version, _post_id, comment_id)): Path<(String, i64, i64)>,
+    req_auth: RequestAuth,
+    Json(payload): Json<LikeRequest>,
+) -> Result<(), APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+
+    let user_id = match req_auth.user {
+        Some(user) => user.user_id,
+        None => return Err(AuthServiceError::InvalidCredentials.into()),
+    };
+    
+    tracing::info!(user_id, comment_id, payload.is_like, "received like request for comment");
+    let mut tx = state.db_pool.begin().await?;
+    tracing::info!(user_id, comment_id, payload.is_like, "liking comment");
+
+    post_repo::comment::liked_comment(
+        &mut tx,
+        comment_id,
+        user_id,
+        payload.is_like,
+    )
+    .await?;
+
+    tx.commit().await?;
+
+    Ok(())
 }
