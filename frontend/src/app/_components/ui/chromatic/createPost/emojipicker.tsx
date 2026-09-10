@@ -66,6 +66,7 @@ const EPicker = ({
     return (
         <div>
             <button
+                type="button"
                 ref={refs.setReference}
                 {...getReferenceProps({
                     onClick: () => setOpen(!open),
