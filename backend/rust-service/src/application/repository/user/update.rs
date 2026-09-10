@@ -23,6 +23,27 @@ pub async fn user_display_name(
     Ok(())
 }
 
+pub async fn user_post_counts(
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    user_id: i64,
+    increment: i32,
+) -> RepositoryResult<()> {
+    sqlx::query(
+        r#"
+        UPDATE user_profiles
+        SET posts_count = posts_count + $1,
+            updated_at = now()
+        WHERE user_id = $2
+        "#,
+    )
+    .bind(increment)
+    .bind(user_id)
+    .execute(tx.as_mut())
+    .await?;
+
+    Ok(())
+}
+
 /// status got renamed to quote due to making the site fit the theme
 pub async fn user_status(
     tx: &mut Transaction<'_, sqlx::Postgres>,

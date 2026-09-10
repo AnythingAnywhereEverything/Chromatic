@@ -48,6 +48,11 @@ impl From <PostServiceError> for APIError{
                 APIErrorEntry::new("Failed to delete post")
                 .kind(APIErrorKind::PostError)
             ),
+            PostServiceError::ProfileServiceError(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                APIErrorEntry::new(&format!("Profile Service Error: {}", e.to_string()))
+                .kind(APIErrorKind::PostError)
+            ),
             _ => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 APIErrorEntry::new("An unexpected error occurred")

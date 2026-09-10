@@ -81,7 +81,7 @@ impl PostService {
         let Some(post) = post_repo::get::base_post(&mut tx, post_id, Some(author_id)).await? else {
             return Err(PostServiceError::PostNotFound);
         };
-        
+
         tx.commit().await?;
         // update the cache with the latest post data
         let mut conn = state.redis.get().await?;
@@ -91,7 +91,9 @@ impl PostService {
             .await?;
 
         let mut tx = state.db_pool.begin().await?;
-        let updated_post = self.get_post(state, &mut tx, post_id, Some(author_id)).await?;
+        let updated_post = self
+            .get_post(state, &mut tx, post_id, Some(author_id))
+            .await?;
         if let Some(updated_post) = updated_post {
             Ok(updated_post)
         } else {
@@ -105,7 +107,6 @@ impl PostService {
         post_id: i64,
         author_id: i64,
     ) -> Result<(), PostServiceError> {
-
         let mut tx = state.db_pool.begin().await?;
         let rows_affected = post_repo::delete::post(&mut tx, post_id, author_id).await?;
         if rows_affected == 0 {
@@ -117,6 +118,8 @@ impl PostService {
         let mut conn = state.redis.get().await?;
         let cache_key = format!("post:{}", post_id);
         let _ = conn.del(&cache_key).await?;
+
+        ProfileService::update_post_counts(state, author_id, -1).await?;
         Ok(())
     }
 
@@ -129,11 +132,15 @@ impl PostService {
         limit: i32,
     ) -> Result<Vec<PostRow>, PostServiceError> {
         let mut tx = state.db_pool.begin().await?;
-        let user_posts = post_repo::get::user_posts(&mut tx, target_id, requester_id, before, limit).await?;
+        let user_posts =
+            post_repo::get::user_posts(&mut tx, target_id, requester_id, before, limit).await?;
 
         let mut posts = Vec::new();
         for post_id in &user_posts {
-            if let Some(post) = self.get_post(state, &mut tx, *post_id, requester_id).await? {
+            if let Some(post) = self
+                .get_post(state, &mut tx, *post_id, requester_id)
+                .await?
+            {
                 posts.push(post);
             }
         }
@@ -153,7 +160,10 @@ impl PostService {
         let mut posts = Vec::new();
         for post_id in &feed {
             // Fetch each post by its ID
-            if let Some(post) = self.get_post(state, &mut tx, *post_id, Some(user_id)).await? {
+            if let Some(post) = self
+                .get_post(state, &mut tx, *post_id, Some(user_id))
+                .await?
+            {
                 posts.push(post);
             }
         }
@@ -179,9 +189,7 @@ impl PostService {
                     return Ok(post);
                 }
             }
-            let post =
-                post_repo::get::base_post(tx, post_id, user_id)
-                    .await?;
+            let post = post_repo::get::base_post(tx, post_id, user_id).await?;
             // Set cache with expiration of 20 minutes (60 * 20 seconds)
             let _: () = redis
                 .set_ex(&cache_key, serde_json::to_string(&post)?, 60 * 20)
@@ -310,8 +318,13 @@ impl PostService {
                     .await?;
             }
         }
-        let post = self.get_post(state, &mut tx, *new_post_id, Some(author_id)).await?;
+        let post = self
+            .get_post(state, &mut tx, *new_post_id, Some(author_id))
+            .await?;
         tx.commit().await?;
+
+        ProfileService::update_post_counts(state, author_id, 1).await?;
+
         let Some(post) = post else {
             return Err(PostServiceError::PostNotFound);
         };
