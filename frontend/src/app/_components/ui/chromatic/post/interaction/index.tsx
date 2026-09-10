@@ -123,7 +123,7 @@ type InteractButtonTooltip = {
     children: React.ReactNode;
 } & React.HTMLAttributes<HTMLButtonElement>;
 
-function InteractButton({ name, children, ...props }: InteractButtonTooltip) {
+export function InteractButton({ name, children, ...props }: InteractButtonTooltip) {
     return (
         <Tooltip openDelayDuration={500}>
             <TooltipTrigger {...props}>{children}</TooltipTrigger>
