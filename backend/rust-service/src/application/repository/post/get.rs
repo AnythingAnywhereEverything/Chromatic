@@ -222,6 +222,7 @@ pub async fn feed(
 pub async fn user_posts(
     tx: &mut Transaction<'_, Postgres>,
     target_id: i64,
+    requester_id: Option<i64>,
     before: chrono::DateTime<chrono::Utc>,
     limit: i32,
 ) -> RepositoryResult<Vec<i64>> {
@@ -231,12 +232,54 @@ pub async fn user_posts(
             FROM media_posts p
             WHERE p.deleted_at IS NULL
                 AND p.user_id = $1
-                AND p.created_at < $2
+                AND p.created_at < $3
+                AND p.deleted_at IS NULL
+                AND (
+                        (
+                            $2 IS NULL
+                            AND p.visibility = 'everyone'::post_visibility
+                        )
+
+                        OR 
+
+                        (
+                            -- The post belongs to the current user
+                            $2 IS NOT NULL
+                            AND p.user_id = $2
+                        )
+
+                        OR
+
+                        (
+                            $2 IS NOT NULL
+                            AND (
+                                -- Everyone can see it
+                                p.visibility = 'everyone'::post_visibility
+
+                                OR
+
+                                -- Both users follow each other
+                                (
+                                    p.visibility = 'friend'::post_visibility
+                                    AND EXISTS (
+                                        SELECT 1
+                                        FROM user_follow uf1
+                                        JOIN user_follow uf2
+                                            ON uf1.follower_id = uf2.user_id
+                                        AND uf2.follower_id = uf1.user_id
+                                        WHERE uf1.user_id = p.user_id
+                                        AND uf2.user_id = $2
+                                    )
+                                )
+                            )
+                        )
+                    )
             ORDER BY p.created_at DESC
-            LIMIT $3;
+            LIMIT $4;
         "#,
     )
     .bind(target_id)
+    .bind(requester_id)
     .bind(before)
     .bind(limit)
     .fetch_all(tx.as_mut())

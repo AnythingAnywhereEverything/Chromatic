@@ -90,8 +90,8 @@ impl PostService {
             .set_ex(&cache_key, serde_json::to_string(&post)?, 60 * 20)
             .await?;
 
-
-        let updated_post = self.get_post(state, post_id, Some(author_id)).await?;
+        let mut tx = state.db_pool.begin().await?;
+        let updated_post = self.get_post(state, &mut tx, post_id, Some(author_id)).await?;
         if let Some(updated_post) = updated_post {
             Ok(updated_post)
         } else {
@@ -129,11 +129,11 @@ impl PostService {
         limit: i32,
     ) -> Result<Vec<PostRow>, PostServiceError> {
         let mut tx = state.db_pool.begin().await?;
-        let user_posts = post_repo::get::user_posts(&mut tx, target_id, before, limit).await?;
+        let user_posts = post_repo::get::user_posts(&mut tx, target_id, requester_id, before, limit).await?;
 
         let mut posts = Vec::new();
         for post_id in &user_posts {
-            if let Some(post) = self.get_post(state, *post_id, requester_id).await? {
+            if let Some(post) = self.get_post(state, &mut tx, *post_id, requester_id).await? {
                 posts.push(post);
             }
         }
@@ -153,7 +153,7 @@ impl PostService {
         let mut posts = Vec::new();
         for post_id in &feed {
             // Fetch each post by its ID
-            if let Some(post) = self.get_post(state, *post_id, Some(user_id)).await? {
+            if let Some(post) = self.get_post(state, &mut tx, *post_id, Some(user_id)).await? {
                 posts.push(post);
             }
         }
@@ -164,6 +164,7 @@ impl PostService {
     pub async fn get_post(
         &self,
         state: &AppState,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
         post_id: i64,
         user_id: Option<i64>,
     ) -> Result<Option<PostRow>, PostServiceError> {
@@ -179,7 +180,7 @@ impl PostService {
                 }
             }
             let post =
-                post_repo::get::base_post(&mut state.db_pool.begin().await?, post_id, user_id)
+                post_repo::get::base_post(tx, post_id, user_id)
                     .await?;
             // Set cache with expiration of 20 minutes (60 * 20 seconds)
             let _: () = redis
@@ -309,12 +310,11 @@ impl PostService {
                     .await?;
             }
         }
+        let post = self.get_post(state, &mut tx, *new_post_id, Some(author_id)).await?;
         tx.commit().await?;
-
-        let mut tx = state.db_pool.begin().await?;
-        // ! soon will be cache and remove from here.
-        let post = post_repo::find::get_post_by_id(&mut tx, *new_post_id, Some(author_id)).await?;
-
+        let Some(post) = post else {
+            return Err(PostServiceError::PostNotFound);
+        };
         Ok(post)
     }
 }

@@ -119,7 +119,10 @@ pub async fn get_info_post_handler(
         None => None,
     };
 
-    let post = PostService.get_post(&state, post_id, user_id).await?;
+    let mut tx = state.db_pool.begin().await?;
+
+    let post = PostService.get_post(&state, &mut tx, post_id, user_id).await?;
+    tx.commit().await?;
     if let Some(post) = post {
         Ok(Json(post))
     } else {
