@@ -1,12 +1,15 @@
+use deadpool_redis::PoolError;
 use thiserror::Error;
 
-use crate::application::service::errors::SnowflakeServiceError;
+use crate::application::service::errors::{
+    MediaServiceError, ProfileServiceError, SnowflakeServiceError, media_service::ExtractionError,
+};
 
 #[derive(Debug, Error)]
 pub enum PostServiceError {
-    #[error("Database error")]
-    Database,
-    
+    #[error("Nothing to update")]
+    NothingToUpdate,
+
     #[error("ID generation failed.")]
     IdGenerationFailed,
 
@@ -23,8 +26,8 @@ pub enum PostServiceError {
     CommentNotFoundOrUnauthorized,
 
     #[error("Post not found")]
-    InvalidPost,
-    
+    PostNotFound,
+
     #[error("Failed to update post")]
     UpdatePostFailed,
 
@@ -36,12 +39,27 @@ pub enum PostServiceError {
 
     #[error("Can't not find tag id")]
     TagIdNotFound,
-}
 
-impl From<sqlx::Error> for PostServiceError {
-    fn from(_: sqlx::Error) -> Self {
-        PostServiceError::Database
-    }
+    #[error(transparent)]
+    MediaServiceError(#[from] MediaServiceError),
+
+    #[error(transparent)]
+    MediaExtractorError(#[from] ExtractionError),
+
+    #[error(transparent)]
+    ProfileServiceError(#[from] ProfileServiceError),
+
+    #[error(transparent)]
+    RedisPoolError(#[from] PoolError),
+
+    #[error(transparent)]
+    RedisError(#[from] redis::RedisError),
+
+    #[error(transparent)]
+    SerdeError(#[from] serde_json::Error),
+
+    #[error(transparent)]
+    Database(#[from] sqlx::Error),
 }
 
 impl From<SnowflakeServiceError> for PostServiceError {
