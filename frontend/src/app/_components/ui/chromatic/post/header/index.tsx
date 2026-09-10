@@ -7,11 +7,9 @@ interface PostHeaderProps {
         avatar_thumbhash: string | null;
     };
     created_at: string;
-    postId: string;
     visibility: string;
     onDelete: () => void;
 }
-import { useRef } from "react";
 import { useUser } from "@/hooks/useUser";
 import {
     formatSocialMediaDate,
@@ -28,7 +26,6 @@ import style from "./style.module.scss";
 import { BsThreeDots } from "react-icons/bs";
 import { PostAvatar } from "./avatar";
 import Link from "next/link";
-import { deletePost } from "@/api/post/getFeed";
 import {
     Tooltip,
     TooltipArrow,
@@ -39,21 +36,13 @@ import { FaGlobeAmericas, FaLock, FaUserFriends } from "react-icons/fa";
 
 const PostHeader: React.FC<PostHeaderProps> = ({
     author,
-    created_at, postId,
+    created_at, 
     visibility,
     onDelete,
 }) => {
     const currentUserId = useUser().data?.id;
     const hasDisplayName = author.display_name || null;
 
-    const handleDeletePost = async () => {
-        try {
-            await deletePost(postId);
-            onDelete();
-        } catch (error) {
-            console.error("Failed to delete post:", error);
-        }
-    };
 
     return (
         <header className={style["header"]}>
@@ -142,7 +131,7 @@ const PostHeader: React.FC<PostHeaderProps> = ({
                             <DropdownItem>
                                 <button 
                                 type="button" 
-                                onClick={handleDeletePost}>
+                                onClick={onDelete}>
                                     Delete Post
                                 </button>
                             </DropdownItem>
