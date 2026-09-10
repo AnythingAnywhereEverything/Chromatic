@@ -1,4 +1,5 @@
-import { getCommentsOnPost, getFocusedPost } from "@/api/post/getFeed";
+import { getCommentsOnPost } from "@/api/post/comments";
+import { getFocusedPost } from "@/api/post/getFeed";
 import PostContentPage from "./body";
 import type { Metadata } from "next";
 import style from "./content.module.scss"
@@ -56,7 +57,7 @@ export default async function PostPage({
     params: Promise<{ post: string }>;
 }) {
     return (
-        <div className={style["content-layout"]}>
+        <div className={style["layout"]}>
             <div className={style["left-layout"]}>
             <PostContentPage params={await params} />
             </div>

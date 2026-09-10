@@ -1,23 +1,20 @@
 "use client";
 
-import {
-    commentProps,
-    getFocusedPost,
-    PostProps,
-} from "@/api/post/getFeed";
+import { getFocusedPost, PostProps } from "@/api/post/getFeed";
+import type { commentProps } from "@/api/post/comments";
 import { getCacheUserId } from "@/handler/token_handler";
 import { useEffect, useRef, useState } from "react";
 import { useUser } from "@/hooks/useUser";
 import style from "./content.module.scss";
 import { IoArrowBackCircleOutline, IoBookmarkOutline } from "react-icons/io5";
-import PostHeader from "./header";
 import { MediaGroup } from "@/app/_components/ui/chromatic/post/mediagroup";
 import { TogglePostLike } from "@/api/post/like";
 import { GoComment } from "react-icons/go";
 import { LuThumbsUp } from "react-icons/lu";
-import { DialogSharePost } from "@/app/_components/ui/chromatic/post";
 import BottomPostInteraction from "@/app/_components/ui/chromatic/post/interaction";
 import CommentSection from "./comment";
+import PostHeader from "@/app/_components/ui/chromatic/post/header";
+import { FaArrowLeft } from "react-icons/fa";
 
 function PostContentSkeleton() {
     return <div className={style["skeleton-container"]}>loading</div>;
@@ -56,55 +53,77 @@ function PostContentPage({ params }: { params: { post: string } }) {
 
     console.log(post);
     return (
-        <article className={style["layout"]} key={post.post_id}>
-            {post ? (
-                <section className={style["main-post-container"]}>
-                    {/*  */}
-                    <section className={style["back-button"]}>
-                        <button
-                            type="button"
-                            style={{ cursor: "pointer" }}
-                            className={style["leave-btn"]}
-                        >
-                            <IoArrowBackCircleOutline size={36} />
-                        </button>
-                        <h2>Post</h2>
-                    </section>
-                    <PostHeader {...post} />
-                    <section className={style["main"]}>
-                        <div className={style["context"]}>
-                            <span style={{ fontSize: "var(--text-small)" }}>
+        <>
+            <section className={style["back-button"]}>
+                <button
+                    type="button"
+                    style={{ cursor: "pointer" }}
+                    className={style["leave-btn"]}
+                >
+                    <FaArrowLeft size={18} />
+                </button>
+                <h2>Post</h2>
+            </section>
+
+            <article key={post.post_id}>
+                {post ? (
+                    <section>
+                        <div className={style["main-post-container"]}>
+                            <PostHeader
+                                author={{
+                                    id: post.author.id,
+                                    username: post.author.username,
+                                    display_name: post.author.display_name,
+                                    avatar: post.author.avatar,
+                                    avatar_thumbhash:
+                                        post.author.avatar_thumbhash,
+                                }}
+                                created_at={post.created_at}
+                                visibility={post.visibility}
+                                onDelete={function (): void {
+                                    throw new Error(
+                                        "Function not implemented.",
+                                    );
+                                }}
+                            />
+
+                            <span className={style["context"]}>
                                 {post.content}
                             </span>
-                        </div>
-                        <article className={style["media"]}>
-                            {post.has_attachment && (
-                                <MediaGroup media={post.attachments} />
-                            )}
-                            <ul className={style["subject-tag"]}>
-                                {post.tag && post.tag.map((item) => {
-                                    return (
-                                        <li
-                                            key={item.tag_id}
-                                            style={{
-                                                backgroundColor: `${item.tag_color}`,
-                                            }}
-                                        >
-                                            <p>{item.tag_name}</p>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        </article>
-                        <BottomPostInteraction {...post} username={post.author.username} />
+                            <article className={style["media"]}>
+                                {post.has_attachment && (
+                                    <MediaGroup media={post.attachments} />
+                                )}
+                                <ul className={style["subject-tag"]}>
+                                    {post.tag &&
+                                        post.tag.map((item) => {
+                                            return (
+                                                <li
+                                                    key={item.tag_id}
+                                                    style={{
+                                                        backgroundColor: `${item.tag_color}`,
+                                                    }}
+                                                >
+                                                    <p>{item.tag_name}</p>
+                                                </li>
+                                            );
+                                        })
+                                    }
+                                </ul>
+                            </article>
 
-                        <CommentSection postId={params.post} />
+                        <BottomPostInteraction
+                            {...post}
+                            username={post.author.username}
+                        />
+                        </div>
+                        <CommentSection postId={post.post_id} />
                     </section>
-                </section>
-            ) : (
-                <PostContentSkeleton />
-            )}
-        </article>
+                ) : (
+                    <PostContentSkeleton />
+                )}
+            </article>
+        </>
     );
 }
 
