@@ -63,7 +63,7 @@ export default function PostGroup({
             // * Use the oldest post as the cursor for the next request.
             const oldestPost = post[post.length - 1];
 
-            setBeforeDate(new Date(`${oldestPost.created_at}Z`));
+            setBeforeDate(new Date(`${oldestPost.created_at}`));
 
             console.log("Oldest post date:", oldestPost.created_at);
 
