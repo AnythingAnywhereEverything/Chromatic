@@ -53,21 +53,6 @@ export interface PostProps {
     updated_at: string;
 }
 
-export interface commentProps {
-    comment_id: string;
-    // post_id: string // If still need to used
-    author: Author; // commenter
-
-    content: string;
-    total_likes: number;
-
-    has_attachment: boolean;
-    attachments: Media[];
-
-    created_at: string;
-    updated_at: string;
-}
-
 interface PostTag {
     tag_id: string;
     tag_name: string;
@@ -91,23 +76,4 @@ export const getFocusedPost = async (postId: string): Promise<PostProps> => {
     if (!res.ok) throw new Error("Failed to get post data");
     const data = await res.json();
     return data;
-};
-
-export const getCommentsOnPost = async (
-    postId: string,
-): Promise<commentProps[]> => {
-    const res = await fetchWithOptionAuth(`v2/posts/${postId}/comments`);
-    if (!res.ok) throw new Error("Failed to get comments data");
-    const data = await res.json();
-    return data;
-};
-
-export const deletePost = async (postId: string): Promise<void> => {
-    const res = await fetchWithAuth(`v2/posts/${postId}`, {
-        method: "DELETE",
-    });
-
-    if (!res.ok) {
-        throw new Error(`Failed to delete post: ${res.status}`);
-    }
 };
