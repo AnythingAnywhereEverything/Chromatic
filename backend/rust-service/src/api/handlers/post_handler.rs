@@ -2,35 +2,17 @@ use axum::{
     Json,
     extract::{Multipart, Path, Query, State},
 };
-use multipart_derive::Multipart;
 
 use crate::{
-    api::{
-        APIError,
-        RequestAuth,
-        version,
-    },
+    api::{APIError, RequestAuth, version},
     application::{
-        repository::{
-            media::{
-                self as media_repo,
-                row::{MediaType, ProcessingState},
-            },
-            post::{
-                self as post_repo,
-                row::PostRow,
-            },
+        repository::post::{
+            self as post_repo,
+            row::{PostRow, PostVisibility},
         },
         service::{
             errors::{AuthServiceError, PostServiceError},
-            media::{
-                self,
-                extractor::{ExtractorFileOptions, ValidationOptions},
-                model::{FileContainer, container::ContainerConfig},
-                processor::types::{
-                    ImageProcessorType, MediaProcessorOptions, ResizeStyle, VideoPostProcessorType,
-                },
-            },
+            post_service::PostService,
         },
         state::SharedState,
     },
@@ -41,73 +23,6 @@ pub enum PostStatus {
     Pending,
     Active,
     InActive,
-}
-#[derive(serde::Deserialize, sqlx::Type, Debug, serde::Serialize)]
-#[sqlx(type_name = "post_visibility", rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
-pub enum PostVisibility {
-    Everyone,
-    Friend,
-    Private,
-}
-
-#[derive(serde::Deserialize, serde::Serialize, sqlx::Type, Debug)]
-#[sqlx(type_name = "tag_attachment_types", rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
-pub enum TagTarget {
-    User,
-    Post,
-    Guild,
-}
-
-impl ToString for TagTarget {
-    fn to_string(&self) -> String {
-        match self {
-            TagTarget::User => "user".to_string(),
-            TagTarget::Post => "post".to_string(),
-            TagTarget::Guild => "guild".to_string(),
-        }
-    }
-}
-
-impl ToString for PostVisibility {
-    fn to_string(&self) -> String {
-        match self {
-            PostVisibility::Everyone => "everyone".to_string(),
-            PostVisibility::Friend => "friend".to_string(),
-            PostVisibility::Private => "private".to_string(),
-        }
-    }
-}
-
-#[derive(serde::Deserialize, sqlx::Type, Debug)]
-#[sqlx(rename_all = "lowercase")]
-pub enum MediaTypeAttachment {
-    Post,
-    Comment,
-    Message,
-    Community,
-}
-
-impl MediaTypeAttachment {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Self::Post => "post",
-            Self::Comment => "comment",
-            Self::Message => "message",
-            Self::Community => "community",
-        }
-    }
-}
-
-#[derive(serde::Deserialize, Debug, Multipart)]
-pub struct CreatePostRequest {
-    pub content: Option<String>,
-    #[multipart]
-    pub media_src: Option<FileContainer>,
-    pub repost_from: Option<i64>,
-    pub visibility: PostVisibility,
-    pub media_tags: Option<Vec<i64>>,
 }
 
 #[derive(serde::Deserialize)]
@@ -136,7 +51,6 @@ impl PostVisibility {
 #[derive(serde::Deserialize, Debug)]
 pub struct UserPostQuery {
     pub limit: Option<i32>,
-    // example frontend query ?=before=2024-06-05T12:00:00
     pub before: chrono::DateTime<chrono::Utc>,
 }
 
@@ -154,16 +68,15 @@ pub async fn get_user_posts_handler(
         None => None,
     };
 
-    let mut tx = state.db_pool.begin().await?;
-
-    let posts = post_repo::find::get_user_posts(
-        &mut tx,
-        target_id,
-        user_id.unwrap_or_default(),
-        query.before,
-        query.limit.unwrap_or(8) as i32,
-    )
-    .await?;
+    let posts = PostService
+        .get_user_posts(
+            &state,
+            target_id,
+            user_id,
+            query.before,
+            query.limit.unwrap_or(8) as i32,
+        )
+        .await?;
 
     Ok(Json(posts))
 }
@@ -179,19 +92,18 @@ pub async fn get_feed_post_handler(
 
     let user_id = match req_auth.user {
         Some(user) => Some(user.user_id),
-        None => None,
+        None => return Err(AuthServiceError::InvalidCredentials.into()),
     };
 
-    let mut tx = state.db_pool.begin().await?;
+    let feed = PostService
+        .get_feed(
+            &state,
+            user_id.unwrap(),
+            query.limit.unwrap_or(8) as i32,
+        )
+        .await?;
 
-    let all_post = post_repo::find::get_feed_for_user(
-        &mut tx,
-        user_id.unwrap_or_default(),
-        query.limit.unwrap_or(8) as i32,
-    )
-    .await?;
-
-    Ok(Json(all_post))
+    Ok(Json(feed))
 }
 
 pub async fn get_info_post_handler(
@@ -207,11 +119,12 @@ pub async fn get_info_post_handler(
         None => None,
     };
 
-    let mut tx = state.db_pool.begin().await?;
-
-    let post = post_repo::find::get_post_by_id(&mut tx, post_id, user_id).await?;
-
-    Ok(Json(post))
+    let post = PostService.get_post(&state, post_id, user_id).await?;
+    if let Some(post) = post {
+        Ok(Json(post))
+    } else {
+        Err(PostServiceError::PostNotFound.into())
+    }
 }
 
 #[axum::debug_handler]
@@ -229,103 +142,7 @@ pub async fn create_new_post_handler(
         None => return Err(AuthServiceError::InvalidCredentials.into()),
     };
 
-    let ext_opts = ExtractorFileOptions {
-        max_size: Some(512_000_000),
-        max_files: Some(5),
-        validation: Some(
-            ValidationOptions::new_whitelist()
-                .add_type(media::inspector::FileType::Category(MediaType::Image))
-                .add_type(media::inspector::FileType::Category(MediaType::Video)),
-        ),
-        field_options: None,
-    };
-
-    let mut extracted = state
-        .multi_extractor
-        .extract::<CreatePostRequest>(request, Some(ext_opts))
-        .await?;
-
-    let new_post_id = &state.snowflake_generator.generate_id()?;
-
-    let mut tx = state.db_pool.begin().await?;
-
-    let content = extracted.content;
-
-    if let Some(content) = content.as_ref() {
-        if content.len() > 2500 {
-            return Err(PostServiceError::PostTextContentTooLarge.into());
-        }
-    }
-
-    let content = content.as_ref();
-
-    if let Some(container) = &mut extracted.media_src {
-        container
-            .set_uploader_id(user_id)
-            .set_target_path(format!("posts/{}", new_post_id))
-            .set_config(
-                ContainerConfig::new()
-                    .set_generate_thumbhash(true)
-                    .set_processing_options(
-                        MediaProcessorOptions::new()
-                            .set_fflags_video_gpu_accel(true)
-                            .set_fflags_video_thumbnail(true)
-                            .set_image_processors(vec![ImageProcessorType::Resize {
-                                style: ResizeStyle::Absolute {
-                                    width: 1024,
-                                    height: 1024,
-                                },
-                                upscale: false,
-                            }])
-                            .set_post_video_processors(vec![VideoPostProcessorType::HLS {
-                                segment_time: 10,
-                            }]),
-                    ),
-            );
-
-        state.media_service.save_media(&state, container).await?;
-
-        for media in container.resolve_files() {
-            // set to complete the media processing
-            media_repo::update::processing_state(&mut tx, &media.id, &ProcessingState::Completed)
-                .await?;
-            post_repo::post::add_has_attachment(
-                &mut tx,
-                *new_post_id,
-                media.id,
-                MediaTypeAttachment::Post.as_str().to_string(),
-            )
-            .await?;
-        }
-    }
-
-    let post_tags = extracted.media_tags.unwrap_or_default();
-
-    let _ = post_repo::post::create_post(
-        &mut tx,
-        new_post_id,
-        user_id,
-        content.map(|x| x.as_str()),
-        extracted.repost_from,
-        !extracted.media_src.is_none(),
-        extracted.repost_from.is_some(),
-        extracted.visibility,
-    )
-    .await?;
-
-    if !post_tags.is_empty() {
-        tracing::trace!("Entering add tags stage");
-        for tag in post_tags {
-            post_repo::post::add_tags_target(&mut tx, *new_post_id, TagTarget::Post, tag).await?;
-        }
-    }
-    tx.commit().await?;
-
-    tracing::trace!("Committing transaction and fetching post by ID");
-
-    let mut tx = state.db_pool.begin().await?;
-    let post = post_repo::find::get_post_by_id(&mut tx, *new_post_id, Some(user_id)).await?;
-
+    let post = PostService.create_post(&state, user_id, request).await?;
     Ok(Json(post))
 }
 
@@ -343,69 +160,7 @@ pub async fn update_post_handler(
         None => return Err(AuthServiceError::InvalidCredentials.into()),
     };
 
-    let extracted = state
-        .multi_extractor
-        .extract::<CreatePostRequest>(media_src, None)
-        .await?;
-
-    if extracted.content.as_ref().unwrap_or(&String::new()).len() > 2500 {
-        return Err(PostServiceError::PostTextContentTooLarge.into());
-    }
-
-    tracing::debug!("Extracted payload: {:#?}", extracted);
-
-    let mut tx = state.db_pool.begin().await?;
-
-    let old_post = post_repo::find::get_post_by_id(&mut tx, post_id, Some(user_id)).await?;
-    let old_tags = post_repo::post::get_tag_attachments(&mut tx, post_id).await?;
-
-    if let Some(new_tags) = extracted.media_tags {
-        let old_tag_ids: std::collections::HashSet<i64> = old_tags
-            .iter()
-            .filter_map(|tag| tag.tag_id.parse::<i64>().ok())
-            .collect();
-
-        let new_tag_ids: std::collections::HashSet<i64> = new_tags.iter().copied().collect();
-
-        // * Delete old tags that are no longer present.
-        for old_tag in &old_tags {
-            let old_tag_id = old_tag
-                .tag_id
-                .parse::<i64>()
-                .map_err(|_| PostServiceError::TagIdNotFound)?;
-
-            if !new_tag_ids.contains(&old_tag_id) {
-                post_repo::post::delete_tag_attachment(&mut tx, post_id, old_tag_id).await?;
-            }
-        }
-
-        // * Add new tags that weren't already attached.
-        for tag_id in new_tags {
-            if !old_tag_ids.contains(&tag_id) {
-                post_repo::post::add_tags_target(&mut tx, post_id, TagTarget::Post, tag_id).await?;
-            }
-        }
-    }
-    tracing::trace!("Old post: {:?}", old_post);
-
-    // Properly compute the content to pass to the repository: prefer a new
-    // content when provided and different, otherwise keep the old content
-    // (or None if the old content was None).
-    let content: Option<String> = match extracted.content {
-        Some(new_content) => {
-            if Some(new_content.clone()) != old_post.content {
-                Some(new_content)
-            } else {
-                old_post.content.clone()
-            }
-        }
-        None => old_post.content.clone(),
-    };
-
-    let _ = post_repo::post::update_post(&mut tx, post_id, user_id, content, extracted.visibility)
-        .await?;
-
-    tx.commit().await?;
+    PostService.update_post(&state, post_id, user_id, media_src).await?;
 
     Ok(Json(()))
 }
