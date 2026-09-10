@@ -6,7 +6,7 @@ use crate::application::repository::user::row::{UserProfileRow, UserProfileMinim
 pub struct UserDTO {
     pub id: String, // Use String to avoid issues with JavaScript number precision
     pub email: Option<String>,
-    pub username: Option<String>,
+    pub username: String,
     pub display_name: Option<String>,
     pub bio: Option<String>,
     pub avatar: Option<String>, // hash name
@@ -36,7 +36,7 @@ impl Into<UserDTO> for UserProfileMinimalRow {
 #[derive(Debug, Serialize)]
 pub struct PublicUserProfileDTO {
     pub id: String,
-    pub username: Option<String>,
+    pub username: String,
     pub display_name: Option<String>,
     pub bio: Option<String>,
     pub quote: Option<String>,
@@ -56,7 +56,7 @@ pub struct PublicUserProfileDTO {
 impl Into<PublicUserProfileDTO> for UserProfileRow {
     fn into(self) -> PublicUserProfileDTO {
         PublicUserProfileDTO {
-            id: self.id,
+            id: self.id.to_string(),
             username: self.username,
             display_name: self.display_name,
             bio: self.bio,
