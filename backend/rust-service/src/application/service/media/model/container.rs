@@ -304,6 +304,12 @@ impl FileContainer {
         Ok(())
     }
 
+    /// Special case if need retain datas.
+    pub async fn abort_retain(&mut self, storage: Arc<dyn TempStore>) -> Result<(), ContainerError> {
+        storage.delete(&self.relative_path).await?;
+        Ok(())
+    }
+
     pub fn length(&self) -> usize {
         self.files.len()
     }

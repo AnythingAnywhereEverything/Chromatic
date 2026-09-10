@@ -180,6 +180,7 @@ impl MediaService {
                         
                         resolved_files.id = conflict_id;
                         tracing::info!("Conflict detected for resolved file: {:#?}", resolved_files);
+                        container.abort_retain(self.temporary_store.clone()).await?;
 
                         // ! hardcode specific usecase.
                         return Ok(());

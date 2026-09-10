@@ -29,13 +29,17 @@ impl ProfileService {
         requester: Option<i64>,
     ) -> Result<UserProfileRow, ProfileServiceError> {
         let mut conn = state.redis.get().await?;
-        let key = format!("profile:{}", username);
+        let username_key = format!("profile:username:{}", username);
 
-        if let Some(value) = conn.get(&key).await? {
-            // update the expiration time for the cached profile
-            conn.expire(&key, 3600).await?;
-            let profile: UserProfileRow = serde_json::from_str(&value)?;
-            return Ok(profile);
+        if let Some(id_key) = conn.get(&username_key).await? {
+            if let Some(value) = conn.get(&id_key).await? {
+                conn.expire(&username_key, 3600).await?;
+                conn.expire(&id_key, 3600).await?;
+                let profile: UserProfileRow = serde_json::from_str(&value)?;
+                return Ok(profile);
+            } else {
+                conn.del(&username_key).await?;
+            }
         }
 
         let mut tx = state.db_pool.begin().await?;
@@ -43,10 +47,34 @@ impl ProfileService {
             user_repo::find::profile_full_by_username(&mut tx, &username, requester).await?;
         tx.commit().await?;
         // cache the profile in Redis
+        let id_key = format!("profile:id:{}", profile.id);
         let value = serde_json::to_string(&profile)?;
-        let _: () = conn.set_ex(key, value, 3600).await?;
+        let _: () = conn.set_ex(&username_key, &id_key, 3600).await?;
+        let _: () = conn.set_ex(&id_key, &value, 3600).await?;
 
         Ok(profile)
+    }
+
+    pub async fn update_post_counts(
+        state: &AppState,
+        user_id: i64,
+        increment: i32,
+    ) -> Result<(), ProfileServiceError> {
+        let mut tx = state.db_pool.begin().await?;
+        user_repo::update::user_post_counts(&mut tx, user_id, increment).await?;
+        tx.commit().await?;
+
+        // update cache in Redis
+        let mut conn = state.redis.get().await?;
+        let key = format!("profile:{}", user_id);
+        if let Some(value) = conn.get(&key).await? {
+            let mut profile: UserProfileRow = serde_json::from_str(&value)?;
+            profile.posts_count = Some(profile.posts_count.unwrap_or(0) + increment);
+            let value = serde_json::to_string(&profile)?;
+            let _: () = conn.set_ex(key, value, 3600).await?;
+        }
+
+        Ok(())
     }
 
     pub async fn get_profile_with_opts(
@@ -190,8 +218,9 @@ impl ProfileService {
                     user_repo::update::banner_media_id(&mut tx, user_id, Some(media.id)).await?
                 };
                 if let Some(media_id) = media_to_delete {
-                    let path =
+                    let object =
                         media_repo::delete::hard_delete_media_data(&mut tx, media_id).await?;
+                    let path = format!("{}/{}", object.storage_key, object.name);
                     if path.contains("a_") {
                         let animated_path = path.replace(".png", ".webp");
                         state.persistent_store.delete(&animated_path).await?;
@@ -209,8 +238,8 @@ impl ProfileService {
         // update cache
         let mut conn = state.redis.get().await?;
         let cache_key = format!(
-            "profile:{}",
-            &profile.username.clone().unwrap_or_else(|| "".to_string())
+            "profile:id:{}",
+            &profile.id
         );
         let cache_value = serde_json::to_string(&profile)?;
         conn.set_ex(&cache_key, &cache_value, 3600).await?;
