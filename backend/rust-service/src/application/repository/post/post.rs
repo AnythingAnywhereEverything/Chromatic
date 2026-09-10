@@ -1,16 +1,10 @@
 use sqlx::{Postgres, Transaction};
 
-use crate::{
-    api::handlers::post_handler::{PostVisibility, TagTarget}, application::{
-        repository::{
-            post::row::{
-                CreatePostRow, HasAttachmentRow, PostLikesRow, PostRow, TagAttachmentFull,
-                TagAttachmentRow, TotalLikesRow,
-            },
-        },
-        service::errors::PostServiceError,
-    },
-};
+use crate::application::{
+        repository::post::row::{
+                CreatePostRow, HasAttachmentRow, PostLikesRow, PostRow, PostVisibility, TagAttachmentFull, TagAttachmentRow, TagTarget, TotalLikesRow,
+            }, service::errors::PostServiceError,
+    };
 
 pub async fn get_feed_public(
     tx: &mut Transaction<'_, sqlx::Postgres>,
@@ -252,7 +246,7 @@ pub async fn create_post(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     id: &i64,
     user_id: i64,
-    content: Option<&str>,
+    content: Option<String>,
     repost_from: Option<i64>,
     has_attachment: bool,
     is_repost: bool,
