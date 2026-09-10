@@ -1,6 +1,6 @@
 import { fetchWithAuth } from "@/handler/token_handler";
 
-export interface LikePostResponse {
+export interface LikeResponse {
     id: string;
     total_liked: number;
 }
@@ -8,7 +8,7 @@ export interface LikePostResponse {
 export const TogglePostLike = async (
     id: string,
     is_like: boolean
-): Promise<LikePostResponse> => {
+): Promise<LikeResponse> => {
 
     const res = await fetchWithAuth(`v2/posts/${id}/like`, {
         method: "POST",
@@ -24,7 +24,7 @@ export const TogglePostLike = async (
         throw new Error(`Failed to toggle post like: ${res.status}`);
     }
 
-    const data: LikePostResponse = await res.json();
+    const data: LikeResponse = await res.json();
 
     return data;
 };
