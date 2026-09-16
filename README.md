@@ -1,6 +1,9 @@
 # Chromatic
 Chromatic is a social media platform made for students (academically), though originally intended for a broader audience. The project is built using a polyglot approach, leveraging multiple programming languages and frameworks to create a scalable application.
 
+## Disclaimer
+This project is for educational purposes only and will not be developed further after the project was presented.
+
 ## Project Structure
 The project is organized into the following directories:
 - /backend: Contains the backend code for the project, including implementations in Rust, Elixir, and Python.
