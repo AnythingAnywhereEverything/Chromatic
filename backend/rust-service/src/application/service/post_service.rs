@@ -8,13 +8,10 @@ use crate::application::{
         media::{
             self as media_repo,
             row::{MediaType, ProcessingState},
+        }, post::{
+            self as post_repo, row::{CommentRow, MediaTypeAttachment, PostRow, PostVisibility, TagTarget},
         },
-        post::{
-            self as post_repo,
-            row::{MediaTypeAttachment, PostRow, PostVisibility, TagTarget},
-        },
-    },
-    service::{
+    }, service::{
         errors::PostServiceError,
         media::{
             extractor::{ExtractorFileOptions, ValidationOptions},
@@ -25,8 +22,7 @@ use crate::application::{
             },
         },
         profile_service::ProfileService,
-    },
-    state::AppState,
+    }, state::AppState,
 };
 
 #[derive(serde::Deserialize, Debug, Multipart)]
@@ -50,6 +46,56 @@ pub struct UpdatePostRequest {
 pub struct PostService;
 
 impl PostService {
+    pub async fn get_comments(
+        &self,
+        state: &AppState,
+        post_id: i64,
+        requester_id: i64,
+        before: chrono::DateTime<chrono::Utc>,
+        limit: i64,
+    ) -> Result<Vec<CommentRow>, PostServiceError> {
+        let mut tx = state.db_pool.begin().await?;
+        let comment_ids: Vec<i64> = post_repo::get::post_comment_ids(&mut tx, post_id, requester_id, before, limit).await?;
+
+        let comments = {
+            let mut comments = Vec::new();
+            for comment_id in comment_ids {
+                if let Some(comment) = self.get_comment(state, &mut tx, comment_id, requester_id).await.ok() {
+                    comments.push(comment);
+                }
+            }
+            comments
+        };
+
+        Ok(comments)
+    }
+
+    pub async fn get_comment(
+        &self,
+        state: &AppState,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        comment_id: i64,
+        requester_id: i64,
+    ) -> Result<CommentRow, PostServiceError> {
+        let comment = post_repo::get::base_comment(tx, comment_id, requester_id).await?;        
+
+        // add author information to the comment
+        let author = ProfileService::get_profile_by_id(state, comment.author_id, Some(requester_id)).await?;
+        let comment = CommentRow {
+            id: comment.id,
+            author: Json(author),
+            total_likes: comment.total_likes,
+            is_liked: comment.is_liked,
+            content: comment.content,
+            has_attachment: comment.has_attachment,
+            created_at: comment.created_at,
+            updated_at: comment.updated_at,
+            attachments: comment.attachments,
+        };
+
+        Ok(comment)
+    }
+
     pub async fn update_post(
         &self,
         state: &AppState,

@@ -7,6 +7,9 @@ use crate::application::service::errors::{
 
 #[derive(Debug, Error)]
 pub enum PostServiceError {
+    #[error("Comment not found")]
+    CommentNotFound,
+
     #[error("Nothing to update")]
     NothingToUpdate,
 

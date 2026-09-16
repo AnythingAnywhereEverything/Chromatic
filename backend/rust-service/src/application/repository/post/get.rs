@@ -1,6 +1,6 @@
 use sqlx::{Postgres, Transaction};
 
-use crate::application::repository::{RepositoryResult, post::row::{FeedRow, PostBaseRow, UserPostsRow}};
+use crate::application::repository::{RepositoryResult, post::{row::{CommentBaseRow, CommentIdsRow, FeedRow, PostBaseRow, UserPostsRow}}};
 
 pub async fn base_post(
     tx: &mut Transaction<'_, Postgres>,
@@ -285,4 +285,143 @@ pub async fn user_posts(
     .fetch_all(tx.as_mut())
     .await?;
     Ok(posts.into_iter().map(|user_posts_row| user_posts_row.post_id).collect())
+}
+
+pub async fn base_comment(
+    tx: &mut Transaction<'_, Postgres>,
+    comment_id: i64,
+    requester_id: i64,
+) -> RepositoryResult<CommentBaseRow> {
+    let comment = sqlx::query_as::<_, CommentBaseRow>(
+        r#"
+        SELECT
+            c.user_id as author_id,
+            c.id::TEXT as id,
+            c.post_id::TEXT as post_id,
+            c.content,
+            (
+                EXISTS (
+                    SELECT 1
+                    FROM media_likes ml
+                    WHERE ml.target_id = c.id
+                      AND ml.target_type = 'comment'
+                      AND ml.user_id = $2
+                      AND ml.is_like = TRUE
+                )
+            ) AS is_liked,
+            c.total_likes,
+            c.has_attachment,
+            COALESCE(
+                (
+                    SELECT jsonb_agg(
+                        jsonb_build_object(
+                            'id', gma.id::text,
+                            'file_type', gma.file_type,
+                            'processing_state', gma.processing_state,
+                            'post_processing_state', gma.post_processing_state,
+                            'flags', gma.flags::text,
+
+                            'media_objects', gma.media_objects,
+                            'media_object_metadata', gma.media_object_metadata,
+
+                            'media_hls', gma.media_hls,
+                            'media_hls_playlists', gma.media_hls_playlists,
+
+                            'created_at', gma.created_at,
+                            'updated_at', gma.updated_at
+                        )
+                        ORDER BY gma.id
+                    )
+                    FROM media_attachments ma
+                    JOIN get_media_by_id_without_playlists(ma.media_id) gma
+                        ON gma.id = ma.media_id
+                    WHERE ma.target_id = c.id
+                      AND gma.deleted_at IS NULL
+                ),
+                '[]'::jsonb
+            ) AS attachments,
+            c.created_at,
+            c.updated_at
+        FROM media_comments c
+        WHERE c.id = $1
+          AND c.deleted_at IS NULL
+          AND c.status != 'inactive'
+        "#,
+    )
+    .bind(comment_id)
+    .bind(requester_id)
+    .fetch_one(tx.as_mut())
+    .await?;
+    Ok(comment)
+}
+
+pub async fn post_comment_ids(
+    tx: &mut Transaction<'_, Postgres>,
+    post_id: i64,
+    requester_id: i64,
+    before: chrono::DateTime<chrono::Utc>,
+    limit: i64,
+) -> RepositoryResult<Vec<i64>> {
+    let comments = sqlx::query_as::<_, CommentIdsRow>(
+        r#"
+            SELECT c.id AS comment_id
+            FROM media_comments c
+            JOIN media_posts p
+                ON p.id = c.post_id
+            WHERE c.post_id = $1
+                AND c.deleted_at IS NULL
+                AND p.id = c.post_id
+                AND p.deleted_at IS NULL
+                AND (
+                        (
+                            $2 IS NULL
+                            AND p.visibility = 'everyone'::post_visibility
+                        )
+
+                        OR 
+
+                        (
+                            -- The post belongs to the current user
+                            $2 IS NOT NULL
+                            AND p.user_id = $2
+                        )
+
+                        OR
+
+                        (
+                            $2 IS NOT NULL
+                            AND (
+                                -- Everyone can see it
+                                p.visibility = 'everyone'::post_visibility
+
+                                OR
+
+                                -- Both users follow each other
+                                (
+                                    p.visibility = 'friend'::post_visibility
+                                    AND EXISTS (
+                                        SELECT 1
+                                        FROM user_follow uf1
+                                        JOIN user_follow uf2
+                                            ON uf1.follower_id = uf2.user_id
+                                        AND uf2.follower_id = uf1.user_id
+                                        WHERE uf1.user_id = p.user_id
+                                        AND uf2.user_id = $2
+                                    )
+                                )
+                            )
+                        )
+                    )
+            AND ($3 IS NULL OR c.created_at < $3)
+            ORDER BY c.created_at DESC
+            LIMIT $4;
+        "#,
+    )
+    .bind(post_id)
+    .bind(requester_id)
+    .bind(before)
+    .bind(limit)
+    .fetch_all(tx.as_mut())
+    .await?;
+    Ok(comments.into_iter().map(|comment_row| comment_row.comment_id).collect())
 }
