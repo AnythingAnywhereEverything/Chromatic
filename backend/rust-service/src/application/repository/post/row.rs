@@ -46,6 +46,11 @@ pub struct UserPostsRow {
     pub post_id: i64,
 }
 
+#[derive(sqlx::FromRow, Debug, Deserialize, Serialize)]
+pub struct CommentIdsRow {
+    pub comment_id: i64,
+}
+
 /// Full post data, after caching
 #[derive(sqlx::FromRow, Debug, Deserialize, Serialize)]
 pub struct PostRow {
@@ -94,9 +99,7 @@ pub struct RepostedPostRow {
 
 #[derive(sqlx::FromRow, Debug, Deserialize, Serialize)]
 pub struct CommentRow {
-    pub id: String,
-    pub post_id: String,
-    
+    pub id: String,    
     pub author: Json<UserProfileRow>,
     pub total_likes: i32,
     pub is_liked: bool,
@@ -106,7 +109,20 @@ pub struct CommentRow {
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
     pub attachments: Json<Vec<Attachment>>,
+}
 
+#[derive(sqlx::FromRow, Debug, Deserialize, Serialize)]
+pub struct CommentBaseRow {
+    pub id: String,
+    pub author_id: i64,
+    pub total_likes: i32,
+    pub is_liked: bool,
+
+    pub content: Option<String>,
+    pub has_attachment: bool,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub attachments: Json<Vec<Attachment>>,
 }
 
 #[derive(sqlx::FromRow, Debug, Deserialize)]
