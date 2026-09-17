@@ -11,12 +11,11 @@ use crate::{
     application::{
         repository::{
             media::{
-                self as media_repo,
-                row::{MediaType, ProcessingState},
+                row::{MediaType},
             },
             post::{
                 self as post_repo,
-                row::{CommentRow, MediaTypeAttachment},
+                row::{CommentRow},
             },
         },
         service::{
@@ -24,8 +23,6 @@ use crate::{
             media::{
                 extractor::{ExtractorFileOptions, ValidationOptions},
                 inspector::FileType,
-                model::{FileContainer, container::ContainerConfig},
-                processor::types::{ImageProcessorType, MediaProcessorOptions, ResizeStyle},
             },
             post_service::PostService,
         },
@@ -36,8 +33,6 @@ use crate::{
 #[derive(serde::Deserialize, Debug, Multipart)]
 pub struct CreateCommentRequest {
     pub content: String,
-    #[multipart]
-    pub files: Option<FileContainer>,
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -90,7 +85,7 @@ pub async fn create_new_comment_handler(
         ..Default::default()
     };
 
-    let mut extracted = state
+    let extracted = state
         .multi_extractor
         .extract::<CreateCommentRequest>(files, Some(ext_opts))
         .await?;
@@ -99,12 +94,10 @@ pub async fn create_new_comment_handler(
 
     let new_comment_id = state.snowflake_generator.generate_id()?;
 
-    let img_container = &mut extracted.files;
-
     let mut tx = state.db_pool.begin().await?;
-    let has_attachment = img_container.is_some();
+    let has_attachment = false;
 
-    let comment = post_repo::comment::create_comment(
+    post_repo::comment::create_comment(
         &mut tx,
         &new_comment_id,
         post_id,
@@ -114,50 +107,9 @@ pub async fn create_new_comment_handler(
     )
     .await?;
 
-    if let Some(container) = img_container {
-        container
-            .prepare_ids(&state.snowflake_generator)?
-            .set_uploader_id(user_id)
-            .set_target_path(format!("comments/{}", new_comment_id))
-            .set_config(
-                ContainerConfig::new()
-                    .set_generate_thumbhash(true)
-                    .set_processing_options(MediaProcessorOptions::new().set_image_processors(
-                        vec![ImageProcessorType::Resize {
-                            style: ResizeStyle::Absolute {
-                                width: 1024,
-                                height: 1024,
-                            },
-                            upscale: false,
-                        }],
-                    )),
-            );
-
-        state.media_service.save_media(&state, container).await?;
-
-        // save all the id state
-        for file in container.files_mut() {
-            media_repo::update::processing_state(
-                &mut tx,
-                &file.id().unwrap(),
-                &ProcessingState::Completed,
-            )
-            .await?;
-            post_repo::post::add_has_attachment(
-                &mut tx,
-                comment.id,
-                file.id().unwrap(),
-                MediaTypeAttachment::Comment.as_str().to_string(),
-            )
-            .await?;
-        }
-    }
-
-    tx.commit().await?;
-
     let mut tx = state.db_pool.begin().await?;
     let get_comment =
-        post_repo::comment::get_comment_by_id(&mut tx, new_comment_id, Some(user_id)).await?;
+        PostService.get_comment(&state, &mut tx, new_comment_id, user_id).await?;
     tx.commit().await?;
 
     Ok(Json(get_comment))

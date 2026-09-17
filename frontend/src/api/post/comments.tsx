@@ -20,16 +20,14 @@ export interface commentProps {
     is_followed: boolean;
 }
 
-export const getCommentsOnPost = async (
+export const getComments = async (
     postId: string,
-    before: Date,
-    limit?: number,
+    before: string,
+    limit: number,
 ): Promise<commentProps[] | null> => {
     const query = new URLSearchParams();
-    query.append("before", before.toISOString());
-    if (limit !== undefined) {
-        query.append("limit", limit.toString());
-    }
+    query.append("before", before);
+    query.append("limit", limit.toString());
     const res = await fetchWithOptionAuth(`v2/posts/${postId}/comments?${query.toString()}`);
     if (!res.ok) throw new Error("Failed to get comments data");
     const data = await res.json();
