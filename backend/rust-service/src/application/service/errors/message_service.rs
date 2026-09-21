@@ -1,6 +1,4 @@
-use crate::application::service::errors::media_service::{
- ExtractionError, MediaServiceError, 
-};
+use crate::application::service::errors::media_service::{ExtractionError, MediaServiceError};
 use crate::application::service::errors::profile_service::ProfileServiceError;
 use crate::application::service::errors::snowflake_service::SnowflakeServiceError;
 use axum::extract::multipart::MultipartError;
@@ -11,15 +9,19 @@ use thiserror::Error;
 pub enum MessageServiceError {
     #[error("User not found")]
     UserNotFound,
+    
     #[error("Message not found")]
     MessageNotFound,
-    #[error("Invalid request")]
-    InvalidRequest,
-    #[error("Database error")]
-    DatabaseError,
+
+    #[error("Empty content")]
+    EmptyContent,
+
+    #[error("Invalid payload")]
+    InvalidPayload,
+    
     #[error("Content too long")]
     ContentTooLong,
-
+    
     #[error(transparent)]
     MediaServiceError(#[from] MediaServiceError),
 
@@ -43,6 +45,7 @@ pub enum MessageServiceError {
 
     #[error(transparent)]
     SerializationError(#[from] serde_json::Error),
-        #[error(transparent)]
+
+    #[error(transparent)]
     ProfileServiceError(#[from] ProfileServiceError),
 }

@@ -62,6 +62,11 @@ pub enum APIErrorCode {
 
     MediaMisconfigured,
 
+    // Message
+    MessageNotFound,
+    InvalidPayload,
+    EmptyContent,
+
     // Post
     TextTooLarge,
     EmptyFile,

@@ -32,6 +32,12 @@ pub struct CreateMessageRequest {
     #[multipart]
     pub files: Option<FileContainer>,
 }
+#[derive(serde::Deserialize, Debug, Multipart)]
+pub struct UpdateMessageRequest {
+    pub new_content: Option<String>,
+    #[multipart]
+    pub media_to_delete: Option<Vec<i64>>,
+}
 
 pub struct MessageService;
 
@@ -41,11 +47,12 @@ impl MessageService {
         state: &AppState,
         user_id: i64,
         target_id: i64,
-        limit: i64,
+        before: chrono::DateTime<chrono::Utc>,
+        limit: i32,
     ) -> Result<Vec<MessageRow>, MessageServiceError> {
         let mut tx = state.db_pool.begin().await?;
         let messages_id: Vec<i64> =
-            messages::get::get_message_id(&mut tx, user_id, target_id, limit).await?;
+            messages::get::get_messages_id(&mut tx, user_id, target_id, before, limit).await?;
 
         let mut messages = Vec::new();
         for id in messages_id {
@@ -56,6 +63,7 @@ impl MessageService {
         Ok(messages)
     }
 
+    // base message retrieval
     pub async fn get_message(
         &self,
         state: &AppState,
@@ -102,11 +110,14 @@ impl MessageService {
             ),
             field_options: None,
         };
-
         let mut extracted = state
             .multi_extractor
             .extract::<CreateMessageRequest>(request, Some(ext_opts))
             .await?;
+
+        if extracted.content.is_none() && extracted.files.is_none() {
+            return Err(MessageServiceError::EmptyContent);
+        }
 
         let new_message_id = &state.snowflake_generator.generate_id()?;
         let mut tx = state.db_pool.begin().await?;
@@ -161,13 +172,53 @@ impl MessageService {
         }
 
         let message = self
-        .get_message(state, &mut tx, *new_message_id, sender_id)
-        .await?;
+            .get_message(state, &mut tx, *new_message_id, sender_id)
+            .await?;
 
         let Some(message) = message else {
             return Err(MessageServiceError::MessageNotFound);
         };
         Ok(message)
+    }
+
+    // Accept only Text no files for updating a message
+    // check there's image if new content is empty
+    pub async fn update_message(
+        &self,
+        state: &AppState,
+        sender_id: i64,
+        message_id: i64,
+        multipart: Multipart,
+    ) -> Result<MessageRow, MessageServiceError> {
+        let extracted = state
+            .multi_extractor
+            .extract::<UpdateMessageRequest>(multipart, None)
+            .await?;
+
+        if extracted.new_content.is_none() && extracted.media_to_delete.is_none() {
+            return Err(MessageServiceError::EmptyContent);
+        }
+        let mut tx = state.db_pool.begin().await?;
+
+        if let Some(content) = extracted.new_content {
+            messages::update::update_message(&mut tx, message_id, content, sender_id).await?;
+        }
+
+        let Some(_message) = messages::get::base_message(&mut tx, message_id, sender_id).await?
+        else {
+            return Err(MessageServiceError::MessageNotFound);
+        };
+
+        tx.commit().await?;
+
+        let mut tx = state.db_pool.begin().await?;
+        let updated_message = self
+            .get_message(state, &mut tx, message_id, sender_id)
+            .await?;
+        if let Some(updated_message) = updated_message {
+            return Ok(updated_message);
+        }
+        Err(MessageServiceError::MessageNotFound) // Return an error if the message was not found after update
     }
 
     pub async fn delete_message(
