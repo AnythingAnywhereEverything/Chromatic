@@ -1,51 +1,63 @@
-
-.layout{
+.post-layout {
     width: 100%;
     display: flex;
     flex-direction: row;
     justify-content: center;
-    gap: var(--space-12);
+    padding-bottom: var(--space-12);
 }
 
-.left-layout{
+.container-wrapper {
     flex: 1;
     max-width: 640px;
     display: flex;
     flex-direction: column;
-    gap: var(--space-12);
-}
-.main-post-container{
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    position: relative;
-    gap: var(--space-12);
-    background-color: var(--popover);
-    border-radius: var(--radius-sm);
 }
 
-.back-button {
+.header {
     display: flex;
-    flex-direction: row;
     align-items: center;
-    gap: var(--space-12);
-    padding: var(--space-8);
-
+    gap: var(--space-8);
     position: sticky;
     top: 0;
-    background-color: var(--background);
     z-index: 1;
-    
-    .leave-btn{
-        cursor: pointer;
+    background-color: var(--background);
+    padding-block: var(--space-12);
+}
+
+.leave-btn {
+    display: grid;
+    place-items: center;
+    width: var(--size-32);
+    height: var(--size-32);
+    border-radius: var(--radius-round);
+
+    background-color: var(--popover);
+    transition: background-color 0.2s ease;
+
+    cursor: pointer;
+
+    &:hover {
+        background-color: color-mix(in srgb, var(--popover) 90%, var(--popover-foreground));
     }
-    // For some reason there's a space under icon   
-    svg{
+
+    &:active {
+        background-color: color-mix(in srgb, var(--popover) 80%, var(--popover-foreground));
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
+        background-color: color-mix(in srgb, var(--popover) 90%, var(--popover-foreground));
+    }
+
+    svg {
+        width: var(--size-16);
+        height: var(--size-16);
         display: block;
     }
 }
 
-.context{
+.context {
     font-size: var(--font-size-md);
     padding-inline: var(--space-20);
 }

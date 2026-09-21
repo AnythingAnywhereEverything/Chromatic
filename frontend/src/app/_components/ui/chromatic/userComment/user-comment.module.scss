@@ -1,8 +1,5 @@
 .container {
-    background-color: var(--popover);
     width: 100%;
-    border-radius: var(--radius-sm);
-
     display: flex;
     flex-direction: column;
     gap: var(--space-12);
@@ -14,10 +11,28 @@
     }
 }
 
-.separator {
-    height: 1px;
-    background-color: var(--muted);
-    width: 100%;
+.comment-info {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.username {
+    font-size: var(--font-size-md);
+    color: var(--text-neutral);
+    text-decoration: none;
+    display: flex;
+    flex-direction: row;
+    gap: var(--space-4);
+    span {
+        color: var(--text-muted);
+    }
+}
+
+.comment-meta {
+    font-size: var(--font-size-md);
+    color: var(--text-neutral);
 }
 
 .is-collapsed {

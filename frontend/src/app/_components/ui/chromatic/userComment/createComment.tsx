@@ -15,25 +15,19 @@ interface CreateCommentProps {
     onCommentCreated?: () => void;
 }
 
-const CreateComment: React.FC<CreateCommentProps> = ({ postId, author, onCommentCreated }) => {
+const CreateComment: React.FC<CreateCommentProps> = ({
+    postId,
+    author,
+    onCommentCreated,
+}) => {
     const [text, setText] = React.useState("");
     const [media, setMedia] = React.useState<MediaFileProps[]>([]);
 
     const [isSubmittable, setIsSubmittable] = React.useState(false);
     const [isPending, setIsPending] = React.useState(false);
-    const [activeIndex, setActiveIndex] = useState(0);
-
-    const [isOpenEmoji, setIsOpenEmoji] = React.useState(false);
-
-    const { refs, context } = useFloating({
-        open: isOpenEmoji,
-        onOpenChange: setIsOpenEmoji,
-    });
-    const dismiss = useDismiss(context);
 
     const textareaRef = React.useRef<HTMLTextAreaElement>(null);
     const warpperRef = React.useRef<HTMLDivElement>(null);
-    const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
     React.useEffect(() => {
         if (textareaRef.current) {
@@ -41,80 +35,9 @@ const CreateComment: React.FC<CreateCommentProps> = ({ postId, author, onComment
             textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
         }
     }, [text]);
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const selectedFiles = Array.from(event.target.files ?? []);
-        const remaining = MAX_MEDIA_FILES - media.length;
-
-        if (remaining <= 0) {
-            return;
-        }
-
-        const newMedia = selectedFiles
-            .slice(0, remaining)
-            .filter((file) => file.type.startsWith("image/"))
-            .map((file) => ({
-                file,
-                url: URL.createObjectURL(file),
-                type: "image" as const,
-            }));
-
-        setMedia((current) => [...current, ...newMedia]);
-        event.target.value = "";
-    };
-
-    const handleRemoveMedia = (index: number) => {
-        setMedia((current) => current.filter((_, i) => i !== index));
-    };
 
     const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setText(e.target.value);
-    };
-
-    const handleEmojiClick = (emojiObject: any, event: MouseEvent) => {
-        setText((current) => current + emojiObject.emoji);
-    };
-
-    const MediaContainerRef = React.useRef<HTMLDivElement | null>(null);
-    const groupRef = React.useRef<HTMLDivElement | null>(null);
-    const [translateX, setTranslateX] = useState(0);
-    const [showRightController, setShowRightController] = useState(false);
-    const [showLeftController, setShowLeftController] = useState(false);
-
-    React.useEffect(() => {
-        const container = MediaContainerRef.current;
-        const group = groupRef.current;
-
-        if (!container || !group) {
-            return;
-        }
-        const maxTranslate = Math.max(
-            group.scrollWidth - container.clientWidth,
-            0,
-        );
-
-        const targetTranslate = Math.min(
-            activeIndex * group.scrollWidth,
-            maxTranslate,
-        );
-
-        targetTranslate >= maxTranslate
-            ? setShowRightController(false)
-            : setShowRightController(true);
-        targetTranslate <= 0
-            ? setShowLeftController(false)
-            : setShowLeftController(true);
-
-        setTranslateX(targetTranslate);
-    }, [activeIndex, media, groupRef]);
-
-    const slideMedia = (direction: "left" | "right") => {
-        setActiveIndex((currentIndex) => {
-            if (direction === "right") {
-                return Math.min(currentIndex + 1, media.length - 1);
-            }
-
-            return Math.max(currentIndex - 1, 0);
-        });
     };
 
     const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -198,95 +121,25 @@ const CreateComment: React.FC<CreateCommentProps> = ({ postId, author, onComment
                         />
                     </div>
 
-                    <div className={style["text-container"]} ref={warpperRef}>
-                        <textarea
-                            ref={textareaRef}
-                            className={style["content"]}
-                            placeholder="Enter your comment here."
-                            value={text}
-                            maxLength={MAX_TEXT_LENGTH}
-                            onChange={handleTextChange}
-                            onPaste={handlePaste}
-                        />
-                    </div>
-                </section>
-
-                <div
-                    style={{ display: media.length > 0 ? "block" : "none" }}
-                    className={style["media-container"]}
-                    ref={MediaContainerRef}
-                >
-                    {showLeftController && (
-                        <button
-                            type="button"
-                            onClick={() => slideMedia("left")}
-                            className={style["show-left"]}
+                    <div className={style["content-section"]}>
+                        <p className={style["author-info"]}>
+                            {author.display_name ? author.display_name : author.username}
+                        </p>
+                        <div
+                            className={style["text-container"]}
+                            ref={warpperRef}
                         >
-                            &lt;
-                        </button>
-                    )}
-                    {showRightController && (
-                        <button
-                            type="button"
-                            onClick={() => slideMedia("right")}
-                            className={style["show-right"]}
-                        >
-                            &gt;
-                        </button>
-                    )}
-                    <div
-                        className={style["media-group"]}
-                        ref={groupRef}
-                        style={{
-                            transform: `translate3d(-${translateX}px, 0, 0)`,
-                        }}
-                    >
-                        {media.map((file, index) => (
-                            <div key={index} className={style["media-item"]}>
-                                <button
-                                    className={style["remove-media"]}
-                                    type="button"
-                                    onClick={() => handleRemoveMedia(index)}
-                                >
-                                    <MdClose />
-                                </button>
-                                {file.type === "image" && (
-                                    <img
-                                        src={file.url}
-                                        draggable="false"
-                                        alt=""
-                                    />
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className={style["separator"]} />
-
-                <div className={style["extended"]}>
-                    <section className={style["button-group"]}>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                fileInputRef.current?.click();
-                            }}
-                        >
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept="image/*"
-                                multiple
-                                onChange={handleFileChange}
-                                style={{ display: "none" }}
+                            <textarea
+                                ref={textareaRef}
+                                className={style["content"]}
+                                placeholder="Enter your comment here."
+                                value={text}
+                                maxLength={MAX_TEXT_LENGTH}
+                                onChange={handleTextChange}
+                                onPaste={handlePaste}
                             />
-                            <MdImage />
-                        </button>
-                        <EPicker onEmojiClick={handleEmojiClick}>
-                            <MdEmojiEmotions />
-                        </EPicker>
-                    </section>
-
+                        </div>
+                    </div>
                     <button
                         className={style["send-button"]}
                         disabled={!isSubmittable}
@@ -295,7 +148,7 @@ const CreateComment: React.FC<CreateCommentProps> = ({ postId, author, onComment
                         {!isPending ? (
                             <>
                                 <FaPaperPlane />
-                                <span>Post</span>
+                                <span>Send</span>
                             </>
                         ) : (
                             <>
@@ -303,11 +156,14 @@ const CreateComment: React.FC<CreateCommentProps> = ({ postId, author, onComment
                                     src="/asset/svgs/dot_loading.svg"
                                     alt="Post"
                                 />
-                                <span>Post</span>
+                                <span>Send</span>
                             </>
                         )}
                     </button>
-                </div>
+                    <span className={style["text-counter"]}>
+                        {text.length}/{MAX_TEXT_LENGTH}
+                    </span>
+                </section>
             </form>
         </section>
     );

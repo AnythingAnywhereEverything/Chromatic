@@ -1,4 +1,3 @@
-import { getCommentsOnPost } from "@/api/post/comments";
 import { getFocusedPost } from "@/api/post/getFeed";
 import PostContentPage from "./body";
 import type { Metadata } from "next";
@@ -57,11 +56,10 @@ export default async function PostPage({
     params: Promise<{ post: string }>;
 }) {
     return (
-        <div className={style["layout"]}>
-            <div className={style["left-layout"]}>
-            <PostContentPage params={await params} />
+        <div className={style["post-layout"]}>
+            <div className={style["container-wrapper"]}>
+                <PostContentPage params={await params} />
             </div>
-            <PostRightLayout/>
         </div>
     );
 }

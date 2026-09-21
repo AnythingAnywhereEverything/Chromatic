@@ -4,7 +4,7 @@ import style from "./comment.module.scss";
 import React, { useEffect, useRef, useState } from "react";
 import UserComment from "@/app/_components/ui/chromatic/userComment/userComment";
 import CreateComment from "@/app/_components/ui/chromatic/userComment/createComment";
-import { commentProps, getCommentsOnPost } from "@/api/post/comments";
+import { commentProps, getComments } from "@/api/post/comments";
 import { UserResponse } from "@/api/user";
 import { useUser } from "@/hooks/useUser";
 type CommentSectionProps = {
@@ -16,9 +16,6 @@ export const CommentSection = ({ postId }: CommentSectionProps) => {
     const [user, setUser] = useState<UserResponse | null>(null);
     const currentUser = useUser();
     const observerRef = useRef<HTMLDivElement | null>(null);
-    const [beforeDate, setBeforeDate] = useState(new Date());
-    const [hasMore, setHasMore] = useState(true);
-    const [loading, setLoading] = useState(false);
 
     React.useEffect(() => {
         if (currentUser?.data) {
@@ -26,37 +23,35 @@ export const CommentSection = ({ postId }: CommentSectionProps) => {
         }
     }, [currentUser]);
 
-    // panigation comment section
-    const loadmore = async () => {
+    const loadingRef = React.useRef<HTMLDivElement | null>(null);
+    const [beforeDate, setBeforeDate] = useState(new Date());
+    const [hasMore, setHasMore] = useState(true);
+    const [loading, setLoading] = useState(false);
+
+    const loadMoreComments = async () => {
         if (loading || !hasMore) return;
         setLoading(true);
-        try {
-            console.log("Load more comments");
-            const comments = await getCommentsOnPost(
-                postId,
-                beforeDate,
-                10,
-            );
-            console.log(comments);
 
-            if (!comments || comments.length === 0) {
+        try {
+            const result = await getComments(postId, beforeDate.toISOString(), 10);
+            if (!result || result.length === 0) {
                 setHasMore(false);
                 return;
             }
-
             setComments((current) => {
-                const existingIds = new Set(current.map((item) => item.id));
+                const existingIds = new Set(
+                    current.map((comment) => comment.id),
+                );
                 return [
                     ...current,
-                    ...comments.filter((item) => !existingIds.has(item.id)),
+                    ...result.filter((comment) => !existingIds.has(comment.id)),
                 ];
             });
 
-            const oldestComment = comments[comments.length - 1];
-            setBeforeDate(new Date(`${oldestComment.created_at}`));
-            console.log("Updated beforeDate:", beforeDate);
+            const oldestComment = result[result.length - 1];
+            setBeforeDate(new Date(oldestComment.created_at));
 
-            if (comments.length < 10) {
+            if (result.length < 10) {
                 setHasMore(false);
             }
         } finally {
@@ -64,24 +59,21 @@ export const CommentSection = ({ postId }: CommentSectionProps) => {
         }
     };
 
-    // init fetch
-    useEffect(() => {
-        loadmore();
+    React.useEffect(() => {
+        loadMoreComments();
     }, [postId]);
 
-    useEffect(() => {
+    // observer
+    React.useEffect(() => {
         const observer = new IntersectionObserver(
             ([entry]) => {
                 if (entry.isIntersecting) {
-                    loadmore();
+                    loadMoreComments();
                 }
             },
-            {
-                rootMargin: "300px",
-            },
+            { rootMargin: "100px" },
         );
-
-        const target = observerRef.current;
+        const target = loadingRef.current;
 
         if (target) {
             observer.observe(target);
@@ -92,17 +84,18 @@ export const CommentSection = ({ postId }: CommentSectionProps) => {
                 observer.unobserve(target);
             }
         };
-    }, [loading, loadmore, beforeDate, postId]);
+    }, [loadingRef, loadMoreComments, beforeDate, postId]);
 
     return (
         <div className={style["comment-layout"]}>
-            {user && <CreateComment postId={postId} author={user} />}
-
+            {user && <CreateComment postId={postId} author={user} onCommentCreated={loadMoreComments} />}
+            <div className={style["spacer"]} />
             <div className={style["comments-container"]}>
                 {comments.map((comment) => (
                     <UserComment key={comment.id} {...comment} />
                 ))}
             </div>
+            {hasMore && <div ref={loadingRef}>{loading && "Loading..."}</div>}
         </div>
     );
 };

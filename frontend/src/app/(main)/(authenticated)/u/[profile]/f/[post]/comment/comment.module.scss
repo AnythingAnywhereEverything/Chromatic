@@ -3,11 +3,23 @@
     flex-direction: column;
     width: 100%;
     margin-top: var(--space-12);
+    background-color: var(--popover);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
 }
 
 .comments-container {
     display: flex;
     flex-direction: column;
     margin-top: var(--space-12);
-    gap: var(--space-6);
+    gap: var(--space-8);
+}
+
+.spacer {
+    height: 1px;
+    background-color: color-mix(
+        in srgb,
+        var(--popover) 80%,
+        var(--popover-foreground)
+    );
 }

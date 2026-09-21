@@ -17,6 +17,7 @@ function UserComment({
     has_attachment,
     attachments,
     created_at,
+    is_followed,
     updated_at,
 }: commentProps) {
     if (id === undefined) return null;
@@ -69,6 +70,7 @@ function UserComment({
                         avatar: author.avatar,
                         avatar_thumbhash: author.avatar_thumbhash,
                     }}
+                    is_followed={is_followed}
                     visibility={"public"}
                     created_at={created_at}
                     onDelete={handleDeleteComment}
