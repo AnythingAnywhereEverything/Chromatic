@@ -85,12 +85,6 @@ const SidebarNavigator: React.FC = () => {
                     href="/explore"
                 />
                 <SidebarPageItem
-                    icon={<HiMiniUserGroup />}
-                    active={firstPathSegment === "groups"}
-                    label="Groups"
-                    href="/groups"
-                />
-                <SidebarPageItem
                     icon={<HiMiniChatBubbleLeftRight />}
                     active={firstPathSegment === "messages"}
                     label="Messages"

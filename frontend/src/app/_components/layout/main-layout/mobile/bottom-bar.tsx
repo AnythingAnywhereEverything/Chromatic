@@ -33,11 +33,6 @@ export default function BottomBar() {
                 active={firstPathSegment === "explore"}
             />
             <BottomBarButtons
-                href="/groups"
-                icon={<HiMiniUserGroup />}
-                active={firstPathSegment === "groups"}
-            />
-            <BottomBarButtons
                 href="/create"
                 icon={<HiPlus />}
                 active={firstPathSegment === "create"}
