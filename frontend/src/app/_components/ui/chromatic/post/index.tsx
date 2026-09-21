@@ -21,6 +21,7 @@ const Post: React.FC<PostProps> = ({
     is_reposted,
     reposted_post,
     has_attachment,
+    is_followed,
     created_at,
     updated_at,
     attachments = [],
@@ -31,7 +32,6 @@ const Post: React.FC<PostProps> = ({
     const [showReadMoreButton, setShowReadMoreButton] = useState(false);
     const ref = useRef<HTMLSpanElement | null>(null);
     const [likeState, setLikeState] = useState(is_liked);
-    const [likeCount, setLikeCount] = useState(total_likes);
     const [isDeleted, setIsDeleted] = useState(false);
     const rootRef = useRef<HTMLDivElement>(null);
 
@@ -66,10 +66,7 @@ const Post: React.FC<PostProps> = ({
             {!isDeleted && (
             <section
                 className={style["container"]}
-                //  ! remove before push
-                onClick={() => {
-                    console.log(post_id);
-                }}
+
             >
                 <PostHeader
                     author={{
@@ -79,6 +76,7 @@ const Post: React.FC<PostProps> = ({
                         avatar: author.avatar,
                         avatar_thumbhash: author.avatar_thumbhash,
                     }}
+                    is_followed={is_followed}
                     created_at={created_at}
                     visibility={visibility}
                     onDelete={handleDeletePost}

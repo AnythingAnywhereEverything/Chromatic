@@ -51,6 +51,7 @@ export interface PostProps {
 
     created_at: string;
     updated_at: string;
+    is_followed: boolean;
 }
 
 interface PostTag {
