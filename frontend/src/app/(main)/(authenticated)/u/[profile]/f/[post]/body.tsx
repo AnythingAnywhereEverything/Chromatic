@@ -1,7 +1,7 @@
 "use client";
 
 import { getFocusedPost, PostProps } from "@/api/post/getFeed";
-import type { commentProps } from "@/api/post/comments";
+import { getCommentsOnPost, type commentProps } from "@/api/post/comments";
 import { getCacheUserId } from "@/handler/token_handler";
 import { useEffect, useRef, useState } from "react";
 import { useUser } from "@/hooks/useUser";
@@ -24,10 +24,6 @@ function PostContentPage({ params }: { params: { post: string } }) {
     const [post, setPost] = useState<PostProps | null>(null);
     const [likeState, setLikeState] = useState(post?.is_liked || false);
     const [likeCount, setLikeCount] = useState(post?.total_likes || 0);
-    const ref = useRef<HTMLSpanElement | null>(null);
-
-    const [comment, setComment] = useState<commentProps | null>(null);
-
     const currentUserId = useUser().data?.id;
 
     useEffect(() => {
@@ -51,7 +47,7 @@ function PostContentPage({ params }: { params: { post: string } }) {
         return <PostContentSkeleton />;
     }
 
-    console.log(post);
+
     return (
         <>
             <section className={style["back-button"]}>
@@ -85,6 +81,7 @@ function PostContentPage({ params }: { params: { post: string } }) {
                                         "Function not implemented.",
                                     );
                                 }}
+                                is_followed={post.is_followed}
                             />
 
                             <span className={style["context"]}>
@@ -107,15 +104,14 @@ function PostContentPage({ params }: { params: { post: string } }) {
                                                     <p>{item.tag_name}</p>
                                                 </li>
                                             );
-                                        })
-                                    }
+                                        })}
                                 </ul>
                             </article>
 
-                        <BottomPostInteraction
-                            {...post}
-                            username={post.author.username}
-                        />
+                            <BottomPostInteraction
+                                {...post}
+                                username={post.author.username}
+                            />
                         </div>
                         <CommentSection postId={post.post_id} />
                     </section>
