@@ -1,7 +1,13 @@
 use std::{collections::HashMap, sync::Arc};
 
 use axum::{
-    Json, Router, body::Body, extract::{DefaultBodyLimit, Query, Request}, http::{HeaderMap, Method, StatusCode}, middleware::{self, Next}, response::{IntoResponse, Response}, routing::{any, get},
+    Json, Router,
+    body::Body,
+    extract::{DefaultBodyLimit, Query, Request},
+    http::{HeaderMap, Method, StatusCode},
+    middleware::{self, Next},
+    response::{IntoResponse, Response},
+    routing::{any, get},
 };
 use axum_client_ip::ClientIpSource;
 use serde_json::json;
@@ -16,8 +22,12 @@ use tower_http::cors::{Any, CorsLayer};
 
 use crate::{
     api::{
-        error::APIError, routes::{auth_routes, dev_routes, post_routes, protected_routes, user_routes},
-    }, application::state::SharedState,
+        error::APIError,
+        routes::{
+            auth_routes, dev_routes, message_routes, post_routes, protected_routes, user_routes,
+        },
+    },
+    application::state::SharedState,
 };
 
 pub async fn create_router(state: SharedState) -> Router {
@@ -37,8 +47,8 @@ pub async fn create_router(state: SharedState) -> Router {
         // Nesting user routes.
         .nest("/{version}/users", user_routes::routes())
         .nest("/{version}/posts", post_routes::routes())
+        .nest("/{version}/message", message_routes::routes())
         .nest("/{version}/dev", dev_routes::routes())
-
         .nest("/{version}/protected", protected_routes::routes())
         // Add a fallback service for handling routes to unknown paths.
         .fallback(error_404_handler)
@@ -55,7 +65,7 @@ pub async fn start(state: SharedState) {
     // let cors_layer = CorsLayer::new()
     //      .allow_origin(cors_header_value)
     //      .allow_methods([
-    //          Method::HEAD,
+    //          Method::HEAD,s
     //          Method::GET,
     //          Method::POST,
     //          Method::PATCH,
