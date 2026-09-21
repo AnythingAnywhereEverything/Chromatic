@@ -1,7 +1,4 @@
-use crate::application::repository::{
-    messages::row::{MessageBaseRow, MessageRow},
-    user,
-};
+use crate::application::repository::messages::row::{MessageBaseRow, MessageRow};
 
 pub async fn get_messages(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
@@ -12,10 +9,10 @@ pub async fn get_messages(
 ) -> Result<Vec<MessageRow>, sqlx::Error> {
     sqlx::query_as::<_, MessageRow>(
         r#"
-        SELECT * FROM messages 
-        WHERE ((sender_id = $1 AND target_id = $2)
-        OR (sender_id = $2 AND target_id = $1)) 
-        AND target_type = $3 LIMIT $4
+        SELECT * FROM messages m
+        WHERE ((m.user_id = $1 AND m.target_id = $2)
+        OR (m.user_id = $2 AND m.target_id = $1)) 
+        AND m.target_type = $3 LIMIT $4
         "#,
     )
     .bind(user_id)
@@ -26,24 +23,29 @@ pub async fn get_messages(
     .await
 }
 
-pub async fn get_message_id(
+pub async fn get_messages_id(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     user_id: i64,
     target_id: i64,
-    limit: i64,
+    before: chrono::DateTime<chrono::Utc>,
+    limit: i32,
 ) -> Result<Vec<i64>, sqlx::Error> {
-    let messages  =sqlx::query_as::<_, (i64,)>(
+    // pagination based on the 'before' timestamp
+    let messages = sqlx::query_as::<_, (i64,)>(
         r#"
         SELECT m.id AS message_id
-        FROM messages 
-        WHERE ((sender_id = $1 AND target_id = $2)
-        OR (sender_id = $2 AND target_id = $1)) 
+        FROM messages m
+        WHERE ((m.user_id = $1 AND m.target_id = $2)
+        OR (m.user_id = $2 AND m.target_id = $1)) 
         AND m.deleted_at IS NULL
-        LIMIT $3
+        AND m.created_at < $3
+        ORDER BY m.created_at DESC
+        LIMIT $4
         "#,
     )
     .bind(user_id)
     .bind(target_id)
+    .bind(before)
     .bind(limit)
     .fetch_all(tx.as_mut())
     .await?;

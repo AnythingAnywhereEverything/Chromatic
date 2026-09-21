@@ -3,7 +3,8 @@ use sqlx::Transaction;
 use crate::application::repository::{messages::row::MessageRow, post::row::HasAttachmentRow};
 pub async fn send_message(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    sender_id: i64,
+    id: i64,
+    user_id: i64,
     target_id: i64,
     target_type: &str,
     content: String,
@@ -11,16 +12,18 @@ pub async fn send_message(
 ) -> Result<MessageRow, sqlx::Error> {
     sqlx::query_as::<_, MessageRow>(
         r#"INSERT INTO messages (
-        sender_id, 
+        id,
+        user_id, 
         target_id, 
         target_type, 
         content, 
         has_attachment
         )
-        VALUES ($1, $2, $3, $4, $5) 
+        VALUES ($1, $2, $3, $4, $5, $6) 
         RETURNING *"#,
     )
-    .bind(sender_id)
+    .bind(id)
+    .bind(user_id)
     .bind(target_id)
     .bind(target_type)
     .bind(content)
