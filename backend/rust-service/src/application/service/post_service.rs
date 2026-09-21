@@ -83,6 +83,7 @@ impl PostService {
         let author = ProfileService::get_profile_by_id(state, comment.author_id, Some(requester_id)).await?;
         let comment = CommentRow {
             id: comment.id,
+            post_id: comment.post_id,
             author: Json(author),
             total_likes: comment.total_likes,
             is_liked: comment.is_liked,

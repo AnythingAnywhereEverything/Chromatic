@@ -10,9 +10,6 @@ use crate::{
     },
     application::{
         repository::{
-            media::{
-                row::{MediaType},
-            },
             post::{
                 self as post_repo,
                 row::{CommentRow},
@@ -20,10 +17,6 @@ use crate::{
         },
         service::{
             errors::{AuthServiceError, CommentServiceError},
-            media::{
-                extractor::{ExtractorFileOptions, ValidationOptions},
-                inspector::FileType,
-            },
             post_service::PostService,
         },
         state::SharedState,
@@ -66,7 +59,7 @@ pub async fn create_new_comment_handler(
     State(state): State<SharedState>,
     Path((version, post_id)): Path<(String, i64)>,
     req_auth: RequestAuth,
-    files: Multipart,
+    content: Multipart,
 ) -> Result<Json<CommentRow>, APIError> {
     let api_version = version::parse_version(&version)?;
     tracing::trace!("api version: {}", api_version);
@@ -76,18 +69,9 @@ pub async fn create_new_comment_handler(
         None => return Err(AuthServiceError::InvalidCredentials.into()),
     };
 
-    let ext_opts = ExtractorFileOptions {
-        max_files: Some(1),
-        max_size: Some(25 * 1024 * 1024), // 25 MB
-        validation: Some(
-            ValidationOptions::new_whitelist().add_type(FileType::Category(MediaType::Image)),
-        ),
-        ..Default::default()
-    };
-
     let extracted = state
         .multi_extractor
-        .extract::<CreateCommentRequest>(files, Some(ext_opts))
+        .extract::<CreateCommentRequest>(content, None)
         .await?;
 
     tracing::debug!("Extracted payload: {:#?}", extracted);
@@ -107,7 +91,6 @@ pub async fn create_new_comment_handler(
     )
     .await?;
 
-    let mut tx = state.db_pool.begin().await?;
     let get_comment =
         PostService.get_comment(&state, &mut tx, new_comment_id, user_id).await?;
     tx.commit().await?;

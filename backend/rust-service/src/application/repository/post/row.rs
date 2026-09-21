@@ -101,7 +101,8 @@ pub struct RepostedPostRow {
 
 #[derive(sqlx::FromRow, Debug, Deserialize, Serialize)]
 pub struct CommentRow {
-    pub id: String,    
+    pub id: String,
+    pub post_id: String,
     pub author: Json<UserProfileRow>,
     pub total_likes: i32,
     pub is_liked: bool,
@@ -116,6 +117,7 @@ pub struct CommentRow {
 #[derive(sqlx::FromRow, Debug, Deserialize, Serialize)]
 pub struct CommentBaseRow {
     pub id: String,
+    pub post_id: String,
     pub author_id: i64,
     pub total_likes: i32,
     pub is_liked: bool,
