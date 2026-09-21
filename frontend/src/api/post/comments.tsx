@@ -22,8 +22,15 @@ export interface commentProps {
 
 export const getCommentsOnPost = async (
     postId: string,
-): Promise<commentProps[]> => {
-    const res = await fetchWithOptionAuth(`v2/posts/${postId}/comments`);
+    before: Date,
+    limit?: number,
+): Promise<commentProps[] | null> => {
+    const query = new URLSearchParams();
+    query.append("before", before.toISOString());
+    if (limit !== undefined) {
+        query.append("limit", limit.toString());
+    }
+    const res = await fetchWithOptionAuth(`v2/posts/${postId}/comments?${query.toString()}`);
     if (!res.ok) throw new Error("Failed to get comments data");
     const data = await res.json();
     return data;
