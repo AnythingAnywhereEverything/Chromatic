@@ -17,11 +17,10 @@ import {
     SettingContentProps,
 } from "./content/accountSetting";
 import { useUser } from "@/hooks/useUser";
-import { UserResponse } from "@/api/user";
+import { UserResponse, UserSettingResponse } from "@/api/user";
 import { NotificationSetting } from "./content/notificationSetting";
 
 function UserSetting({
-    children,
     open,
     onOpenChange,
 }: {
@@ -40,8 +39,8 @@ function UserSetting({
             title: "Account",
             component: AccountSettingContent,
         },
-        notification: {
-            title: "Notification",
+        notifications: {
+            title: "Notifications",
             component: NotificationSetting,
         },
         privacy: {
@@ -56,7 +55,6 @@ function UserSetting({
 
     const [user, setUser] = useState<UserResponse | null>(null);
     const [settingContent, setSettingContent] = useState("account");
-
     const currentUser = useUser();
 
     const CurrentSetting = SettingMap[settingContent]?.component;
@@ -74,7 +72,7 @@ function UserSetting({
         }
     }, [settingContent]);
 
-    if (!user || !CurrentSetting || !currentSetting) {
+    if (!user) {
         return null;
     }
 
@@ -89,10 +87,7 @@ function UserSetting({
                 />
 
                 <section className={style["content"]}>
-                    <CurrentSetting
-                        title={currentSetting.title}
-                        user={user}
-                    />
+                    <CurrentSetting title={currentSetting.title} user={user} />
                 </section>
             </DialogContent>
         </Dialog>

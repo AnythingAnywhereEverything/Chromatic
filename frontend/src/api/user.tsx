@@ -25,6 +25,13 @@ interface PasswordData{
   new_password: string;
   confirm_password: string;
 }
+
+export interface UserSettingResponse {
+  setting_type: string;
+  setting_value: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
 export async function getUser(): Promise<UserResponse> {
   const res = await fetchWithAuth(`v2/users/me`); // proxied to backend via nginx
   if (!res.ok) throw new Error("Failed to get user data");
@@ -158,3 +165,19 @@ export const updatePassword = async (data: PasswordData) => {
     if (!res.ok) throw new Error("Change password failed")
     return res.ok
 }
+
+export const getUserSettingType = async (setting_type: string) => {
+  const res = await fetchWithAuth(`v2/users/settings/${setting_type}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const errorMessage =
+      data?.errors?.[0]?.message || "Failed to get user setting type";
+    throw new Error(errorMessage);
+  }
+  return data;
+};

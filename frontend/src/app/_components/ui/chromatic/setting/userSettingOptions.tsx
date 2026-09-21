@@ -7,7 +7,7 @@ interface options {
     option: string
     onChangeOption: (option: string) => void;
     list: string[]
-}
+};
 
 function UserSettingOption({user , option, list, onChangeOption}: options) {
     return (
