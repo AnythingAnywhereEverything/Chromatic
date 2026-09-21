@@ -8,9 +8,9 @@ import {
     IoLogoTwitter,
 } from "react-icons/io5";
 import style from "./interaction.module.scss";
-import { LuRepeat, LuShare2, LuThumbsUp } from "react-icons/lu";
+import { LuRepeat, LuShare2 } from "react-icons/lu";
 import { TogglePostLike } from "@/api/post/like";
-import { useState } from "react";
+import { use, useState } from "react";
 import React, { useRef } from "react";
 import {
     Dialog,
@@ -20,11 +20,11 @@ import {
     DialogTrigger,
 } from "../../dialogue";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../tooltip";
-import { MdOutlineChatBubbleOutline, MdThumbUpOffAlt } from "react-icons/md";
+import { MdOutlineChatBubbleOutline } from "react-icons/md";
 import { base64ToUrlBase64, bnToB64 } from "@lib/base64";
 import { FaHeart, FaLink, FaRegHeart } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
-import { IoMdThumbsUp } from "react-icons/io";
+import { useRouter } from "next/dist/client/components/navigation";
 
 interface BottomPostInteractionProps {
     username: string;
@@ -44,6 +44,7 @@ const BottomPostInteraction = React.memo(function BottomPostInteraction({
     const [likeState, setLikeState] = useState(is_liked);
     const [likeCount, setLikeCount] = useState(total_likes);
 
+    const router = useRouter(); 
     const handleLike = async () => {
         try {
             const nextLikeState = !likeState;
@@ -56,6 +57,11 @@ const BottomPostInteraction = React.memo(function BottomPostInteraction({
         }
     };
 
+    const handleGoToComments = () => {
+        // Navigate to the post's comment section
+        router.push(`/u/${username}/f/${post_id}`);
+    };
+
     return (
         <section>
             <div className={style["bottom-container"]}>
@@ -65,20 +71,13 @@ const BottomPostInteraction = React.memo(function BottomPostInteraction({
                         className={`${style["button"]} ${style["like-button"]}`}
                         onClick={handleLike}
                     >
-                        <i>
-                            {
-                                likeState ? (
-                                    <FaHeart />
-                                ) : (
-                                    <FaRegHeart />
-                                )
-                            }
-                        </i>
+                        <i>{likeState ? <FaHeart /> : <FaRegHeart />}</i>
                         {likeCount > 0 ? likeCount : null}
                     </InteractButton>
                     <InteractButton
                         name="Comment"
                         className={`${style["button"]} ${style["comment-button"]}`}
+                        onClick={handleGoToComments}
                     >
                         <i>
                             <MdOutlineChatBubbleOutline />
@@ -123,7 +122,11 @@ type InteractButtonTooltip = {
     children: React.ReactNode;
 } & React.HTMLAttributes<HTMLButtonElement>;
 
-export function InteractButton({ name, children, ...props }: InteractButtonTooltip) {
+export function InteractButton({
+    name,
+    children,
+    ...props
+}: InteractButtonTooltip) {
     return (
         <Tooltip openDelayDuration={500}>
             <TooltipTrigger {...props}>{children}</TooltipTrigger>
