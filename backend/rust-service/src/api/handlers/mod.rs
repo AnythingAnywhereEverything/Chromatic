@@ -5,3 +5,4 @@ pub mod comment_handler;
 pub mod dev_handlers;
 pub mod file_handlers;
 pub mod guild_handler;
+pub mod message_handler;

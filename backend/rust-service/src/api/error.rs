@@ -74,6 +74,8 @@ pub enum APIErrorCode {
 
     // User
     UserNotFound,
+    CannotFollowYourself,
+    InvalidFollowOperation,
 
     // Profile
     InvalidAvatarUpdate,
@@ -129,6 +131,8 @@ pub enum APIErrorKind {
     RedisError,
     
     PostError,
+
+    MessageError,
 
     CommentError,
 
