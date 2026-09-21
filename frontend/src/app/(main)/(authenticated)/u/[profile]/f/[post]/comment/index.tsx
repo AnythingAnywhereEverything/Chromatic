@@ -47,10 +47,11 @@ export const CommentSection = ({ postId }: CommentSectionProps) => {
                     ...result.filter((comment) => !existingIds.has(comment.id)),
                 ];
             });
-
+            
+            
             const oldestComment = result[result.length - 1];
             setBeforeDate(new Date(oldestComment.created_at));
-
+            
             if (result.length < 10) {
                 setHasMore(false);
             }

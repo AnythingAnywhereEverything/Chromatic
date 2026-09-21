@@ -16,7 +16,7 @@ export interface commentProps {
 
     created_at: string;
     updated_at: string;
-    is_like: boolean;
+    is_liked: boolean;
     is_followed: boolean;
 }
 
