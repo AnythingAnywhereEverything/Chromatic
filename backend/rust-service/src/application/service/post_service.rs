@@ -10,7 +10,7 @@ use crate::application::{
             row::{MediaType, ProcessingState},
         }, post::{
             self as post_repo, row::{CommentRow, MediaTypeAttachment, PostRow, PostVisibility, TagTarget},
-        },
+        }, user::{ follow::is_following},
     }, service::{
         errors::PostServiceError,
         media::{
@@ -226,7 +226,7 @@ impl PostService {
     ) -> Result<Option<PostRow>, PostServiceError> {
         let redis = &mut state.redis.get().await?;
         let cache_key: String = format!("post:{}", post_id);
-
+        
         // check cache
         let post = {
             let cached_post: Option<String> = redis.get(&cache_key).await?;
@@ -246,6 +246,7 @@ impl PostService {
         if let Some(post) = post {
             let author = ProfileService::get_profile_by_id(state, post.author_id, user_id).await?;
 
+            let is_followed = is_following(tx, user_id, post.author_id).await?;
             Ok(Some(PostRow {
                 author: Json(author),
                 post_id: post.post_id,
@@ -261,6 +262,7 @@ impl PostService {
                 attachments: post.attachments,
                 created_at: post.created_at,
                 updated_at: post.updated_at,
+                is_followed: is_followed,
             }))
         } else {
             Ok(None)

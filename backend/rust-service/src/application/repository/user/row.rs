@@ -60,3 +60,41 @@ pub struct ReportUserAndGuildRow {
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub resolved_at: Option<chrono::DateTime<chrono::Utc>>,
 }
+
+#[derive(Debug, sqlx::FromRow, serde::Serialize, serde::Deserialize)]
+pub struct FollowUserRow {
+    pub user_id: String,
+    pub follower_id: String,
+    pub status: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, sqlx::FromRow, serde::Serialize)]
+pub struct UserSettingRow {
+    pub setting_key: String,
+    pub setting_value: serde_json::Value,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, sqlx::Type, Debug)]
+#[serde(rename_all = "lowercase")]
+pub enum SettingsType {
+    Account,
+    Security,
+    Privacy,
+    Notification,
+    Display,
+}
+
+impl ToString for SettingsType {
+    fn to_string(&self) -> String {
+        match self {
+            SettingsType::Account => "account".to_string(),
+            SettingsType::Security => "security".to_string(),
+            SettingsType::Privacy => "privacy".to_string(),
+            SettingsType::Notification => "notification".to_string(),
+            SettingsType::Display => "display".to_string(),
+        }
+    }
+}

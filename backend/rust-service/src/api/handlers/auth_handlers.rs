@@ -8,10 +8,8 @@ use crate::{
         APIError, RequestAuth,
         dtos::auth_dtos::{LoginRequest, LoginResponse, OauthRequest, OauthResponse, RegisterRequest, RegisterResponse},
         version,
-    },
-    application::{
-        service::{auth::{self, provider::errors::ProviderError, service::AuthService}, errors::AuthServiceError, session_service::SessionService},
-        state::SharedState,
+    }, application::{
+        service::{auth::{self, provider::errors::ProviderError, service::AuthService}, errors::AuthServiceError, profile_service::ProfileService, session_service::SessionService}, state::SharedState,
     },
 };
 
@@ -116,6 +114,8 @@ pub async fn register_handler(
             &payload.username.to_lowercase(), // ensure username is in lowercase for login, as we store it in lowercase in the database
             &payload.password,
             req_header).await?;
+
+    ProfileService::init_user_settings(&state, login_res.user_id).await?;
 
     Ok(Json(RegisterResponse {
         token: login_res.token,

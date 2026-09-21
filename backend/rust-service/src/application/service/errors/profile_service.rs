@@ -18,6 +18,15 @@ pub enum ProfileServiceError {
     #[error("Invalid banner update.")]
     InvalidBannerUpdate,
 
+    #[error("Invalid follow operation.")]
+    InvalidFollowOperation,
+
+    #[error("Cannot follow yourself.")]
+    CannotFollowYourself,
+    
+    #[error("Cannot follow user due to their privacy settings.")]
+    CannotFollowUser,
+    
     #[error(transparent)]
     DisplayNameError(#[from] DisplayNameError),
     #[error(transparent)]

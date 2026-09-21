@@ -20,6 +20,7 @@ impl From<ProfileServiceError> for APIError {
                     .code(APIErrorCode::InvalidBannerUpdate)
                     .kind(APIErrorKind::ValidationError),
             ),
+
             ProfileServiceError::NoUpdateFields => (
                 StatusCode::BAD_REQUEST,
                 APIErrorEntry::new("No update fields provided.")
@@ -42,6 +43,18 @@ impl From<ProfileServiceError> for APIError {
                 StatusCode::BAD_REQUEST,
                 APIErrorEntry::new(&e.to_string())
                     .code(APIErrorCode::QuotesError)
+                    .kind(APIErrorKind::ValidationError),
+            ),
+            ProfileServiceError::CannotFollowYourself => (
+                StatusCode::BAD_REQUEST,
+                APIErrorEntry::new("Cannot follow yourself.")
+                    .code(APIErrorCode::CannotFollowYourself)
+                    .kind(APIErrorKind::ValidationError),
+            ),
+            ProfileServiceError::InvalidFollowOperation => (
+                StatusCode::BAD_REQUEST,
+                APIErrorEntry::new("Invalid follow operation.")
+                    .code(APIErrorCode::InvalidFollowOperation)
                     .kind(APIErrorKind::ValidationError),
             ),
             _ => (

@@ -1,6 +1,5 @@
 use axum::{
-    Json,
-    extract::{Multipart, Path, State},
+    Json, extract::{Multipart, Path, State},
 };
 use multipart_derive::Multipart;
 use serde::Deserialize;
@@ -11,8 +10,18 @@ use crate::{
         dtos::user_dtos::{PublicUserProfileDTO, UserDTO},
         version,
     }, application::{
-        repository::{media::row::MediaType, user::{self as user_repo, find::URDQOpts}}, service::{
-            errors::AuthServiceError, media::{extractor::{ExtractorFileOptions, ValidationOptions}, inspector::FileType, model::FileContainer}, profile_service::ProfileService,
+        repository::{
+            media::row::MediaType, user::{
+                self as user_repo, find::URDQOpts, row::{FollowUserRow, SettingsType, UserSettingRow},
+            },
+        }, service::{
+            errors::{AuthServiceError, ProfileServiceError},
+            media::{
+                extractor::{ExtractorFileOptions, ValidationOptions},
+                inspector::FileType,
+                model::FileContainer,
+            },
+            profile_service::ProfileService,
         }, state::SharedState,
     },
 };
@@ -136,7 +145,6 @@ pub async fn get_current_user_handler(
     Ok(Json(user.into()))
 }
 
-
 pub async fn get_user_minimal_handler(
     State(state): State<SharedState>,
     Path((version, user_id)): Path<(String, i64)>,
@@ -155,4 +163,96 @@ pub async fn get_user_minimal_handler(
     let user = ProfileService::get_profile_with_opts(&state, opts).await?;
 
     Ok(Json(user.into()))
+}
+
+#[derive(serde::Serialize,Deserialize, Debug)]
+pub struct UserSettingPayload {
+    pub setting_type: SettingsType,
+}
+pub async fn get_user_setting_handler(
+    State(state): State<SharedState>,
+    Path((version, setting_type)): Path<(String, SettingsType)>,
+    req_auth: RequestAuth,
+) -> Result<Json<UserSettingRow>, APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+
+    let user_id = match req_auth.user {
+        Some(user) => user.user_id,
+        None => return Err(AuthServiceError::InvalidCredentials.into()),
+    };
+
+    let setting =
+        ProfileService::get_user_setting(&state, user_id, setting_type).await?;
+
+    Ok(Json(setting.into()))
+}
+
+// ? I don't know I should doing it seperate or in the same handler as follow_user_handler
+#[axum::debug_handler]
+pub async fn follow_user_handler(
+    State(state): State<SharedState>,
+    Path((version, following_id)): Path<(String, i64)>,
+    req_auth: RequestAuth,
+) -> Result<Json<FollowUserRow>, APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+
+    let user_id = match req_auth.user {
+        Some(user) => user.user_id,
+        None => return Err(AuthServiceError::InvalidCredentials.into()),
+    };
+
+    if user_id == following_id {
+        return Err(ProfileServiceError::CannotFollowYourself.into());
+    }
+
+    let target_follow_setting =
+        ProfileService::get_user_setting(&state, following_id, SettingsType::Privacy).await?;
+
+    if target_follow_setting.setting_value["who_can_follow_me"] == "request" {
+        let result = ProfileService::follow_user
+        (&state, user_id, following_id, "pending").await?;
+        return Ok(Json(result));
+    }
+
+    let result = ProfileService::follow_user(&state, user_id, following_id, "followed").await?;
+
+    Ok(Json(result))
+}
+
+pub async fn unfollow_user_handler(
+    State(state): State<SharedState>,
+    Path((version, following_id)): Path<(String, i64)>,
+    req_auth: RequestAuth,
+) -> Result<(), APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+
+    let user_id = match req_auth.user {
+        Some(user) => user.user_id,
+        None => return Err(AuthServiceError::InvalidCredentials.into()),
+    };
+
+    ProfileService::unfollow_user(&state, user_id, following_id).await?;
+
+    Ok(())
+}
+
+pub async fn follow_user_accept_handler(
+    State(state): State<SharedState>,
+    Path((version, following_id)): Path<(String, i64)>,
+    req_auth: RequestAuth,
+) -> Result<Json<FollowUserRow>, APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+
+    let user_id = match req_auth.user {
+        Some(user) => user.user_id,
+        None => return Err(AuthServiceError::InvalidCredentials.into()),
+    };
+
+    let result = ProfileService::follow_user(&state, user_id, following_id, "followed").await?;
+
+    Ok(Json(result))
 }

@@ -79,6 +79,8 @@ pub struct PostRow {
 
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
+
+    pub is_followed: bool,
 }
 
 #[skip_serializing_none]

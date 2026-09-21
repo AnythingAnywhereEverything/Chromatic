@@ -4,7 +4,11 @@ use crate::{
     application::{
         repository::{
             media::{self as media_repo, row::ProcessingState},
-            user::{self as user_repo, find::URDQOpts, row::UserProfileRow},
+            user::{
+                self as user_repo,
+                find::URDQOpts,
+                row::{FollowUserRow, SettingsType, UserProfileRow, UserSettingRow},
+            },
         },
         service::{
             errors::ProfileServiceError,
@@ -18,7 +22,9 @@ use crate::{
         },
         state::AppState,
     },
-    domain::user::types::{Bio, DisplayName, Quotes},
+    domain::user::{
+        types::{Bio, DisplayName, Quotes},
+    },
 };
 pub struct ProfileService;
 
@@ -264,15 +270,103 @@ impl ProfileService {
 
         // update cache
         let mut conn = state.redis.get().await?;
-        let cache_key = format!(
-            "profile:id:{}",
-            &profile.id
-        );
+        let cache_key = format!("profile:id:{}", &profile.id);
         let cache_value = serde_json::to_string(&profile)?;
         conn.set_ex(&cache_key, &cache_value, 3600).await?;
 
         tx.commit().await?;
 
         Ok(profile)
+    }
+    pub async fn unfollow_user(
+        state: &AppState,
+        user_id: i64,
+        target_id: i64,
+    ) -> Result<(), ProfileServiceError> {
+        let mut tx = state.db_pool.begin().await?;
+        let result = user_repo::follow::unfollow_repo(&mut tx, user_id, target_id).await?;
+        tracing::info!("Unfollow repository call result: {:?}", result);
+         if result {
+            user_repo::follow::update_follower_count(&mut tx, target_id, -1).await?;
+            user_repo::follow::update_following_count(&mut tx, user_id, -1).await?;
+         }
+        tx.commit().await?;
+        Ok(())
+    }
+
+    pub async fn follow_user(
+        state: &AppState,
+        user_id: i64,
+        target_id: i64,
+        status: &str,
+    ) -> Result<FollowUserRow, ProfileServiceError> {
+        let mut tx = state.db_pool.begin().await?;
+        tracing::info!(
+            "Following user: {} -> {} with status: {}",
+            user_id,
+            target_id,
+            status
+        );
+        let result = user_repo::follow::follow_repo(&mut tx, user_id, target_id, &status).await?;
+        let notification_id = state.snowflake_generator.generate_id()?;
+        tracing::info!("Follow repository call result: {:?}", result);
+        let username = Self::get_profile_by_id(state, user_id, None)
+            .await?
+            .username;
+        if status == "followed" {
+            user_repo::follow::update_follower_count(&mut tx, target_id, 1).await?;
+            user_repo::follow::update_following_count(&mut tx, user_id, 1).await?;
+
+            user_repo::notification::create_notification(
+                &mut tx,
+                notification_id,
+                target_id,
+                "follow",
+                serde_json::json!({
+                    "username": username,
+                    "message": "has followed you"
+                }),
+            )
+            .await?;
+        } else if status == "pending" {
+            user_repo::notification::create_notification(
+                &mut tx,
+                notification_id,
+                target_id,
+                "follow_request",
+                serde_json::json!({
+                    "username": username,
+                    "message": "has requested to follow you"
+                }),
+            )
+            .await?;
+        }
+
+
+        tx.commit().await?;
+        Ok(result)
+    }
+
+    pub async fn init_user_settings(
+        state: &AppState,
+        user_id: i64,
+    ) -> Result<(), ProfileServiceError> {
+        let mut tx = state.db_pool.begin().await?;
+        user_repo::setting::init_setting_message(&mut tx, user_id).await?;
+        user_repo::setting::init_setting_privacy(&mut tx, user_id).await?;
+        user_repo::setting::init_setting_notification(&mut tx, user_id).await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    pub async fn get_user_setting(
+        state: &AppState,
+        user_id: i64,
+        setting_key: SettingsType,
+    ) -> Result<UserSettingRow, ProfileServiceError> {
+        let mut tx = state.db_pool.begin().await?;
+        let setting = user_repo::setting::get_setting_type(&mut tx, user_id, setting_key).await?;
+        tx.commit().await?;
+        Ok(setting)
     }
 }
