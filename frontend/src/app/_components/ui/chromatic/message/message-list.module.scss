@@ -1,0 +1,32 @@
+.message-list{
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-16);
+
+    background-color: var(--popover);
+    padding-inline: var(--space-16);
+    min-width: 320px;
+}
+
+.your-profile-tabs {
+    display: flex;
+    flex-direction: row;
+    gap: var(--space-8);
+    padding: var(--space-8);
+    align-items: center;
+    cursor: pointer;
+    img{
+        border-radius: 50%;
+    }
+}
+
+.your-profile-tab-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.your-profile-tab-status {
+    font-size: var(--font-size-sm);
+    opacity: 0.6;
+}

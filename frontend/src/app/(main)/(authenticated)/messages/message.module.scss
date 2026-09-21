@@ -1,0 +1,10 @@
+.message-layout{
+    display: flex;
+    flex-direction: row;
+    gap: var(--space-12);
+    height: 100%;
+}
+
+.message-body{
+    flex: 1;
+}
