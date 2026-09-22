@@ -204,7 +204,12 @@ pub struct TagAttachmentFull {
     pub target_type: TagTarget,
     pub tag_id: String,
     pub tag_name: String,
-    pub tag_color: Option<String>,
+}
+
+#[derive(sqlx::FromRow, Debug, Serialize, Deserialize)]
+pub struct TagRow{
+    pub id: i64,
+    pub tag_name: String,
 }
 
 #[derive(serde::Deserialize, sqlx::Type, Debug)]

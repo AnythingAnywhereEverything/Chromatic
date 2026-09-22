@@ -10,7 +10,9 @@ use crate::application::{
             row::{MediaType, ProcessingState},
         }, post::{
             self as post_repo, row::{CommentRow, MediaTypeAttachment, PostRow, PostVisibility, TagTarget},
-        }, user::{ follow::is_following},
+        }, tags:: {
+            self as tags_repo
+        }, user::follow::is_following,
     }, service::{
         errors::PostServiceError,
         media::{
@@ -363,7 +365,7 @@ impl PostService {
         if !post_tags.is_empty() {
             tracing::trace!("Entering add tags stage");
             for tag in post_tags {
-                post_repo::post::add_tags_target(&mut tx, *new_post_id, TagTarget::Post, tag)
+                tags_repo::add::add_tags_target(&mut tx, *new_post_id, TagTarget::Post, tag)
                     .await?;
             }
         }

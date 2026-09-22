@@ -22,12 +22,10 @@ use tower_http::cors::{Any, CorsLayer};
 
 use crate::{
     api::{
-        error::APIError,
-        routes::{
-            auth_routes, dev_routes, message_routes, post_routes, protected_routes, user_routes,
+        error::APIError, routes::{
+            auth_routes, dev_routes, message_routes, post_routes, protected_routes, tag_routes, user_routes,
         },
-    },
-    application::state::SharedState,
+    }, application::state::SharedState,
 };
 
 pub async fn create_router(state: SharedState) -> Router {
@@ -50,6 +48,7 @@ pub async fn create_router(state: SharedState) -> Router {
         .nest("/{version}/message", message_routes::routes())
         .nest("/{version}/dev", dev_routes::routes())
         .nest("/{version}/protected", protected_routes::routes())
+        .nest("/{version}/tags", tag_routes::routes())
         // Add a fallback service for handling routes to unknown paths.
         .fallback(error_404_handler)
         .with_state(Arc::clone(&state))

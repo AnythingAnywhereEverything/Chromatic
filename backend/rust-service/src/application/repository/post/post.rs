@@ -383,75 +383,7 @@ pub async fn delete_target_attachments(
     Ok(())
 }
 
-// * ----------------------------------------------
-// * Interest tags
-// * ----------------------------------------------
 
-pub async fn add_tags_target(
-    tx: &mut Transaction<'_, sqlx::Postgres>,
-    target_id: i64,
-    target_type: TagTarget,
-    tag_id: i64,
-) -> Result<TagAttachmentRow, sqlx::Error> {
-    sqlx::query_as::<_, TagAttachmentRow>(
-        r#"
-            INSERT INTO tag_attachments (
-                target_id,
-                target_type,
-                tag_id
-            )
-            VALUES($1, $2, $3)
-            RETURNING *
-        "#,
-    )
-    .bind(target_id)
-    .bind(target_type)
-    .bind(tag_id)
-    .fetch_one(tx.as_mut())
-    .await
-}
-
-pub async fn get_tag_attachments(
-    tx: &mut Transaction<'_, Postgres>,
-    target_id: i64,
-) -> Result<Vec<TagAttachmentFull>, sqlx::Error> {
-    sqlx::query_as::<_, TagAttachmentFull>(
-        r#"
-            SELECT
-                ta.target_id,
-                ta.target_type,
-                ta.tag_id,
-                it.tag_name
-            FROM tag_attachments ta
-            JOIN interest_tags it
-                ON it.id = ta.tag_id
-            WHERE ta.target_id = $1
-        "#,
-    )
-    .bind(target_id)
-    .fetch_all(tx.as_mut())
-    .await
-}
-
-pub async fn delete_tag_attachment(
-    tx: &mut Transaction<'_, Postgres>,
-    target_id: i64,
-    tag_id: i64,
-) -> Result<u64, sqlx::Error> {
-    let row = sqlx::query(
-        r#"
-            DELETE FROM tag_attachments
-            WHERE target_id = $1
-              AND tag_id = $2
-        "#,
-    )
-    .bind(target_id)
-    .bind(tag_id)
-    .execute(tx.as_mut())
-    .await?;
-
-    Ok(row.rows_affected())
-}
 // -------------------------------------
 // * Small like patch
 // -------------------------------------
