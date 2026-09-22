@@ -16,6 +16,7 @@
     flex-direction: row;
     align-items: center;
     gap: var(--space-4);
+    flex: 1;
 }
 
 .username {
@@ -37,6 +38,8 @@
     align-items: flex-start;
     padding-inline: var(--space-12);
     padding-top: var(--space-8);
+    width: 100%;
+    overflow: hidden;
 }
 
 .author-container {
@@ -44,8 +47,18 @@
     flex-direction: row;
     align-items: flex-start;
     gap: var(--space-8);
+    flex: 1 1 auto;
+    min-width: 0;
+
+    section {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+    }
 
     .avatar {
+        flex-shrink: 0;
         border-radius: var(--radius-round);
         object-fit: cover;
     }
@@ -80,16 +93,19 @@
 .text-container {
     line-height: var(--line-height-sm);
     font-size: var(--font-size-sm);
-    word-wrap: break-word;
     min-width: 0;
-    -webkit-box-orient: vertical;
+    max-width: 100%;
     overflow: hidden;
-    font-weight: 400;
+    font-weight: var(--font-normal);
     .content {
-        line-height: 1.5;
-        transition: max-height 0.3s ease; /* Optional: smooth opening */
+        max-width: 100%;
+        line-height: var(--line-height-sm);
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        transition: max-height 0.3s ease;
         z-index: 0;
     }
+    width: 100%;
 }
 
 .interaction {

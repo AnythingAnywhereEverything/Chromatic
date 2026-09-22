@@ -84,90 +84,70 @@ function UserComment(props: commentProps) {
         !isDeleted && (
             <div key={id} className={style["container"]}>
                 <header className={style["header"]}>
-                    <Tooltip
-                        placement="top-start"
-                        allowHovering={true}
-                        offset={8}
-                    >
-                        <div className={style["author-container"]}>
-                            <TooltipTrigger>
-                                <PostAvatar
-                                    userId={author.id}
-                                    username={author.username}
-                                    displayName={author.display_name}
-                                    avatar={author.avatar}
-                                    thumbhash={author.avatar_thumbhash || ""}
-                                    className={style["avatar"]}
-                                    width={38}
-                                    height={38}
-                                />
-                            </TooltipTrigger>
-                            <section>
-                                <div className={style["comment-info"]}>
-                                    <Link
-                                        href={`/u/${author.username}`}
-                                        className={style["username"]}
-                                    >
-                                        <p>
-                                            {author.display_name ||
-                                                author.username}
-                                        </p>
-                                        <span>@{author.username}</span>
-                                    </Link>
-                                    <span>•</span>
-                                    <p className={style["comment-meta"]}>
-                                        <Tooltip
-                                            openDelayDuration={300}
-                                        >
-                                            <TooltipTrigger>
-                                                <span>
-                                                    {formatSocialMediaDate(
-                                                        created_at,
-                                                    )}
-                                                </span>
-                                            </TooltipTrigger>
-                                            <TooltipContent
-                                            >
-                                                <p>
-                                                    {formatFullDateWithExactTime(
-                                                        created_at,
-                                                    )}
-                                                </p>
-                                            </TooltipContent>
-                                        </Tooltip>
+                    <div className={style["author-container"]}>
+                        <PostAvatar
+                            userId={author.id}
+                            username={author.username}
+                            displayName={author.display_name}
+                            avatar={author.avatar}
+                            thumbhash={author.avatar_thumbhash || ""}
+                            className={style["avatar"]}
+                            width={38}
+                            height={38}
+                        />
+                        <section>
+                            <div className={style["comment-info"]}>
+                                <Link
+                                    href={`/u/${author.username}`}
+                                    className={style["username"]}
+                                >
+                                    <p>
+                                        {author.display_name || author.username}
                                     </p>
+                                    <span>@{author.username}</span>
+                                </Link>
+                                <span>•</span>
+                                <p className={style["comment-meta"]}>
+                                    <Tooltip openDelayDuration={300}>
+                                        <TooltipTrigger>
+                                            <span>
+                                                {formatSocialMediaDate(
+                                                    created_at,
+                                                )}
+                                            </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>
+                                                {formatFullDateWithExactTime(
+                                                    created_at,
+                                                )}
+                                            </p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </p>
+                            </div>
+                            <div className={style["text-container"]}>
+                                <span
+                                    style={{ whiteSpace: "pre-wrap" }}
+                                    className={`${style["content"]} ${!open ? style["is-collapsed"] : ""}`}
+                                    ref={ref}
+                                >
+                                    {content}
+                                </span>
+                                <div>
+                                    {showReadMoreButton && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setOpen(!open)}
+                                            className={style["read-more-btn"]}
+                                        >
+                                            {open ? "Show less" : "Read more"}
+                                        </button>
+                                    )}
                                 </div>
-                                <div className={style["text-container"]}>
-                                    <span
-                                        style={{ whiteSpace: "pre-wrap" }}
-                                        className={`${style["content"]} ${!open ? style["is-collapsed"] : ""}`}
-                                        ref={ref}
-                                    >
-                                        {content}
-                                    </span>
-                                    <div>
-                                        {showReadMoreButton && (
-                                            <button
-                                                type="button"
-                                                onClick={() => setOpen(!open)}
-                                                className={
-                                                    style["read-more-btn"]
-                                                }
-                                            >
-                                                {open
-                                                    ? "Show less"
-                                                    : "Read more"}
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            </section>
-                        </div>
-                        <TooltipContent>
-                            <TooltipArrow />
-                            <p>User: @{author.username}</p>
-                        </TooltipContent>
-                    </Tooltip>
+                            </div>
+                        </section>
+                    </div>
                     <div className={style["option"]}>
                         <Dropdown>
                             <DropdownTrigger asChild>
