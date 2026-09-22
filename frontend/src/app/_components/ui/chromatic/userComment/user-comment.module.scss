@@ -57,10 +57,12 @@
         overflow: hidden;
     }
 
-    .avatar {
+    div{
         flex-shrink: 0;
-        border-radius: var(--radius-round);
-        object-fit: cover;
+        .avatar {
+            border-radius: var(--radius-round);
+            object-fit: cover;
+        }
     }
 }
 
