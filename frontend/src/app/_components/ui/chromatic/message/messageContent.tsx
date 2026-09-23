@@ -42,6 +42,12 @@ function MessageContent({ target, currentUser }: MessageContentProps) {
             ) {
                 return;
             }
+
+            // check if message id was already in the current messages list
+            if (messages.some((msg) => msg.id === realtimeMessage.id)) {
+                return;
+            }
+
             const wrappedMessage: MessageResponse = {
                 id: realtimeMessage.id,
                 user_id: realtimeMessage.sender_id,
