@@ -1,6 +1,7 @@
 import { MessageResponse } from "@/api/messages/messages";
 import { UserResponse } from "@/api/user";
 import { useState, useEffect, useRef } from "react";
+import { useRealtime } from "@/app/realtime";
 import { useRouter } from "next/navigation";
 import { getMessages } from "@/api/messages/messages";
 import { PostAvatar } from "../post/header/avatar";
@@ -29,6 +30,14 @@ interface MessageContentProps {
 function MessageContent({ profile, currentUser }: MessageContentProps) {
     const [loading, setLoading] = useState(false);
 
+    const { messages: realtimeMessage, connected, sendMessage } = useRealtime();
+
+    useEffect(() => {
+        // append new realtime messages to the existing messages
+        // setMessages((current) => [...current, ...realtimeMessage]);
+        console.log("New realtime messages:", realtimeMessage);
+    }, [realtimeMessage]);
+
     const [messages, setMessages] = useState<MessageResponse[]>([]);
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
@@ -51,7 +60,7 @@ function MessageContent({ profile, currentUser }: MessageContentProps) {
     useEffect(() => {
         const loadMessages = async () => {
             setLoading(true);
-            setMessages(TEST_MESSAGE);
+            setMessages([]);
             setMessageInput("");
             setHasMore(true);
 
@@ -163,7 +172,7 @@ function MessageContent({ profile, currentUser }: MessageContentProps) {
             return;
         }
 
-        // Implement the logic to send the message here
+        sendMessage(profile.id, messageInput);
 
         setMessageInput("");
     };

@@ -20,4 +20,25 @@ defmodule ElixirService.Messages do
     })
     |> Repo.insert()
   end
+
+  def delete_message(message_id, sender_id) do
+    message = Repo.get(Message, message_id)
+    # also check if sender match the user_id of the message before deleting
+    case message do
+      nil -> {:error, :not_found}
+      %Message{user_id: ^sender_id} -> Repo.delete(message)
+      _ -> {:error, :unauthorized}
+    end
+  end
+
+  def edit_message(message_id, new_content) do
+    message = Repo.get(Message, message_id)
+    case message do
+      nil -> {:error, :not_found}
+      _ ->
+        message
+        |> change(%{content: new_content})
+        |> Repo.update()
+    end
+  end
 end

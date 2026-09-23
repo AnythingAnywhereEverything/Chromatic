@@ -4,6 +4,7 @@ import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { PortalProvider } from "./_components/portal";
+import { RealtimeProvider } from "./realtime";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
     const [queryClient] = useState(
@@ -23,7 +24,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         <ThemeProvider enableSystem>
             <QueryClientProvider client={queryClient}>
                 <PortalProvider container={portalRoot}>
-                    {children}
+                    <RealtimeProvider>{children}</RealtimeProvider>
                 </PortalProvider>
                 <div
                     data-portal-root

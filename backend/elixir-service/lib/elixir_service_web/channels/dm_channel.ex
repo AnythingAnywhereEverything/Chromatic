@@ -48,11 +48,18 @@ defmodule ElixirServiceWeb.DMChannel do
           content: content
         }
 
-        Phoenix.PubSub.broadcast(
-          ElixirService.PubSub,
-          "dm:#{recipient_id}",
-          {:new_message, message}
-        )
+        # * Sender always receives the successfully saved message.
+        push(socket, "new_message", message)
+
+        # * Don't broadcast to ourselves again.
+        # * If the recipient is offline, PubSub simply has no subscribers.
+        if recipient_id != sender_id do
+          PubSub.broadcast(
+            ElixirService.PubSub,
+            "dm:#{recipient_id}",
+            {:new_message, message}
+          )
+        end
 
         {:reply, :ok, socket}
 
@@ -62,6 +69,34 @@ defmodule ElixirServiceWeb.DMChannel do
   end
 
   @impl true
+  def handle_in(
+        "delete_message",
+        %{"message_id" => message_id},
+        socket
+      ) do
+    sender_id = socket.assigns.user.id
+    message_id = String.to_integer(message_id)
+
+    case ElixirService.Messages.delete_message(message_id, sender_id) do
+      {:ok, _message} ->
+        {:reply, :ok, socket}
+
+      {:error, :not_found} ->
+        {:reply, {:error, %{reason: "not_found"}}, socket}
+
+      {:error, :unauthorized} ->
+        {:reply, {:error, %{reason: "unauthorized"}}, socket}
+
+      {:error, _changeset} ->
+        {:reply, {:error, %{reason: "failed_to_delete"}}, socket}
+    end
+  end
+
+  @impl true
+  @spec handle_info(
+          {:new_message, any()},
+          Phoenix.Socket.t()
+        ) :: {:noreply, Phoenix.Socket.t()}
   def handle_info({:new_message, message}, socket) do
     IO.inspect(message, label: "RECEIVED MESSAGE")
 

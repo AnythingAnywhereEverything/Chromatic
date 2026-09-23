@@ -3,6 +3,7 @@ services:
     build: ./backend/elixir-service
     env_file:
       - .env_docker_global
+      - .env_docker_elixir
     ports:
       - "4000:4000"
     networks:

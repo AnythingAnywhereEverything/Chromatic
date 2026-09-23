@@ -36,6 +36,8 @@ IO.puts("Redis config successfully loaded from environment variables.")
 config :elixir_service, :worker,
     id: env!("WORKER_ID", :integer)
 
+IO.puts("Worker config successfully loaded from environment variables.")
+
 # ---------- PHOENIX ----------
 
 config :elixir_service, ElixirServiceWeb.Endpoint,
