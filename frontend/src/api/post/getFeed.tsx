@@ -1,10 +1,7 @@
 import {
     fetchWithAuth,
     fetchWithOptionAuth,
-    getCacheUserId,
-    getToken,
 } from "@/handler/token_handler";
-import { getUser } from "../user";
 import { Media } from "../types/media";
 
 // * from community? post
@@ -57,7 +54,6 @@ export interface PostProps {
 interface PostTag {
     tag_id: string;
     tag_name: string;
-    tag_color: string;
     target_id: string;
 }
 
