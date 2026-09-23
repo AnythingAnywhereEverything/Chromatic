@@ -7,7 +7,6 @@ import {
 } from "../dialogue";
 import { FiPlus } from "react-icons/fi";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { getFollowedUsers } from "@/api/messages/messages";
 import style from "./scss/create-new-message.module.scss";
 import { PostAvatar } from "../post/header/avatar";
@@ -16,12 +15,17 @@ import { RxCross1 } from "react-icons/rx";
 
 // Component for creating a new direct message, allowing the user to select followed users and initiate a conversation.
 // now create only one on one direct message at a time
-function CreateDirectMessage() {
+function CreateDirectMessage({
+    isOpen,
+    onOpenChange,
+}: {
+    isOpen: boolean;
+    onOpenChange: (open: boolean) => void;
+}) {
     const [followedUsers, setFollowedUsers] = useState<UserResponse[]>([]);
     const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [enableSubmit, setEnableSubmit] = useState(false);
-    const router = useRouter();
 
     useEffect(() => {
         async function fetchFollowedUsers() {
@@ -50,7 +54,7 @@ function CreateDirectMessage() {
     const handleSingleMessage = async (userId: string) => {
         // * Demo: handle creating/opening a one-on-one conversation here.
         console.log("Create single message with user:", userId);
-        
+
         // TODO: check if conversation exists
         // TODO: create conversation if it does not exist
         // TODO: add conversation to history
@@ -77,17 +81,16 @@ function CreateDirectMessage() {
         } finally {
             setIsSubmitting(false);
             setEnableSubmit(selectedUsers.length > 0);
+            onOpenChange(false);
         }
     };
 
     return (
-        <Dialog>
-            <DialogTrigger asChild>
-                <FiPlus />
-            </DialogTrigger>
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className={style["new-message-container"]}>
                 <DialogHeading className={style["new-message-heading"]}>
                     <span>New Message</span>
+
                     <DialogClose style={{ cursor: "pointer" }}>
                         <RxCross1 />
                     </DialogClose>
@@ -150,6 +153,7 @@ function CreateDirectMessage() {
                     >
                         Cancel
                     </DialogClose>
+
                     <button
                         type="button"
                         className={`${style["bottom-button"]} ${style["send-button"]}`}

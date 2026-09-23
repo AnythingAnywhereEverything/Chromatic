@@ -8,6 +8,8 @@ import { BsThreeDots } from "react-icons/bs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../tooltip";
 
 import { CreateDirectMessage } from "./createNewMessage";
+import { FiPlus } from "react-icons/fi";
+
 function MessageListSkeleton() {
     return (
         <div className={style["message-list-skeleton"]}>
@@ -31,14 +33,16 @@ function MessageList({
 }: MessageListProps) {
     const [user, setUser] = useState<UserResponse | null>(null);
     const currentUser = useUser();
-
+    const [openCreate, setOpenCreate] = useState(false);
     useEffect(() => {
         if (currentUser?.data) {
             setUser(currentUser.data);
         }
     }, [currentUser]);
 
-    // todo: pagination for follow in message
+    const handleSelectChatUser = (user: UserResponse) => {
+        onSelectChatUser(user);
+    };
 
     return (
         <>
@@ -56,7 +60,12 @@ function MessageList({
                         <div className={style["your-profile-header"]}>
                             <span>Your Profile</span>
                             {user && (
-                                <div className={style["your-profile-tabs"]}>
+                                <div
+                                    className={`${
+                                        style["your-profile-tabs"]
+                                    }${selectedChatUser?.id === user.id ? ` ${style["active"]}` : ""}`}
+                                    onClick={() => handleSelectChatUser(user)}
+                                >
                                     <PostAvatar
                                         userId={user.id}
                                         username={user.username}
@@ -71,7 +80,7 @@ function MessageList({
                                             style["your-profile-tab-info"]
                                         }
                                     >
-                                        <span>{user.username}</span>
+                                        <span>{user.display_name ?? user.username}</span>
                                         {/* Idk, which one */}
                                         <span
                                             className={
@@ -90,52 +99,76 @@ function MessageList({
                                 <span>Direct Message</span>
                                 <Tooltip>
                                     <TooltipTrigger
+                                        type="button"
                                         className={
                                             style[
                                                 "create-direct-message-button"
                                             ]
                                         }
+                                        onClick={() => setOpenCreate(true)}
                                     >
-                                        <CreateDirectMessage />
+                                        <FiPlus />
                                     </TooltipTrigger>
+
                                     <TooltipContent>
                                         Add a new direct message
                                     </TooltipContent>
                                 </Tooltip>
+
+                                <CreateDirectMessage
+                                    isOpen={openCreate}
+                                    onOpenChange={setOpenCreate}
+                                />
                             </div>
                         </div>
 
-                        <ul>
-                            {/* // ! MOCK UP user profile tab for demonstration purposes */}
-                            {user && (
-                                <div className={style["your-profile-tabs"]}>
-                                    <PostAvatar
-                                        userId={user.id}
-                                        username={user.username}
-                                        displayName={user.display_name}
-                                        avatar={user.avatar}
-                                        thumbhash={user.avatar_thumbhash}
-                                        width={36}
-                                        height={36}
-                                    />
+                        <ul className={style["profile-tabs-list"]}>
+                            {chatUsers.map((user) => (
+                                // on selected user set .active class for styling purposes
+                                <li key={user.id}>
                                     <div
-                                        className={
-                                            style["your-profile-tab-info"]
+                                        className={`${
+                                            style["your-profile-tabs"]
+                                        }${selectedChatUser?.id === user.id ? ` ${style["active"]}` : ""}`}
+                                        onClick={() =>
+                                            handleSelectChatUser(user)
                                         }
                                     >
-                                        <span>{user.username}</span>
-                                        {/* Idk, which one */}
-                                        <span
+                                        <PostAvatar
+                                            userId={user.id}
+                                            username={user.username}
+                                            displayName={user.display_name}
+                                            avatar={user.avatar}
+                                            thumbhash={user.avatar_thumbhash}
+                                            width={36}
+                                            height={36}
+                                        />
+                                        <div
                                             className={
-                                                style["your-profile-tab-status"]
+                                                style["your-profile-tab-info"]
                                             }
                                         >
-                                            Status/ last message /last active
-                                        </span>
+                                            <span>
+                                                {user.display_name
+                                                    ? user.display_name
+                                                    : user.username}
+                                            </span>
+                                            {/* Idk, which one */}
+                                            <span
+                                                className={
+                                                    style[
+                                                        "your-profile-tab-status"
+                                                    ]
+                                                }
+                                            >
+                                                Status/ last message /last
+                                                active
+                                            </span>
+                                        </div>
+                                        <BsThreeDots />
                                     </div>
-                                    <BsThreeDots />
-                                </div>
-                            )}
+                                </li>
+                            ))}
                         </ul>
                     </div>
                 </div>
@@ -143,16 +176,5 @@ function MessageList({
         </>
     );
 }
-
-const TempUser = [
-    {
-        id: 1,
-        name: "Friend 1",
-    },
-    {
-        id: 2,
-        name: "Friend 2",
-    },
-];
 
 export { MessageList };

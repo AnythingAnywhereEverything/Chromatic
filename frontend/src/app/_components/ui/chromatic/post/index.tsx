@@ -113,7 +113,6 @@ const Post: React.FC<PostProps> = ({
                             return (
                                 <li
                                     key={item.tag_id}
-                                    style={{ backgroundColor: `${item.tag_color}` }}
                                 >
                                     <p>{item.tag_name}</p>
                                 </li>
