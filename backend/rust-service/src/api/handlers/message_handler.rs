@@ -1,10 +1,14 @@
 use axum::{
-    Json, extract::{Multipart, Path, Query, State},
+    Json,
+    extract::{Multipart, Path, Query, State},
 };
 
 use crate::{
-    api::{APIError, RequestAuth, version}, application::{
-        repository::{messages::row::MessageRow, user::row::UserProfileRow}, service::{errors::AuthServiceError, message_service::MessageService}, state::SharedState,
+    api::{APIError, RequestAuth, version},
+    application::{
+        repository::{messages::row::MessageRow, user::row::UserProfileRow},
+        service::{errors::AuthServiceError, message_service::MessageService},
+        state::SharedState,
     },
 };
 
@@ -113,8 +117,26 @@ pub async fn get_followed_user_handler(
     };
 
     tracing::trace!("Getting followed users for user_id: {}", user_id);
-    let followed_users = MessageService
-        .get_followed_users(&state, user_id)
-        .await?;
+    let followed_users = MessageService.get_followed_users(&state, user_id).await?;
     Ok(Json(followed_users))
+}
+
+pub async fn get_single_message_handler(
+    State(state): State<SharedState>,
+    Path((version, message_id)): Path<(String, i64)>,
+    req_auth: RequestAuth,
+) -> Result<Json<Option<MessageRow>>, APIError> {
+    let api_version = version::parse_version(&version);
+    tracing::trace!("api_version: {:?}", api_version);
+
+    let user_id = match req_auth.user {
+        Some(user) => user.user_id,
+        None => return Err(AuthServiceError::InvalidCredentials.into()),
+    };
+
+    let message = MessageService
+        .get_message(&state, message_id, user_id)
+        .await?;
+
+    Ok(Json(message))
 }

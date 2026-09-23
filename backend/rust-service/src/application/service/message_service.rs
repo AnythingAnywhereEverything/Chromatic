@@ -63,7 +63,7 @@ impl MessageService {
         let mut messages = Vec::with_capacity(messages_id.len());
 
         for id in messages_id {
-            if let Some(message) = self.get_message(state, &mut tx, id, user_id).await? {
+            if let Some(message) = self.get_message(state, id, user_id).await? {
                 messages.push(message);
             }
         }
@@ -74,13 +74,13 @@ impl MessageService {
     // base message retrieval
     pub async fn get_message(
         &self,
-        _state: &AppState,
-        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        state: &AppState,
         message_id: i64,
         user_id: i64,
     ) -> Result<Option<MessageRow>, MessageServiceError> {
         tracing::info!("Getting base message");
-        let message = messages::get::base_message(tx, message_id, user_id).await?;
+        let mut tx = state.db_pool.begin().await?;
+        let message = messages::get::base_message(&mut tx, message_id, user_id).await?;
 
         // * I should not put profile in response it's cause too much space on response
         // * temp removed attachments to make less change to error
@@ -193,7 +193,7 @@ impl MessageService {
         }
 
         let message = self
-            .get_message(state, &mut tx, *new_message_id, sender_id)
+            .get_message(state, *new_message_id, sender_id)
             .await?;
 
         let Some(message) = message else {
@@ -232,9 +232,8 @@ impl MessageService {
 
         tx.commit().await?;
 
-        let mut tx = state.db_pool.begin().await?;
         let updated_message = self
-            .get_message(state, &mut tx, message_id, sender_id)
+            .get_message(state,  message_id, sender_id)
             .await?;
         if let Some(updated_message) = updated_message {
             return Ok(updated_message);
