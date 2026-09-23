@@ -10,9 +10,6 @@ export const PostPage: React.FC = () => {
             <div className={style["post-left-layout"]}>
                 <PostGroup />
             </div>
-            <div className={style["post-right-layout"]}>
-                <PostRightLayout />
-            </div>
         </div>
     );
 };
