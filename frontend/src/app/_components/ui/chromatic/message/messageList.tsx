@@ -31,14 +31,14 @@ function MessageList({
     selectedChatUser,
     onSelectChatUser,
 }: MessageListProps) {
-    const [user, setUser] = useState<UserResponse | null>(null);
-    const currentUser = useUser();
+    const thisUser = useUser();
+    const [currentUser, setCurrentUser] = useState<UserResponse | null>(null);
     const [openCreate, setOpenCreate] = useState(false);
     useEffect(() => {
-        if (currentUser?.data) {
-            setUser(currentUser.data);
+        if (thisUser?.data) {
+            setCurrentUser(thisUser.data);
         }
-    }, [currentUser]);
+    }, [thisUser]);
 
     const handleSelectChatUser = (user: UserResponse) => {
         onSelectChatUser(user);
@@ -59,19 +59,19 @@ function MessageList({
                     <div className={style["friend-profile"]}>
                         <div className={style["your-profile-header"]}>
                             <span>Your Profile</span>
-                            {user && (
+                            {currentUser && (
                                 <div
                                     className={`${
                                         style["your-profile-tabs"]
-                                    }${selectedChatUser?.id === user.id ? ` ${style["active"]}` : ""}`}
-                                    onClick={() => handleSelectChatUser(user)}
+                                    }${selectedChatUser?.id === currentUser.id ? ` ${style["active"]}` : ""}`}
+                                    onClick={() => handleSelectChatUser(currentUser)}
                                 >
                                     <PostAvatar
-                                        userId={user.id}
-                                        username={user.username}
-                                        displayName={user.display_name}
-                                        avatar={user.avatar}
-                                        thumbhash={user.avatar_thumbhash}
+                                        userId={currentUser.id}
+                                        username={currentUser.username}
+                                        displayName={currentUser.display_name}
+                                        avatar={currentUser.avatar}
+                                        thumbhash={currentUser.avatar_thumbhash}
                                         width={36}
                                         height={36}
                                     />
@@ -80,7 +80,9 @@ function MessageList({
                                             style["your-profile-tab-info"]
                                         }
                                     >
-                                        <span>{user.display_name ?? user.username}</span>
+                                        <span>
+                                            {currentUser.display_name ?? currentUser.username}
+                                        </span>
                                         {/* Idk, which one */}
                                         <span
                                             className={
@@ -123,52 +125,60 @@ function MessageList({
                         </div>
 
                         <ul className={style["profile-tabs-list"]}>
-                            {chatUsers.map((user) => (
-                                // on selected user set .active class for styling purposes
-                                <li key={user.id}>
-                                    <div
-                                        className={`${
-                                            style["your-profile-tabs"]
-                                        }${selectedChatUser?.id === user.id ? ` ${style["active"]}` : ""}`}
-                                        onClick={() =>
-                                            handleSelectChatUser(user)
-                                        }
-                                    >
-                                        <PostAvatar
-                                            userId={user.id}
-                                            username={user.username}
-                                            displayName={user.display_name}
-                                            avatar={user.avatar}
-                                            thumbhash={user.avatar_thumbhash}
-                                            width={36}
-                                            height={36}
-                                        />
+                            {chatUsers
+                                .filter((user) => user.id !== currentUser?.id)
+                                .map((user) => (
+                                    <li key={user.id}>
                                         <div
-                                            className={
-                                                style["your-profile-tab-info"]
+                                            className={`${style["your-profile-tabs"]}${
+                                                selectedChatUser?.id === user.id
+                                                    ? ` ${style["active"]}`
+                                                    : ""
+                                            }`}
+                                            onClick={() =>
+                                                handleSelectChatUser(user)
                                             }
                                         >
-                                            <span>
-                                                {user.display_name
-                                                    ? user.display_name
-                                                    : user.username}
-                                            </span>
-                                            {/* Idk, which one */}
-                                            <span
+                                            <PostAvatar
+                                                userId={user.id}
+                                                username={user.username}
+                                                displayName={user.display_name}
+                                                avatar={user.avatar}
+                                                thumbhash={
+                                                    user.avatar_thumbhash
+                                                }
+                                                width={36}
+                                                height={36}
+                                            />
+
+                                            <div
                                                 className={
                                                     style[
-                                                        "your-profile-tab-status"
+                                                        "your-profile-tab-info"
                                                     ]
                                                 }
                                             >
-                                                Status/ last message /last
-                                                active
-                                            </span>
+                                                <span>
+                                                    {user.display_name ||
+                                                        user.username}
+                                                </span>
+
+                                                <span
+                                                    className={
+                                                        style[
+                                                            "your-profile-tab-status"
+                                                        ]
+                                                    }
+                                                >
+                                                    {/* * Use the actual chat/message data here */}
+                                                    Last message / Last active
+                                                </span>
+                                            </div>
+
+                                            <BsThreeDots />
                                         </div>
-                                        <BsThreeDots />
-                                    </div>
-                                </li>
-                            ))}
+                                    </li>
+                                ))}
                         </ul>
                     </div>
                 </div>

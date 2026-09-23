@@ -1,6 +1,6 @@
 "use client";
 import { useUser } from "@/hooks/useUser";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import MessageContent from "@/app/_components/ui/chromatic/message/messageContent";
 import { MessageList } from "@/app/_components/ui/chromatic/message/messageList";
 import style from "./message.module.scss";
@@ -31,24 +31,29 @@ function MessageContainer({ userId }: MessageContainerProps) {
     const [selectedChatUser, setSelectedChatUser] =
         useState<UserResponse | null>(null);
     const [user, setUser] = useState<UserResponse | null>(null);
+    const hasFetched = useRef(false);
 
     useEffect(() => {
-        if (!currentUser.data?.id) {
+        const current = currentUser.data;
+        if (!current?.id || hasFetched.current) {
             return;
         }
-        setUser(currentUser.data);
 
+        hasFetched.current = true;
+        setUser(current);
         const fetchFollowedUsers = async () => {
             try {
                 const res = await getFollowedUsers();
                 setChatUsers(res ?? []);
+                setChatUsers((prev) => [current, ...prev]);
             } catch (error) {
+                hasFetched.current = false;
                 console.error(error);
             }
         };
 
         fetchFollowedUsers();
-    }, [currentUser.data?.id]);
+    }, [currentUser.data]);
 
     useEffect(() => {
         if (!userId || chatUsers.length === 0) {
@@ -56,7 +61,6 @@ function MessageContainer({ userId }: MessageContainerProps) {
         }
 
         const user = chatUsers.find((chatUser) => chatUser.id === userId);
-
         if (user) {
             setSelectedChatUser(user);
         }
@@ -105,6 +109,9 @@ function MessageContainer({ userId }: MessageContainerProps) {
             />
 
             <div className={style["message-body"]}>
+                <button type="button" onClick={() => console.log(chatUsers)}>
+                    Debug button
+                </button>
                 {selectedChatUser ? (
                     <MessageContent
                         profile={selectedChatUser}
