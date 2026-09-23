@@ -5,7 +5,7 @@ use axum::Json;
 use axum::extract::{Path, State};
 
 use crate::api::{APIError, version};
-use crate::application::repository::post::row::{TagAttachmentFull, TagRow};
+use crate::application::repository::post::row::{TagRow};
 use crate::application::repository::tags::{self as tags_repo};
 use crate::application::state::SharedState;
 

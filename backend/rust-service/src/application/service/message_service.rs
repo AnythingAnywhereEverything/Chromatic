@@ -7,6 +7,7 @@ use crate::application::{
             row::{MediaType, ProcessingState},
         },
         messages::{self, row::MessageRow},
+        user::row::UserProfileRow,
     },
     service::{
         errors::MessageServiceError,
@@ -235,5 +236,23 @@ impl MessageService {
 
         tx.commit().await?;
         Ok(())
+    }
+
+    pub async fn get_followed_users(
+        &self,
+        state: &AppState,
+        user_id: i64,
+    ) -> Result<Vec<UserProfileRow>, MessageServiceError> {
+        let mut tx = state.db_pool.begin().await?;
+
+        let followed_user_ids = messages::get::get_id_for_new_messages(&mut tx, user_id).await?;
+        let mut followed_users = Vec::new();
+
+        // The response might large
+        for followed_user_id in followed_user_ids {
+            let profile = ProfileService::get_profile_by_id(state, followed_user_id, None).await?;
+            followed_users.push(profile);
+        }
+        Ok(followed_users)
     }
 }

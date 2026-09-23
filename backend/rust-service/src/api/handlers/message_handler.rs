@@ -1,14 +1,10 @@
 use axum::{
-    Json,
-    extract::{Multipart, Path, State, Query},
+    Json, extract::{Multipart, Path, Query, State},
 };
 
 use crate::{
-    api::{APIError, RequestAuth, version},
-    application::{
-        repository::messages::row::MessageRow,
-        service::{errors::AuthServiceError, message_service::MessageService},
-        state::SharedState,
+    api::{APIError, RequestAuth, version}, application::{
+        repository::{messages::row::MessageRow, user::row::UserProfileRow}, service::{errors::AuthServiceError, message_service::MessageService}, state::SharedState,
     },
 };
 
@@ -18,7 +14,6 @@ pub struct MessageQuery {
     pub before: chrono::DateTime<chrono::Utc>,
 }
 
-#[axum::debug_handler]
 pub async fn get_message_chat_handler(
     State(state): State<SharedState>,
     Path((version, target_id)): Path<(String, i64)>,
@@ -45,7 +40,6 @@ pub async fn get_message_chat_handler(
     Ok(Json(message))
 }
 
-#[axum::debug_handler]
 pub async fn send_message_handler(
     State(state): State<SharedState>,
     Path((version, target_id)): Path<(String, i64)>,
@@ -66,7 +60,6 @@ pub async fn send_message_handler(
     Ok(Json(message))
 }
 
-#[axum::debug_handler]
 pub async fn update_message_handler(
     State(state): State<SharedState>,
     Path((version, message_id)): Path<(String, i64)>,
@@ -87,7 +80,6 @@ pub async fn update_message_handler(
     Ok(Json(message))
 }
 
-#[axum::debug_handler]
 pub async fn delete_message_handler(
     State(state): State<SharedState>,
     Path((version, message_id)): Path<(String, i64)>,
@@ -105,4 +97,24 @@ pub async fn delete_message_handler(
         .delete_message(&state, message_id, user_id)
         .await?;
     Ok(())
+}
+
+pub async fn get_followed_user_handler(
+    State(state): State<SharedState>,
+    Path(version): Path<String>,
+    req_auth: RequestAuth,
+) -> Result<Json<Vec<UserProfileRow>>, APIError> {
+    let api_version = version::parse_version(&version);
+    tracing::trace!("api_version: {:?}", api_version);
+
+    let user_id = match req_auth.user {
+        Some(user) => user.user_id,
+        None => return Err(AuthServiceError::InvalidCredentials.into()),
+    };
+
+    tracing::trace!("Getting followed users for user_id: {}", user_id);
+    let followed_users = MessageService
+        .get_followed_users(&state, user_id)
+        .await?;
+    Ok(Json(followed_users))
 }

@@ -39,6 +39,10 @@ pub struct MessageReaction {
     pub updated_at: chrono::NaiveDateTime,
 }
 
+#[derive(sqlx::FromRow, Debug, Deserialize, Serialize)] 
+pub struct UserFollowRow{
+    pub followed_id: i64,
+}
 
 #[derive(serde::Deserialize, serde::Serialize, sqlx::Type, Debug)]
 #[serde(rename_all = "lowercase")]

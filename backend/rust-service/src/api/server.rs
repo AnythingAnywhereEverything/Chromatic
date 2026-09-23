@@ -45,7 +45,7 @@ pub async fn create_router(state: SharedState) -> Router {
         // Nesting user routes.
         .nest("/{version}/users", user_routes::routes())
         .nest("/{version}/posts", post_routes::routes())
-        .nest("/{version}/message", message_routes::routes())
+        .nest("/{version}/messages", message_routes::routes())
         .nest("/{version}/dev", dev_routes::routes())
         .nest("/{version}/protected", protected_routes::routes())
         .nest("/{version}/tags", tag_routes::routes())

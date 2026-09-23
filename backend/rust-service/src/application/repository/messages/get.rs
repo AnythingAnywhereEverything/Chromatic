@@ -1,4 +1,7 @@
-use crate::application::repository::messages::row::{MessageBaseRow, MessageRow};
+use crate::application::repository::{
+    RepositoryResult,
+    messages::row::{MessageBaseRow, MessageRow},
+};
 
 pub async fn get_messages(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
@@ -123,4 +126,23 @@ pub async fn base_message(
     .bind(user_id)
     .fetch_optional(tx.as_mut())
     .await
+}
+
+pub async fn get_id_for_new_messages(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    user_id: i64,
+) -> RepositoryResult<Vec<i64>> {
+    let followed_users = sqlx::query_as::<_, (i64,)>(
+        r#"
+        SELECT 
+            uf.follower_id
+        FROM user_follow uf
+        WHERE uf.user_id = $1
+        "#,
+    )
+    .bind(user_id)
+    .fetch_all(tx.as_mut())
+    .await?;
+
+    Ok(followed_users.into_iter().map(|(id,)| id).collect())
 }
