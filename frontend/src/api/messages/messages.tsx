@@ -33,7 +33,7 @@ export async function getMessages(
     const query = new URLSearchParams();
     query.append("before", before);
     query.append("limit", limit.toString());
-    const response = await fetchWithAuth(`v2/messages/${targetId}?${query.toString()}`);
+    const response = await fetchWithAuth(`v2/messages/channel/${targetId}?${query.toString()}`);
 
     if (!response.ok) {
         throw new Error(`Failed to fetch messages: ${response.statusText}`);
