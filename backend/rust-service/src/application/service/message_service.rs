@@ -50,10 +50,8 @@ impl MessageService {
 
         let messages_id =
             messages::get::get_messages_id(&mut tx, user_id, target_id, before, limit).await?;
-
         if messages_id.is_empty() {
             let target_exists = user::find::is_user_exist(&mut tx, target_id).await?;
-
             if !target_exists {
                 return Err(MessageServiceError::UserNotFound);
             }
@@ -81,15 +79,18 @@ impl MessageService {
         message_id: i64,
         user_id: i64,
     ) -> Result<Option<MessageRow>, MessageServiceError> {
+        tracing::info!("Getting base message");
         let message = messages::get::base_message(tx, message_id, user_id).await?;
 
         // * I should not put profile in response it's cause too much space on response
+        // * temp removed attachments to make less change to error
         if let Some(message) = message {
             Ok(Some(MessageRow {
                 id: message.id,
                 target_id: message.target_id,
                 content: message.content,
                 has_attachment: message.has_attachment,
+                has_reactions: message.has_reactions,
                 created_at: message.created_at,
                 updated_at: message.updated_at,
             }))

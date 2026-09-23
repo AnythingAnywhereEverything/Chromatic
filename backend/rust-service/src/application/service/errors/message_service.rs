@@ -9,7 +9,7 @@ use thiserror::Error;
 pub enum MessageServiceError {
     #[error("User not found")]
     UserNotFound,
-    
+
     #[error("Message not found")]
     MessageNotFound,
 
@@ -18,10 +18,10 @@ pub enum MessageServiceError {
 
     #[error("Invalid payload")]
     InvalidPayload,
-    
+
     #[error("Content too long")]
     ContentTooLong,
-    
+
     #[error(transparent)]
     MediaServiceError(#[from] MediaServiceError),
 
@@ -35,7 +35,7 @@ pub enum MessageServiceError {
     SnowflakeError(#[from] SnowflakeServiceError),
 
     #[error(transparent)]
-    SqlxError(#[from] sqlx::Error),
+    Database(#[from] sqlx::Error),
 
     #[error(transparent)]
     RedisPoolError(#[from] PoolError),

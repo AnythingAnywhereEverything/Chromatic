@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
-use sqlx::types::Json;
-
-use crate::application::repository::{media::row::Attachment};
+use serde_with::skip_serializing_none;
 
 
 #[derive(sqlx::FromRow, Debug, Deserialize, Serialize)]
@@ -10,23 +8,21 @@ pub struct MessageRow {
     pub target_id: String,
     pub content: String,
     pub has_attachment: bool,
-    pub created_at: chrono::NaiveDateTime,
-    pub updated_at: chrono::NaiveDateTime,
+    pub has_reactions: bool,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
-
+#[skip_serializing_none]
 #[derive(sqlx::FromRow, Debug, Deserialize, Serialize)]
 pub struct MessageBaseRow{
     pub id: String,
-    pub user_id: i64,
+    pub user_id: String,
     pub target_id: String,
-    pub target_type: String,
     pub content: String,
     pub has_attachment: bool,
     pub has_reactions: bool,
-    pub attachment: Json<Vec<Attachment>>,
-    pub reactions: Json<Vec<MessageReaction>>,
-    pub created_at: chrono::NaiveDateTime,
-    pub updated_at: chrono::NaiveDateTime,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(sqlx::FromRow, Debug, Deserialize, Serialize)] 
@@ -34,8 +30,8 @@ pub struct MessageReaction {
     pub message_id: String,
     pub user_id: String,
     pub reaction: String,
-    pub created_at: chrono::NaiveDateTime,
-    pub updated_at: chrono::NaiveDateTime,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(sqlx::FromRow, Debug, Deserialize, Serialize)] 
