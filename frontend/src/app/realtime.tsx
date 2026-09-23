@@ -22,7 +22,7 @@ type Message = {
 
 type RealtimeContextValue = {
     connected: boolean;
-    messages: Message[];
+    message: Message | null;
     sendMessage: (recipientId: string, content: string) => void;
 };
 
@@ -37,7 +37,7 @@ export function RealtimeProvider({
 
     const [token, setToken] = useState<string | null>(null);
     const [connected, setConnected] = useState(false);
-    const [messages, setMessages] = useState<Message[]>([]);
+    const [message, setMessages] = useState<Message|null>(null);
 
     const channelRef = useRef<Channel | null>(null);
 
@@ -79,7 +79,7 @@ export function RealtimeProvider({
             });
 
         channel.on("new_message", (message: Message) => {
-            setMessages((current) => [...current, message]);
+            setMessages(message);
         });
 
         return () => {
@@ -105,7 +105,7 @@ export function RealtimeProvider({
         <RealtimeContext.Provider
             value={{
                 connected,
-                messages,
+                message,
                 sendMessage,
             }}
         >
