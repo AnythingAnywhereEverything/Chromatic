@@ -20,23 +20,16 @@
 .message-container {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    overflow-y: auto;
+    height: 100vh;
+    max-height: 100vh;
 }
 .message-content {
-    overflow-y: auto;
     flex: 1;
     display: flex;
+    min-height: 0;
     flex-direction: column;
-    justify-content: flex-end;
     gap: var(--space-12);
-}
-
-.message-article {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    gap: var(--size-20);
+    overflow-y: scroll;
 }
 
 .message-input {
@@ -56,19 +49,20 @@
     }
 
     .message-send-button {
-        display: flex;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
         background-color: var(--primary);
         color: var(--primary-foreground);
-        padding-inline: var(--space-16);
-        padding-block: var(--space-4);
+        width: var(--size-32);
+        height: var(--size-32);
         margin: 0;
-        align-items: center;
         cursor: pointer;
-        border-radius: var(--radius);
+        border-radius: var(--radius-round);
 
-        img {
-            width: var(--size-24);
-            height: var(--size-24);
+        svg {
+            width: var(--size-16);
+            height: var(--size-16);
         }
 
         span {

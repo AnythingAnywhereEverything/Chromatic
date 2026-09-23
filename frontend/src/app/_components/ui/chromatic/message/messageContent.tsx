@@ -37,7 +37,6 @@ function MessageContent({ profile, currentUser }: MessageContentProps) {
     const messageContentRef = useRef<HTMLElement | null>(null);
     const topSentinelRef = useRef<HTMLDivElement | null>(null);
 
-    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [messageInput, setMessageInput] = useState("");
 
     const router = useRouter();
@@ -52,7 +51,7 @@ function MessageContent({ profile, currentUser }: MessageContentProps) {
     useEffect(() => {
         const loadMessages = async () => {
             setLoading(true);
-            setMessages([]);
+            setMessages(TEST_MESSAGE);
             setMessageInput("");
             setHasMore(true);
 
@@ -87,7 +86,7 @@ function MessageContent({ profile, currentUser }: MessageContentProps) {
 
     // State and logic for handling message loading and pagination
     const loadMoreMessages = async () => {
-        if (!hasMore || loadingMore || messages.length === 0) {
+        if (!hasMore || loadingMore || !messages || messages.length === 0) {
             return;
         }
 
@@ -169,6 +168,16 @@ function MessageContent({ profile, currentUser }: MessageContentProps) {
         setMessageInput("");
     };
 
+    useEffect(() => {
+        const container = messageContentRef.current;
+
+        if (!container || messages.length === 0) {
+            return;
+        }
+
+        container.scrollTop = container.scrollHeight;
+    }, [messages]);
+
     return (
         <section className={style["message-container"]}>
             <div className={style["message-header"]}>
@@ -186,43 +195,41 @@ function MessageContent({ profile, currentUser }: MessageContentProps) {
                     {profile.display_name ?? profile.username}
                 </span>
             </div>
-            <article className={style["message-article"]}>
-                <section
-                    className={style["message-content"]}
-                    ref={messageContentRef}
-                >
-                    {/* Top sentinel for loadmore */}
-                    <div ref={topSentinelRef} />
+            <section
+                className={style["message-content"]}
+                ref={messageContentRef}
+            >
+                {/* Top sentinel for loadmore */}
+                <div ref={topSentinelRef} />
 
-                    {TEST_MESSAGE.map((message) => (
-                        <Message
-                            key={message.id}
-                            message={message}
-                            target={profile} 
-                            currentUser={currentUser}
-                    />
-                    ))}
-                </section>
-                <div className={style["message-input"]}>
-                    <EPicker onEmojiClick={handleEmojiClick}>
-                        <MdEmojiEmotions />
-                    </EPicker>
-                    <textarea
-                        className={style["message-textarea"]}
-                        placeholder="Type a message..."
-                        value={messageInput}
-                        onChange={(e) => setMessageInput(e.target.value)}
-                        maxLength={MAX_LENGTH_MESSAGE}
-                    />
-                    <button
-                        type="button"
-                        className={style["message-send-button"]}
-                        onClick={handleSubmitMessage}
-                    >
-                        <FaPaperPlane />
-                    </button>
-                </div>
-            </article>
+                {messages.map((message) => (
+                    <Message
+                        key={message.id}
+                        message={message}
+                        target={profile} 
+                        currentUser={currentUser}
+                />
+                ))}
+            </section>
+            <div className={style["message-input"]}>
+                <EPicker onEmojiClick={handleEmojiClick}>
+                    <MdEmojiEmotions />
+                </EPicker>
+                <textarea
+                    className={style["message-textarea"]}
+                    placeholder="Type a message..."
+                    value={messageInput}
+                    onChange={(e) => setMessageInput(e.target.value)}
+                    maxLength={MAX_LENGTH_MESSAGE}
+                />
+                <button
+                    type="button"
+                    className={style["message-send-button"]}
+                    onClick={handleSubmitMessage}
+                >
+                    <FaPaperPlane />
+                </button>
+            </div>
         </section>
     );
 }
