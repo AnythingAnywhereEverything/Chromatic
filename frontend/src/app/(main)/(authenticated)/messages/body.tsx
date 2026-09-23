@@ -28,7 +28,7 @@ interface MessageContainerProps {
 function MessageContainer({ userId }: MessageContainerProps) {
     const currentUser = useUser();
     const [chatUsers, setChatUsers] = useState<UserResponse[]>([]);
-    const [selectedChatUser, setSelectedChatUser] =
+    const [targetUser, setTargetUser] =
         useState<UserResponse | null>(null);
     const [user, setUser] = useState<UserResponse | null>(null);
     const hasFetched = useRef(false);
@@ -62,13 +62,13 @@ function MessageContainer({ userId }: MessageContainerProps) {
 
         const user = chatUsers.find((chatUser) => chatUser.id === userId);
         if (user) {
-            setSelectedChatUser(user);
+            setTargetUser(user);
         }
     }, [userId, chatUsers]);
 
     // select and getting messages
     const handleSelectChatUser = (user: UserResponse) => {
-        setSelectedChatUser(user);
+        setTargetUser(user);
 
         window.history.pushState(
             { chatId: user.id },
@@ -84,13 +84,13 @@ function MessageContainer({ userId }: MessageContainerProps) {
             );
 
             if (!match) {
-                setSelectedChatUser(null);
+                setTargetUser(null);
                 return;
             }
 
             const user = chatUsers.find((chatUser) => chatUser.id === match[1]);
 
-            setSelectedChatUser(user ?? null);
+            setTargetUser(user ?? null);
         };
 
         window.addEventListener("popstate", handlePopState);
@@ -104,14 +104,14 @@ function MessageContainer({ userId }: MessageContainerProps) {
         <div className={style["message-layout"]}>
             <MessageList
                 chatUsers={chatUsers}
-                selectedChatUser={selectedChatUser}
+                selectedChatUser={targetUser}
                 onSelectChatUser={handleSelectChatUser}
             />
 
             <div className={style["message-body"]}>
-                {selectedChatUser ? (
+                {targetUser ? (
                     <MessageContent
-                        profile={selectedChatUser}
+                        target={targetUser}
                         currentUser={user!}
                     />
                 ) : (

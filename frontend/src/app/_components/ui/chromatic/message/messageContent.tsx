@@ -23,11 +23,11 @@ function MessageSkeleton() {
 
 // check user_id (sender) before rendering message content and profile information
 interface MessageContentProps {
-    profile: UserResponse;
+    target: UserResponse;
     currentUser: UserResponse;
 }
 
-function MessageContent({ profile, currentUser }: MessageContentProps) {
+function MessageContent({ target, currentUser }: MessageContentProps) {
     const [loading, setLoading] = useState(false);
 
     const { messages: realtimeMessage, connected, sendMessage } = useRealtime();
@@ -50,7 +50,7 @@ function MessageContent({ profile, currentUser }: MessageContentProps) {
 
     const router = useRouter();
     const handlePathToProfile = () => {
-        const URL = `/u/${profile.username}`;
+        const URL = `/u/${target.username}`;
         router.push(URL);
     };
 
@@ -69,7 +69,7 @@ function MessageContent({ profile, currentUser }: MessageContentProps) {
 
             try {
                 const res = await getMessages(
-                    profile.id,
+                    target.id,
                     initialBefore.toISOString(),
                     11,
                 );
@@ -91,7 +91,7 @@ function MessageContent({ profile, currentUser }: MessageContentProps) {
         };
 
         loadMessages();
-    }, [profile.id]);
+    }, [target.id]);
 
     // State and logic for handling message loading and pagination
     const loadMoreMessages = async () => {
@@ -103,7 +103,7 @@ function MessageContent({ profile, currentUser }: MessageContentProps) {
 
         try {
             const res = await getMessages(
-                profile.id,
+                target.id,
                 beforeDate.toISOString(),
                 11,
             );
@@ -172,7 +172,7 @@ function MessageContent({ profile, currentUser }: MessageContentProps) {
             return;
         }
 
-        sendMessage(profile.id, messageInput);
+        sendMessage(target.id, messageInput);
 
         setMessageInput("");
     };
@@ -191,17 +191,17 @@ function MessageContent({ profile, currentUser }: MessageContentProps) {
         <section className={style["message-container"]}>
             <div className={style["message-header"]}>
                 <PostAvatar
-                    userId={profile.id}
-                    username={profile.username}
-                    displayName={profile.display_name ?? profile.username}
-                    avatar={profile.avatar ?? null}
-                    thumbhash={profile.avatar_thumbhash ?? null}
+                    userId={target.id}
+                    username={target.username}
+                    displayName={target.display_name ?? target.username}
+                    avatar={target.avatar ?? null}
+                    thumbhash={target.avatar_thumbhash ?? null}
                 />
                 <span
                     onClick={handlePathToProfile}
                     className={style["message-header-username"]}
                 >
-                    {profile.display_name ?? profile.username}
+                    {target.display_name ?? target.username}
                 </span>
             </div>
             <section
@@ -215,7 +215,7 @@ function MessageContent({ profile, currentUser }: MessageContentProps) {
                     <Message
                         key={message.id}
                         message={message}
-                        target={profile} 
+                        target={target} 
                         currentUser={currentUser}
                 />
                 ))}
@@ -239,6 +239,7 @@ function MessageContent({ profile, currentUser }: MessageContentProps) {
                     <FaPaperPlane />
                 </button>
             </div>
+
         </section>
     );
 }

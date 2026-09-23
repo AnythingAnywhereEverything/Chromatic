@@ -167,7 +167,7 @@ const PostHeader: React.FC<PostHeaderProps> = ({
                                         type="button"
                                         onClick={handleFollow}
                                     >
-                                        Follow @{author.username}
+                                        Follow {author.username}
                                     </button>
                                 </DropdownItem>
                             ) : (
@@ -176,12 +176,12 @@ const PostHeader: React.FC<PostHeaderProps> = ({
                                         type="button"
                                         onClick={handleUnfollow}
                                     >
-                                        Unfollow @{author.username}
+                                        Unfollow {author.username}
                                     </button>
                                 </DropdownItem>
                             )}
                             <DropdownItem>
-                                Block @{author.username}
+                                Block {author.username}
                             </DropdownItem>
                             <DropdownItem>Report</DropdownItem>
                         </DropdownContent>
