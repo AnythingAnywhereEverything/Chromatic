@@ -1,5 +1,5 @@
 import { PostAvatar } from "../post/header/avatar";
-import style from "./scss/user-settingOptions.module.scss";
+import style from "./scss/user-setting-options.module.scss";
 import { UserResponse } from "@/api/user";
 
 interface options {

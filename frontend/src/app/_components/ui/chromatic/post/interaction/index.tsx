@@ -84,14 +84,7 @@ const BottomPostInteraction = React.memo(function BottomPostInteraction({
                         </i>
                         {total_comments > 0 ? total_comments : null}
                     </InteractButton>
-                    <InteractButton
-                        name="Repost"
-                        className={`${style["button"]} ${style["repost-button"]}`}
-                    >
-                        <i>
-                            <LuRepeat />
-                        </i>
-                    </InteractButton>
+
                 </section>
                 <section className={style["interaction"]}>
                     <InteractButton

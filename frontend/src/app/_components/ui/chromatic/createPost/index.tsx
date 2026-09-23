@@ -1,20 +1,9 @@
 "use client";
 
-import { RxCross2 } from "react-icons/rx";
 import style from "./style.module.scss";
 import React, { useState } from "react";
-import { CiImageOn, CiPaperplane } from "react-icons/ci";
-import { HiOutlineEmojiHappy } from "react-icons/hi";
-import EmojiPicker from "emoji-picker-react";
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogHeading,
-    DialogTrigger,
-} from "../dialogue";
-import { Portal } from "@/app/_components/portal";
+import { GetAllTagAttachments, type TagRow } from "@/api/tags/tags";
+
 import { CreatePost } from "@/api/post/post";
 import { PostAvatar } from "../post/header/avatar";
 import { PostStatus, Visibility } from "./status";
@@ -31,6 +20,8 @@ interface CreatePostProps {
     onPostCreated?: (res: PostProps) => void;
 }
 
+let tagAttachmentsCache: TagRow[] = [];
+
 function CreatePostComponent({ author, onPostCreated }: CreatePostProps) {
     const MAX_TEXT_LENGTH = 2500;
     
@@ -45,6 +36,7 @@ function CreatePostComponent({ author, onPostCreated }: CreatePostProps) {
     );
     const [isSubmittable, setIsSubmittable] = useState(false);
     const [isPending, setIsPending] = useState(false);
+    const [tagAttachments, setTagAttachments] = useState<TagRow[]>([]);
 
     const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
         const files = Array.from(e.clipboardData.items)
@@ -215,6 +207,23 @@ function CreatePostComponent({ author, onPostCreated }: CreatePostProps) {
             return Math.max(currentIndex - 1, 0);
         });
     };
+
+    React.useEffect(() => {
+        const fetchTags = async () => {
+            if (tagAttachmentsCache.length === 0) {
+                const tags = await GetAllTagAttachments();
+                if (tags) {
+                    tagAttachmentsCache = tags;
+                    setTagAttachments(tags);
+                    console.log("Fetched and cached tags:", tags);
+                }
+            } else {
+                setTagAttachments(tagAttachmentsCache);
+            }
+        };
+
+        fetchTags();
+    }, []);
 
     return (
         <section className={style["create-container"]}>
