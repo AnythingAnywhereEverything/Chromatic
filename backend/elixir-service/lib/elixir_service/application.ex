@@ -8,6 +8,15 @@ defmodule ElixirService.Application do
     children = [
       ElixirService.Repo,
       {Phoenix.PubSub, name: ElixirService.PubSub},
+      {Registry, keys: :unique, name: ElixirService.Snowflake.Registry},
+      Supervisor.child_spec(
+        {ElixirService.Snowflake, :api},
+        id: :snowflake_api
+      ),
+      Supervisor.child_spec(
+        {ElixirService.Snowflake, :media},
+        id: :snowflake_media
+      ),
       {Redix, name: :redix, host: redis_config[:host], port: redis_config[:port]},
       ElixirService.CounterServer,
       ElixirServiceWeb.Endpoint

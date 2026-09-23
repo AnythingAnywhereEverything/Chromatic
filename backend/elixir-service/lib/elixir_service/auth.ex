@@ -61,8 +61,7 @@ defmodule ElixirService.Auth do
 
   defp find_session(user_id, created_at, token) do
     from(s in Session,
-      where: s.user_id == ^user_id and s.created_at == ^created_at,
-      limit: 5
+      where: s.user_id == ^user_id and s.created_at == ^created_at
     )
     |> Repo.all()
     |> Enum.find(fn session ->

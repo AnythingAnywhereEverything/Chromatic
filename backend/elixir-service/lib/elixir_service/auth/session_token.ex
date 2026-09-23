@@ -1,5 +1,6 @@
 defmodule ElixirService.Auth.SessionToken do
   @enforce_keys [:user_id, :timestamp, :random_string, :full_token]
+
   defstruct [:user_id, :timestamp, :random_string, :full_token]
 
   @type t :: %__MODULE__{
@@ -17,12 +18,10 @@ defmodule ElixirService.Auth.SessionToken do
              {:ok, decoded_timestamp} <- decode_to_string(encoded_timestamp),
              {user_id, ""} <- Integer.parse(decoded_user_id),
              {timestamp, ""} <- Integer.parse(decoded_timestamp) do
-          IO.inspect({user_id, timestamp, random_string}, label: "Parsed session token")
           {:ok,
            %__MODULE__{
              user_id: user_id,
              timestamp: timestamp,
-             # * do NOT decode random part
              random_string: random_string,
              full_token: token
            }}
@@ -38,7 +37,8 @@ defmodule ElixirService.Auth.SessionToken do
 
   def parse(_), do: {:error, :invalid_session}
 
-  @spec decode_to_string(String.t()) :: {:ok, String.t()} | {:error, :invalid_session}
+  @spec decode_to_string(String.t()) ::
+          {:ok, String.t()} | {:error, :invalid_session}
   defp decode_to_string(value) when is_binary(value) do
     case Base.url_decode64(value, padding: false) do
       {:ok, decoded} ->
