@@ -496,3 +496,19 @@ pub async fn by_username_or_email(
 
     Ok(row)
 }
+
+pub async fn is_user_exist(
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    user_id: i64,
+) -> RepositoryResult<bool> {
+    let exists = sqlx::query_scalar::<_, bool>(
+        r#"
+        SELECT EXISTS(SELECT 1 FROM users WHERE id = $1 AND deleted_at IS NULL)
+        "#,
+    )
+    .bind(user_id)
+    .fetch_one(tx.as_mut())
+    .await?;
+
+    Ok(exists)
+}

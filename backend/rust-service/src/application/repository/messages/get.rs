@@ -3,6 +3,30 @@ use crate::application::repository::{
     messages::row::{MessageBaseRow, MessageRow},
 };
 
+pub async fn is_message_exist(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    sender_id: i64,
+    message_id: i64,
+) -> Result<bool, sqlx::Error> {
+    let exists = sqlx::query_as::<_, (bool,)>(
+        r#"
+        SELECT EXISTS(
+            SELECT 1
+            FROM messages m
+            WHERE m.id = $1
+            AND m.user_id = $2
+            AND m.deleted_at IS NULL
+        )
+        "#,
+    )
+    .bind(message_id)
+    .bind(sender_id)
+    .fetch_one(tx.as_mut())
+    .await?;
+    Ok(exists.0)
+}
+
+
 pub async fn get_messages(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     user_id: i64,

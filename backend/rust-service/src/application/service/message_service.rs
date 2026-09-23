@@ -5,11 +5,8 @@ use crate::application::{
         media::{
             self as media_repo,
             row::{MediaType, ProcessingState},
-        },
-        messages::{self, row::MessageRow},
-        user::row::UserProfileRow,
-    },
-    service::{
+        }, messages::{self, row::MessageRow}, user::{ self, row::UserProfileRow},
+    }, service::{
         errors::MessageServiceError,
         media::{
             extractor::{ExtractorFileOptions, ValidationOptions},
@@ -20,12 +17,10 @@ use crate::application::{
             },
         },
         profile_service::ProfileService,
-    },
-    state::AppState,
+    }, state::AppState,
 };
 use axum::extract::multipart::Multipart;
 use multipart_derive::Multipart;
-use sqlx::types::Json;
 
 #[derive(serde::Deserialize, Debug, Multipart)]
 pub struct CreateMessageRequest {
@@ -52,34 +47,46 @@ impl MessageService {
         limit: i32,
     ) -> Result<Vec<MessageRow>, MessageServiceError> {
         let mut tx = state.db_pool.begin().await?;
-        let messages_id: Vec<i64> =
+
+        let messages_id =
             messages::get::get_messages_id(&mut tx, user_id, target_id, before, limit).await?;
 
-        let mut messages = Vec::new();
+        if messages_id.is_empty() {
+            let target_exists = user::find::is_user_exist(&mut tx, target_id).await?;
+
+            if !target_exists {
+                return Err(MessageServiceError::UserNotFound);
+            }
+
+            return Ok(Vec::new());
+        }
+
+        // allocate mem for the messages
+        let mut messages = Vec::with_capacity(messages_id.len());
+
         for id in messages_id {
             if let Some(message) = self.get_message(state, &mut tx, id, user_id).await? {
                 messages.push(message);
             }
         }
+
         Ok(messages)
     }
 
     // base message retrieval
     pub async fn get_message(
         &self,
-        state: &AppState,
+        _state: &AppState,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
         message_id: i64,
         user_id: i64,
     ) -> Result<Option<MessageRow>, MessageServiceError> {
         let message = messages::get::base_message(tx, message_id, user_id).await?;
 
+        // * I should not put profile in response it's cause too much space on response
         if let Some(message) = message {
-            let user_profile =
-                ProfileService::get_profile_by_id(state, message.user_id, Some(user_id)).await?;
             Ok(Some(MessageRow {
                 id: message.id,
-                profile: Json(user_profile),
                 target_id: message.target_id,
                 content: message.content,
                 has_attachment: message.has_attachment,
@@ -89,6 +96,18 @@ impl MessageService {
         } else {
             Ok(None)
         }
+    }
+
+    pub async fn is_message_exist(
+        &self,
+        state: &AppState,
+        message_id: i64,
+        sender_id: i64,
+    ) -> Result<bool, MessageServiceError> {
+        let mut tx = state.db_pool.begin().await?;
+        let exists = messages::get::is_message_exist(&mut tx, sender_id, message_id).await?;
+        tx.commit().await?;
+        Ok(exists)
     }
 
     pub async fn create_message(

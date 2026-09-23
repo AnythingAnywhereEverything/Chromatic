@@ -1,13 +1,12 @@
 use serde::{Deserialize, Serialize};
 use sqlx::types::Json;
 
-use crate::application::repository::{media::row::Attachment, user::row::UserProfileRow};
+use crate::application::repository::{media::row::Attachment};
 
 
 #[derive(sqlx::FromRow, Debug, Deserialize, Serialize)]
 pub struct MessageRow {
     pub id: String,
-    pub profile: Json<UserProfileRow>,
     pub target_id: String,
     pub content: String,
     pub has_attachment: bool,
