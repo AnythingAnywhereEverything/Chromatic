@@ -211,7 +211,7 @@ function MessageContent({ profile, currentUser }: MessageContentProps) {
                 {/* Top sentinel for loadmore */}
                 <div ref={topSentinelRef} />
 
-                {messages.map((message) => (
+                {messages.slice().reverse().map((message) => (
                     <Message
                         key={message.id}
                         message={message}
