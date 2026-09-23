@@ -30,12 +30,30 @@ interface MessageContentProps {
 function MessageContent({ target, currentUser }: MessageContentProps) {
     const [loading, setLoading] = useState(false);
 
-    const { messages: realtimeMessage, connected, sendMessage } = useRealtime();
+    const { message: realtimeMessage, connected, sendMessage } = useRealtime();
 
     useEffect(() => {
-        // append new realtime messages to the existing messages
-        // setMessages((current) => [...current, ...realtimeMessage]);
-        console.log("New realtime messages:", realtimeMessage);
+        // check if the new realtime message belongs to the current chat
+
+        if (realtimeMessage) {
+            if (
+                realtimeMessage.recipient_id !== target.id &&
+                realtimeMessage.sender_id !== target.id
+            ) {
+                return;
+            }
+            const wrappedMessage: MessageResponse = {
+                id: realtimeMessage.id,
+                user_id: realtimeMessage.sender_id,
+                target_id: realtimeMessage.recipient_id,
+                content: realtimeMessage.content,
+                has_attachment: false,
+                has_reactions: false,
+                created_at: new Date().toISOString(), // assume as now
+                updated_at: new Date().toISOString(), // assume as now
+            };
+            setMessages((current) => [wrappedMessage, ...current]);
+        }
     }, [realtimeMessage]);
 
     const [messages, setMessages] = useState<MessageResponse[]>([]);
@@ -211,14 +229,17 @@ function MessageContent({ target, currentUser }: MessageContentProps) {
                 {/* Top sentinel for loadmore */}
                 <div ref={topSentinelRef} />
 
-                {messages.slice().reverse().map((message) => (
-                    <Message
-                        key={message.id}
-                        message={message}
-                        target={target} 
-                        currentUser={currentUser}
-                />
-                ))}
+                {messages
+                    .slice()
+                    .reverse()
+                    .map((message) => (
+                        <Message
+                            key={message.id}
+                            message={message}
+                            target={target}
+                            currentUser={currentUser}
+                        />
+                    ))}
             </section>
             <div className={style["message-input"]}>
                 <EPicker onEmojiClick={handleEmojiClick}>
@@ -239,7 +260,6 @@ function MessageContent({ target, currentUser }: MessageContentProps) {
                     <FaPaperPlane />
                 </button>
             </div>
-
         </section>
     );
 }
@@ -264,7 +284,9 @@ const Message: React.FC<MessageProps> = ({ target, currentUser, message }) => {
                 <PostAvatar
                     userId={messageUser.id}
                     username={messageUser.username}
-                    displayName={messageUser.display_name ?? messageUser.username}
+                    displayName={
+                        messageUser.display_name ?? messageUser.username
+                    }
                     avatar={messageUser.avatar ?? null}
                     thumbhash={messageUser.avatar_thumbhash ?? null}
                     width={36}
@@ -346,7 +368,8 @@ const TEST_MESSAGE: MessageResponse[] = [
     },
     {
         id: "5",
-        content: "Sounds good. I’ll take care of the remaining small adjustments.",
+        content:
+            "Sounds good. I’ll take care of the remaining small adjustments.",
         user_id: "93443151091470336",
         target_id: "91533710922354688",
         has_attachment: false,
