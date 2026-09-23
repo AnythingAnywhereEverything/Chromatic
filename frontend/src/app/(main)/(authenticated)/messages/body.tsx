@@ -109,9 +109,6 @@ function MessageContainer({ userId }: MessageContainerProps) {
             />
 
             <div className={style["message-body"]}>
-                <button type="button" onClick={() => console.log(chatUsers)}>
-                    Debug button
-                </button>
                 {selectedChatUser ? (
                     <MessageContent
                         profile={selectedChatUser}
