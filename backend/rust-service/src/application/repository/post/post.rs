@@ -1,10 +1,11 @@
-use sqlx::{Postgres, Transaction};
+use sqlx::Transaction;
 
 use crate::application::{
-        repository::post::row::{
-                CreatePostRow, HasAttachmentRow, PostLikesRow, PostRow, PostVisibility, TagAttachmentFull, TagAttachmentRow, TagTarget, TotalLikesRow,
-            }, service::errors::PostServiceError,
-    };
+    repository::post::row::{
+        CreatePostRow, HasAttachmentRow, PostLikesRow, PostRow, PostVisibility, TotalLikesRow,
+    },
+    service::errors::PostServiceError,
+};
 
 pub async fn get_feed_public(
     tx: &mut Transaction<'_, sqlx::Postgres>,
@@ -383,7 +384,6 @@ pub async fn delete_target_attachments(
     Ok(())
 }
 
-
 // -------------------------------------
 // * Small like patch
 // -------------------------------------
@@ -414,10 +414,10 @@ pub async fn like_post_repo(
     user_id: i64,
     target_id: i64,
     is_like: bool,
-    target_type: &str
+    target_type: &str,
 ) -> Result<TotalLikesRow, sqlx::Error> {
     sqlx::query_as::<_, TotalLikesRow>(
-r#"
+        r#"
     WITH previous AS (
         SELECT is_like
         FROM media_likes
@@ -467,7 +467,7 @@ r#"
         END
     WHERE id = $2
     RETURNING id, total_likes
-"#
+"#,
     )
     .bind(user_id)
     .bind(target_id)
