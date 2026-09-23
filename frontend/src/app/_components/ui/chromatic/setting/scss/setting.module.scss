@@ -1,8 +1,27 @@
-.setting-container{
+.setting-container {
     background-color: var(--background);
     display: grid;
-    grid-template-areas: "setting-options" "content";
-    grid-template-columns: 1fr 4fr;
-    padding: var(--space-8);
+    grid-template-areas: "setting-options content";
+    grid-template-columns: 1fr 5fr;
     border-radius: var(--radius);
+
+    min-height: 540px;
+}
+
+.content {
+    grid-area: content;
+    .header {
+        display: flex;
+        justify-content: space-between;
+
+        // Idk
+        padding: var(--space-12);
+        border: 1px solid var(--border);
+        border-top-right-radius: var(--radius);
+    }
+}
+
+// There's no scroll yet
+.content-body {
+    padding: var(--space-20);
 }

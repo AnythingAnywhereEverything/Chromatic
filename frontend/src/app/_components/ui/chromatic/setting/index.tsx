@@ -87,7 +87,13 @@ function UserSetting({
                 />
 
                 <section className={style["content"]}>
-                    <CurrentSetting title={currentSetting.title} user={user} />
+                    <div className={style["header"]}>
+                        <span>{currentSetting.title}</span>
+                        <DialogClose>X</DialogClose>
+                    </div>
+                    <div className={style["content-body"]}>
+                        <CurrentSetting user={user} />
+                    </div>
                 </section>
             </DialogContent>
         </Dialog>

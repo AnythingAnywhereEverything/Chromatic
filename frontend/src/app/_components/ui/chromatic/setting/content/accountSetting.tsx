@@ -3,17 +3,15 @@ import style from "../scss/account-setting.module.scss";
 import { UserResponse } from "@/api/user";
 
 export interface SettingContentProps {
-    title: string;
     user: UserResponse;
 }
 
-function AccountSettingContent({ title, user }: SettingContentProps) {
+function AccountSettingContent({ user }: SettingContentProps) {
     if (!user) {
         return <div>Loading...</div>;
     }
     return (
         <div className={style["account-setting"]}>
-            <span>{title}</span>
             <section className={style["profile"]}>
                 <h2>Account info</h2>
                 <div className={style["username"]}>
@@ -35,17 +33,8 @@ function AccountSettingContent({ title, user }: SettingContentProps) {
                         </button>
                     </div>
                 </div>
-
-                <div className={style["phone"]}>
-                    <span>Phone number</span>
-                    <div className={style["editor"]}>
-                        <span>********12</span>
-                        <button type="button" className={style["edit-button"]}>
-                            Edit
-                        </button>
-                    </div>
-                </div>
             </section>
+
             <section className={style["password-security"]}>
                 <h2>Password & Security</h2>
                 <div className={style["password"]}>
@@ -69,7 +58,7 @@ function AccountSettingContent({ title, user }: SettingContentProps) {
                     <span>Account Deactivation</span>
                     <div className={style["editor"]}>
                         <button type="button" className={style["edit-button"]}>
-                            Deactivate Account
+                            Deactivate
                         </button>
                     </div>
                 </div>
@@ -78,7 +67,7 @@ function AccountSettingContent({ title, user }: SettingContentProps) {
                     <span>Delete Account</span>
                     <div className={style["editor"]}>
                         <button type="button" className={style["edit-button"]}>
-                            Delete Account
+                            Delete
                         </button>
                     </div>
                 </div>
