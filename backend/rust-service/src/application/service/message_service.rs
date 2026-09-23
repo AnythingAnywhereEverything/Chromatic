@@ -59,6 +59,8 @@ impl MessageService {
             return Ok(Vec::new());
         }
 
+        tx.commit().await?;
+
         // allocate mem for the messages
         let mut messages = Vec::with_capacity(messages_id.len());
 
@@ -87,6 +89,7 @@ impl MessageService {
         if let Some(message) = message {
             Ok(Some(MessageRow {
                 id: message.id,
+                user_id: message.user_id,
                 target_id: message.target_id,
                 content: message.content,
                 has_attachment: message.has_attachment,
@@ -193,7 +196,7 @@ impl MessageService {
         }
 
         let message = self
-            .get_message(state, *new_message_id, sender_id)
+            .get_message(state, *new_message_id, sender_id) 
             .await?;
 
         let Some(message) = message else {
@@ -233,7 +236,7 @@ impl MessageService {
         tx.commit().await?;
 
         let updated_message = self
-            .get_message(state,  message_id, sender_id)
+            .get_message(state,  message_id, sender_id) 
             .await?;
         if let Some(updated_message) = updated_message {
             return Ok(updated_message);

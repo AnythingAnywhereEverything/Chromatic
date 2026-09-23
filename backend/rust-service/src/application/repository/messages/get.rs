@@ -26,7 +26,6 @@ pub async fn is_message_exist(
     Ok(exists.0)
 }
 
-
 pub async fn get_messages(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     user_id: i64,
@@ -37,7 +36,8 @@ pub async fn get_messages(
     sqlx::query_as::<_, MessageRow>(
         r#"
         SELECT * FROM messages m
-        WHERE ((m.user_id = $1 AND m.target_id = $2)
+        WHERE 
+        ((m.user_id = $1 AND m.target_id = $2)
         OR (m.user_id = $2 AND m.target_id = $1)) 
         AND m.target_type = $3 LIMIT $4
         "#,
@@ -86,7 +86,7 @@ pub async fn base_message(
 ) -> Result<Option<MessageBaseRow>, sqlx::Error> {
     sqlx::query_as::<_, MessageBaseRow>(
         r#"
-        SELECT 
+        SELECT
             m.id::text AS id,
             m.user_id::text AS user_id,
             m.target_id::text AS target_id,
@@ -97,8 +97,10 @@ pub async fn base_message(
             m.updated_at
         FROM messages m
         WHERE m.id = $1
-        AND m.user_id = $2
-        AND m.deleted_at IS NULL
+          AND (
+              (m.user_id = $2 OR target_id = $2)
+          )
+          AND m.deleted_at IS NULL
         "#,
     )
     .bind(message_id)

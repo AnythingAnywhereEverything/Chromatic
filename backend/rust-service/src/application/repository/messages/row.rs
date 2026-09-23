@@ -5,6 +5,7 @@ use serde_with::skip_serializing_none;
 #[derive(sqlx::FromRow, Debug, Deserialize, Serialize)]
 pub struct MessageRow {
     pub id: String,
+    pub user_id: String,
     pub target_id: String,
     pub content: String,
     pub has_attachment: bool,
