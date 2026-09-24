@@ -26,6 +26,7 @@ type ImageProps = UrlParameters &
         containerClassName?: string;
         containerWidth?: number;
         containerHeight?: number;
+        objectFit?: React.CSSProperties["objectFit"];
         // * Delay in milliseconds for the transition from thumbhash to full image */
         delay?: number;
         optimizationType?: OptimizationType;

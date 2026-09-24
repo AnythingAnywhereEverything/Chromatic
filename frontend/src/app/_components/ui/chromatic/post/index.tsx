@@ -25,7 +25,7 @@ const Post: React.FC<PostProps> = ({
     created_at,
     updated_at,
     attachments = [],
-    tag = [],
+    tags = [],
     is_liked = false,
 }) => {
     const [open, setOpen] = useState(false);
@@ -106,15 +106,20 @@ const Post: React.FC<PostProps> = ({
                     )}
 
                     {/* //*--------------------has attachment cp---------------- */}
-                    {has_attachment && <MediaGroup media={attachments} />}
+                    {has_attachment && (
+                        <MediaGroup
+                            media={attachments}
+                            postUrl={`/u/${author.username}/f/${post_id}`}
+                        />
+                    )}
                     {/* //todo: */}
                     <ul className={style["subject-tag"]}>
-                        {tag.map((item) => {
+                        {tags.map((item) => {
                             return (
                                 <li
                                     key={item.tag_id}
                                 >
-                                    <p>{item.tag_name}</p>
+                                    <p className={style["subject-tag-item"]}>{item.tag_name}</p>
                                 </li>
                             );
                         })}

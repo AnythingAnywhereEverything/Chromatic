@@ -8,6 +8,7 @@ import {
 import { HlsPlayer } from "../../hlsPlayer";
 import { Media, MediaObjects } from "@/api/types/media";
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
+import Link from "next/link";
 
 // BIT MASKING LAYER
 const MediaFlags = {
@@ -18,6 +19,9 @@ interface MediaGroupProps {
     containerWidthRatio?: number;
     containerHeightRatio?: number;
     media: Media[];
+    // * When provided, media items link to /media/{index + 1} under this post path
+    // * (e.g. `/u/{username}/f/{post_id}/media/2`).
+    postUrl?: string;
 }
 
 // read from flag
@@ -86,6 +90,7 @@ function MediaLayout({
     media,
     containerWidthRatio,
     containerHeightRatio,
+    postUrl,
 }: MediaGroupProps) {
     const [medias, setMedia] = React.useState<Media[]>([]);
 
@@ -247,7 +252,7 @@ function MediaLayout({
                         transform: `translate3d(-${translateX}px, 0, 0)`,
                     }}
                 >
-                    {medias.map((item) => {
+                    {medias.map((item, index) => {
                         const animated = isAnimated(item);
                         const url = makeStaticURL(item.media_objects);
                         const imageWidth = item.media_object_metadata.width;
@@ -257,6 +262,10 @@ function MediaLayout({
                         const containerWidth = container?.width || imageWidth;
                         const containerHeight =
                             container?.height || imageHeight;
+
+                        const href = postUrl
+                            ? `${postUrl}/media/${index + 1}`
+                            : undefined;
 
                         if (item.file_type === "Hls") {
                             return (
@@ -268,19 +277,37 @@ function MediaLayout({
                                         height: containerHeight,
                                     }}
                                 >
-                                    <HlsPlayer
-                                        id={item.id}
-                                        media={item}
-                                        width={imageWidth}
-                                        height={imageHeight}
-                                        containerWidth={containerWidth}
-                                        containerHeight={containerHeight}
-                                    />
+                                    {href ? (
+                                        <Link
+                                            href={href}
+                                            className={style["image-link"]}
+                                        >
+                                            <HlsPlayer
+                                                id={item.id}
+                                                media={item}
+                                                width={imageWidth}
+                                                height={imageHeight}
+                                                containerWidth={containerWidth}
+                                                containerHeight={
+                                                    containerHeight
+                                                }
+                                            />
+                                        </Link>
+                                    ) : (
+                                        <HlsPlayer
+                                            id={item.id}
+                                            media={item}
+                                            width={imageWidth}
+                                            height={imageHeight}
+                                            containerWidth={containerWidth}
+                                            containerHeight={containerHeight}
+                                        />
+                                    )}
                                 </li>
                             );
                         }
 
-                        return (
+                        const image = (
                             <Image
                                 containerClassName={style["image-item"]}
                                 key={item.id}
@@ -301,6 +328,18 @@ function MediaLayout({
                                 }
                                 viewportThreshold={0.2}
                             />
+                        );
+
+                        return href ? (
+                            <Link
+                                key={item.id}
+                                href={href}
+                                className={style["image-link"]}
+                            >
+                                {image}
+                            </Link>
+                        ) : (
+                            image
                         );
                     })}
                 </ul>
@@ -324,6 +363,7 @@ export const MediaGroup = ({
     media,
     containerWidthRatio,
     containerHeightRatio,
+    postUrl,
 }: MediaGroupProps) => {
     if (media.length === 0) {
         return null;
@@ -335,6 +375,7 @@ export const MediaGroup = ({
                 media={media}
                 containerWidthRatio={containerWidthRatio}
                 containerHeightRatio={containerHeightRatio}
+                postUrl={postUrl}
             />
         </div>
     );
