@@ -19,6 +19,7 @@ import {
 import { useUser } from "@/hooks/useUser";
 import { UserResponse, UserSettingResponse } from "@/api/user";
 import { NotificationSetting } from "./content/notificationSetting";
+import { PrivacySettingContent } from "./content/privacySetting";
 
 function UserSetting({
     open,
@@ -45,7 +46,7 @@ function UserSetting({
         },
         privacy: {
             title: "Privacy",
-            component: () => <div>Privacy Setting</div>,
+            component: PrivacySettingContent,
         },
         logout: {
             title: "Logout",

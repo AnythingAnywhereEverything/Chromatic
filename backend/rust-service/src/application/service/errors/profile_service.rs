@@ -26,6 +26,12 @@ pub enum ProfileServiceError {
     
     #[error("Cannot follow user due to their privacy settings.")]
     CannotFollowUser,
+
+    #[error("Invalid setting update.")]
+    InvalidSettingUpdate,
+
+    #[error("Follow request not found.")]
+    FollowRequestNotFound,
     
     #[error(transparent)]
     DisplayNameError(#[from] DisplayNameError),

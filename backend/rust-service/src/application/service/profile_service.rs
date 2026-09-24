@@ -7,7 +7,7 @@ use crate::{
             user::{
                 self as user_repo,
                 find::URDQOpts,
-                row::{FollowUserRow, SettingsType, UserProfileRow, UserSettingRow},
+                row::{FollowUserRow, PendingFollowRow, SettingsType, UserProfileRow, UserSettingRow},
             },
         },
         service::{
@@ -22,9 +22,7 @@ use crate::{
         },
         state::AppState,
     },
-    domain::user::{
-        types::{Bio, DisplayName, Quotes},
-    },
+    domain::user::types::{Bio, DisplayName, Quotes},
 };
 pub struct ProfileService;
 
@@ -284,13 +282,45 @@ impl ProfileService {
         target_id: i64,
     ) -> Result<(), ProfileServiceError> {
         let mut tx = state.db_pool.begin().await?;
-        let result = user_repo::follow::unfollow_repo(&mut tx, user_id, target_id).await?;
+        let result = user_repo::follow::unfollow_repo(&mut tx, target_id, user_id).await?;
         tracing::info!("Unfollow repository call result: {:?}", result);
-         if result {
+        if result {
             user_repo::follow::update_follower_count(&mut tx, target_id, -1).await?;
             user_repo::follow::update_following_count(&mut tx, user_id, -1).await?;
-         }
+        }
         tx.commit().await?;
+
+        if result {
+            let mut tx = state.db_pool.begin().await?;
+
+            let user_profile = user_repo::find::profile_full_by_id(&mut tx, user_id, None).await?;
+
+            let target_profile =
+                user_repo::find::profile_full_by_id(&mut tx, target_id, None).await?;
+
+            tx.commit().await?;
+
+            let mut conn = state.redis.get().await?;
+
+            let user_id_key = format!("profile:id:{}", user_profile.id);
+            let user_username_key = format!("profile:username:{}", user_profile.username);
+            let user_value = serde_json::to_string(&user_profile)?;
+
+            let target_id_key = format!("profile:id:{}", target_profile.id);
+            let target_username_key = format!("profile:username:{}", target_profile.username);
+            let target_value = serde_json::to_string(&target_profile)?;
+
+            let _: () = conn.set_ex(&user_id_key, &user_value, 3600).await?;
+
+            let _: () = conn.set_ex(&user_username_key, &user_id_key, 3600).await?;
+
+            let _: () = conn.set_ex(&target_id_key, &target_value, 3600).await?;
+
+            let _: () = conn
+                .set_ex(&target_username_key, &target_id_key, 3600)
+                .await?;
+        }
+
         Ok(())
     }
 
@@ -307,7 +337,7 @@ impl ProfileService {
             target_id,
             status
         );
-        let result = user_repo::follow::follow_repo(&mut tx, user_id, target_id, &status).await?;
+        let result = user_repo::follow::follow_repo(&mut tx, target_id, user_id, &status).await?;
         let notification_id = state.snowflake_generator.generate_id()?;
         tracing::info!("Follow repository call result: {:?}", result);
         let username = Self::get_profile_by_id(state, user_id, None)
@@ -342,8 +372,38 @@ impl ProfileService {
             .await?;
         }
 
-
         tx.commit().await?;
+        // A I
+        if status == "followed" {
+            let mut tx = state.db_pool.begin().await?;
+
+            let user_profile = user_repo::find::profile_full_by_id(&mut tx, user_id, None).await?;
+
+            let target_profile =
+                user_repo::find::profile_full_by_id(&mut tx, target_id, None).await?;
+
+            tx.commit().await?;
+
+            let mut conn = state.redis.get().await?;
+
+            let user_id_key = format!("profile:id:{}", user_profile.id);
+            let user_username_key = format!("profile:username:{}", user_profile.username);
+            let user_value = serde_json::to_string(&user_profile)?;
+
+            let target_id_key = format!("profile:id:{}", target_profile.id);
+            let target_username_key = format!("profile:username:{}", target_profile.username);
+            let target_value = serde_json::to_string(&target_profile)?;
+
+            let _: () = conn.set_ex(&user_id_key, &user_value, 3600).await?;
+
+            let _: () = conn.set_ex(&user_username_key, &user_id_key, 3600).await?;
+
+            let _: () = conn.set_ex(&target_id_key, &target_value, 3600).await?;
+
+            let _: () = conn
+                .set_ex(&target_username_key, &target_id_key, 3600)
+                .await?;
+        }
         Ok(result)
     }
 
@@ -368,5 +428,110 @@ impl ProfileService {
         let setting = user_repo::setting::get_setting_type(&mut tx, user_id, setting_key).await?;
         tx.commit().await?;
         Ok(setting)
+    }
+
+    pub async fn update_user_setting(
+        state: &AppState,
+        user_id: i64,
+        setting_key: SettingsType,
+        setting_value: serde_json::Value,
+    ) -> Result<UserSettingRow, ProfileServiceError> {
+        if !setting_value.is_object() {
+            return Err(ProfileServiceError::InvalidSettingUpdate);
+        }
+
+        let mut tx = state.db_pool.begin().await?;
+        let setting =
+            user_repo::setting::update_setting_type(&mut tx, user_id, setting_key, setting_value)
+                .await?;
+        tx.commit().await?;
+        Ok(setting)
+    }
+
+    pub async fn get_pending_follow_requests(
+        state: &AppState,
+        user_id: i64,
+    ) -> Result<Vec<PendingFollowRow>, ProfileServiceError> {
+        let mut tx = state.db_pool.begin().await?;
+        let requests = user_repo::follow::list_pending_followers(&mut tx, user_id).await?;
+        tx.commit().await?;
+        Ok(requests)
+    }
+
+    pub async fn accept_follow_request(
+        state: &AppState,
+        owner_id: i64,
+        follower_id: i64,
+    ) -> Result<FollowUserRow, ProfileServiceError> {
+        let mut tx = state.db_pool.begin().await?;
+        tracing::info!(
+            "Accepting follow request: {} accepts follower: {}",
+            owner_id,
+            follower_id
+        );
+        let result = user_repo::follow::follow_repo(&mut tx, owner_id, follower_id, "followed")
+            .await?;
+        let username = Self::get_profile_by_id(state, follower_id, None)
+            .await?
+            .username;
+        let notification_id = state.snowflake_generator.generate_id()?;
+
+        user_repo::follow::update_follower_count(&mut tx, owner_id, 1).await?;
+        user_repo::follow::update_following_count(&mut tx, follower_id, 1).await?;
+
+        user_repo::notification::create_notification(
+            &mut tx,
+            notification_id,
+            owner_id,
+            "follow",
+            serde_json::json!({
+                "username": username,
+                "message": "has followed you"
+            }),
+        )
+        .await?;
+
+        tx.commit().await?;
+
+        let mut tx = state.db_pool.begin().await?;
+        let owner_profile = user_repo::find::profile_full_by_id(&mut tx, owner_id, None).await?;
+        let follower_profile =
+            user_repo::find::profile_full_by_id(&mut tx, follower_id, None).await?;
+        tx.commit().await?;
+
+        let mut conn = state.redis.get().await?;
+        let owner_id_key = format!("profile:id:{}", owner_profile.id);
+        let owner_username_key = format!("profile:username:{}", owner_profile.username);
+        let owner_value = serde_json::to_string(&owner_profile)?;
+
+        let follower_id_key = format!("profile:id:{}", follower_profile.id);
+        let follower_username_key = format!("profile:username:{}", follower_profile.username);
+        let follower_value = serde_json::to_string(&follower_profile)?;
+
+        let _: () = conn.set_ex(&owner_id_key, &owner_value, 3600).await?;
+        let _: () = conn.set_ex(&owner_username_key, &owner_id_key, 3600).await?;
+        let _: () = conn.set_ex(&follower_id_key, &follower_value, 3600).await?;
+        let _: () = conn
+            .set_ex(&follower_username_key, &follower_id_key, 3600)
+            .await?;
+
+        Ok(result)
+    }
+
+    pub async fn reject_follow_request(
+        state: &AppState,
+        owner_id: i64,
+        follower_id: i64,
+    ) -> Result<(), ProfileServiceError> {
+        let mut tx = state.db_pool.begin().await?;
+        let result =
+            user_repo::follow::reject_follow_repo(&mut tx, owner_id, follower_id).await?;
+
+        if !result {
+            return Err(ProfileServiceError::FollowRequestNotFound);
+        }
+
+        tx.commit().await?;
+        Ok(())
     }
 }
