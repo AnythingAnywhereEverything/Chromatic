@@ -27,6 +27,7 @@ interface PasswordData{
 }
 
 export interface UserSettingResponse {
+  setting_key?: string;
   setting_type: string;
   setting_value: Record<string, any>;
   created_at: string;
@@ -177,6 +178,26 @@ export const getUserSettingType = async (setting_type: string) => {
   if (!res.ok) {
     const errorMessage =
       data?.errors?.[0]?.message || "Failed to get user setting type";
+    throw new Error(errorMessage);
+  }
+  return data;
+};
+
+export const updateUserSettingType = async (
+  setting_type: string,
+  setting_value: Record<string, any>,
+) => {
+  const res = await fetchWithAuth(`v2/users/settings/${setting_type}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ setting_value }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const errorMessage =
+      data?.errors?.[0]?.message || "Failed to update user setting type";
     throw new Error(errorMessage);
   }
   return data;
