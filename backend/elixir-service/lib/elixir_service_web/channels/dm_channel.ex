@@ -78,7 +78,26 @@ defmodule ElixirServiceWeb.DMChannel do
     message_id = String.to_integer(message_id)
 
     case ElixirService.Messages.delete_message(message_id, sender_id) do
-      {:ok, _message} ->
+      {:ok, message} ->
+        deleted = %{
+          id: Integer.to_string(message_id),
+          sender_id: Integer.to_string(message.user_id),
+          recipient_id: Integer.to_string(message.target_id)
+        }
+
+        # * Sender always receives the successful deletion.
+        push(socket, "message_deleted", deleted)
+
+        # * Don't broadcast to ourselves again.
+        # * If the recipient is offline, PubSub simply has no subscribers.
+        if message.target_id != sender_id do
+          PubSub.broadcast(
+            ElixirService.PubSub,
+            "dm:#{message.target_id}",
+            {:message_deleted, deleted}
+          )
+        end
+
         {:reply, :ok, socket}
 
       {:error, :not_found} ->
@@ -101,6 +120,13 @@ defmodule ElixirServiceWeb.DMChannel do
     IO.inspect(message, label: "RECEIVED MESSAGE")
 
     push(socket, "new_message", message)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:message_deleted, deleted}, socket) do
+    push(socket, "message_deleted", deleted)
 
     {:noreply, socket}
   end
