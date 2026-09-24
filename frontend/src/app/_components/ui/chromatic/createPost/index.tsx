@@ -2,7 +2,7 @@
 
 import style from "./style.module.scss";
 import React, { useState } from "react";
-import { GetAllTagAttachments, type TagRow } from "@/api/tags/tags";
+import { GetAllTagAttachments } from "@/api/tags/tags";
 
 import { CreatePost } from "@/api/post/post";
 import { PostAvatar } from "../post/header/avatar";
@@ -12,6 +12,8 @@ import { MdClose, MdEmojiEmotions, MdImage } from "react-icons/md";
 import { FaPaperPlane } from "react-icons/fa6";
 import { PostProps } from "@/api/post/getFeed";
 import EPicker from "./emojipicker";
+import { TagRow } from "@/api/tags/tags";
+import PostTags from "./tags";
 
 // TODO: Zartex, Refactor this.
 
@@ -24,7 +26,7 @@ let tagAttachmentsCache: TagRow[] = [];
 
 function CreatePostComponent({ author, onPostCreated }: CreatePostProps) {
     const MAX_TEXT_LENGTH = 2500;
-    
+
     const [text, setText] = useState("");
     const [hasEdited, setHasEdited] = useState(false);
 
@@ -37,7 +39,9 @@ function CreatePostComponent({ author, onPostCreated }: CreatePostProps) {
     const [isSubmittable, setIsSubmittable] = useState(false);
     const [isPending, setIsPending] = useState(false);
     const [tagAttachments, setTagAttachments] = useState<TagRow[]>([]);
+    // Taking 1 tag to cause less complexity and easier management in demo
 
+    const [selectedTag, setSelectedTag] = useState<TagRow | null>(null);
     const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
         const files = Array.from(e.clipboardData.items)
             .filter((item) => item.kind === "file")
@@ -101,6 +105,9 @@ function CreatePostComponent({ author, onPostCreated }: CreatePostProps) {
         }
         if (visibility != undefined) {
             formData.append("visibility", visibility);
+        }
+        if (selectedTag != undefined) {
+            formData.append("media_tags", selectedTag.id);
         }
 
         try {
@@ -166,6 +173,10 @@ function CreatePostComponent({ author, onPostCreated }: CreatePostProps) {
         event.target.value = "";
     };
 
+    const handleTagClick = (tag: TagRow) => {
+        console.log("clicked:", tag);
+        setSelectedTag(tag);
+    };
     const MediaContainerRef = React.useRef<HTMLDivElement | null>(null);
     const groupRef = React.useRef<HTMLDivElement | null>(null);
     const [translateX, setTranslateX] = useState(0);
@@ -312,6 +323,13 @@ function CreatePostComponent({ author, onPostCreated }: CreatePostProps) {
                             visibility={visibility}
                             onChange={(value) => setVisibility(value)}
                         />
+
+                        <PostTags
+                            tags={tagAttachments}
+                            selectedTag={selectedTag}
+                            onChangeTag={handleTagClick}
+                        />
+
                     </div>
                 )}
             </div>
@@ -343,19 +361,17 @@ function CreatePostComponent({ author, onPostCreated }: CreatePostProps) {
                     disabled={!isSubmittable}
                     onClick={handleSubmit}
                 >
-                    {
-                        !isPending ? (
-                            <>
-                                <FaPaperPlane />
-                                <span>Post</span>
-                            </>
-                        ) : (
-                            <>
-                                <img src="/asset/svgs/dot_loading.svg" alt="Post" />
-                                <span>Post</span>
-                            </>
-                        )
-                    }
+                    {!isPending ? (
+                        <>
+                            <FaPaperPlane />
+                            <span>Post</span>
+                        </>
+                    ) : (
+                        <>
+                            <img src="/asset/svgs/dot_loading.svg" alt="Post" />
+                            <span>Post</span>
+                        </>
+                    )}
                 </button>
             </div>
         </section>
