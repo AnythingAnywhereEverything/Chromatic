@@ -1,7 +1,7 @@
 import Config
 import Dotenvy
 
-env_file_location = System.get_env("ENV_FILE")
+env_file_location = System.get_env("ENV_FILE") || ".env" # if env file is nil
 
 source!([
   Path.absname(env_file_location),

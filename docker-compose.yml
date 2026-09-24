@@ -6,6 +6,8 @@ services:
       - .env_docker_elixir
     ports:
       - "4000:4000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - app
 
@@ -20,6 +22,12 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./media:/app/media
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "3000"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
     networks:
       - app
 
@@ -28,16 +36,21 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.nextjs
       args:
-        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+        NEXT_PUBLIC_CDN_URL: ${NEXT_PUBLIC_CDN_URL}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_URL: ${NEXT_PUBLIC_URL}
+        NEXT_PUBLIC_PHOENIX_SOCKET_URL: ${NEXT_PUBLIC_PHOENIX_SOCKET_URL}
         DOCKER: "true"
     ports:
-      - "5175:5175"
+      - "5173:5173"
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5173"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5173/"]
       interval: 2s
       timeout: 3s
       retries: 10
       start_period: 5s
+    networks:
+      - app
 
   nginx:
     build:
@@ -46,8 +59,10 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - nextjs
-      - rust
+      nextjs:
+        condition: service_healthy
+      rust:
+        condition: service_healthy
     volumes:
       - ./media:/etc/nginx/media
     networks:
