@@ -9,15 +9,8 @@ export const metadata: Metadata = {
     openGraph: {
         title: "Chromatic",
         description: "Chromatic is a social media platform that allows users to share and discover knowledge.",
-        url: "https://www.chromatic.com",
+        url: process.env.NEXT_PUBLIC_URL,
         siteName: "Chromatic",
-        images: [
-            {
-                url: "https://www.chromatic.com/og-image.png",
-                width: 800,
-                height: 600,
-            },
-        ],
         locale: "en_US",
         type: "website",
     },
