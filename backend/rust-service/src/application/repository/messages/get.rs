@@ -113,17 +113,23 @@ pub async fn get_id_for_new_messages(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     user_id: i64,
 ) -> RepositoryResult<Vec<i64>> {
-    let followed_users = sqlx::query_as::<_, (i64,)>(
+    let mutual_users = sqlx::query_as::<_, (i64,)>(
         r#"
-        SELECT 
-            uf.follower_id
+        SELECT uf.user_id
         FROM user_follow uf
-        WHERE uf.user_id = $1
+        WHERE uf.follower_id = $1
+          AND EXISTS (
+              SELECT 1
+              FROM user_follow mutual
+              WHERE mutual.user_id = $1
+                AND mutual.follower_id = uf.user_id
+          )
         "#,
     )
     .bind(user_id)
     .fetch_all(tx.as_mut())
     .await?;
 
-    Ok(followed_users.into_iter().map(|(id,)| id).collect())
+
+    Ok(mutual_users.into_iter().map(|(id,)| id).collect())
 }
