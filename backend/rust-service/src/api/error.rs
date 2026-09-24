@@ -81,6 +81,8 @@ pub enum APIErrorCode {
     UserNotFound,
     CannotFollowYourself,
     InvalidFollowOperation,
+    FollowRequestNotFound,
+    InvalidSettingUpdate,
 
     // Profile
     InvalidAvatarUpdate,
