@@ -18,6 +18,7 @@ import {
     DropdownTrigger,
 } from "@/app/_components/ui/chromatic/dropdown";
 import { BsThreeDots } from "react-icons/bs";
+import { followUser, unfollowUser } from "@/api/user/follow";
 
 function ProfileBannerSkeleton() {
     return (
@@ -51,14 +52,35 @@ function parseStaticImage(url: string) {
     return url;
 }
 
-function ProfileBanner({ profile, isOwner }: { profile: PublicUserProfileResponse, isOwner: boolean }) {
-    const [profileData, setProfileData] = useState<PublicUserProfileResponse | null>(
-        null,
-    );
+function ProfileBanner({
+    profile,
+    isOwner,
+}: {
+    profile: PublicUserProfileResponse;
+    isOwner: boolean;
+}) {
+    const [profileData, setProfileData] =
+        useState<PublicUserProfileResponse | null>(null);
 
     if (!profile) {
         return <ProfileBannerSkeleton />;
     }
+
+    const [following, setFollowing] = useState(false);
+    useEffect(() => {
+        if (profile) {
+            setFollowing(profile.is_following);
+        }
+    }, [profile]);
+
+    const handleFollowUser = async () => {
+        setFollowing(!following);
+        if (!following) {
+            await followUser(profile.id);
+        } else {
+            await unfollowUser(profile.id);
+        }
+    };
 
     return (
         <div className={style["profile-header"]}>
@@ -125,7 +147,36 @@ function ProfileBanner({ profile, isOwner }: { profile: PublicUserProfileRespons
                                         </button>
                                     </DropdownTrigger>
                                     <DropdownContent>
-                                        <DropdownItem>Report User</DropdownItem>
+                                        {!isOwner && (
+                                            <>
+                                                {following ? (
+                                                    <DropdownItem>
+                                                        <button
+                                                            type="button"
+                                                            onClick={
+                                                                handleFollowUser
+                                                            }
+                                                        >
+                                                            Unfollow User
+                                                        </button>
+                                                    </DropdownItem>
+                                                ) : (
+                                                    <DropdownItem>
+                                                        <button
+                                                            type="button"
+                                                            onClick={
+                                                                handleFollowUser
+                                                            }
+                                                        >
+                                                            Follow User
+                                                        </button>
+                                                    </DropdownItem>
+                                                )}
+                                                <DropdownItem>
+                                                    Report User
+                                                </DropdownItem>
+                                            </>
+                                        )}
                                     </DropdownContent>
                                 </Dropdown>
                             </div>

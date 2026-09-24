@@ -177,12 +177,14 @@ impl PostService {
         state: &AppState,
         target_id: i64,
         requester_id: Option<i64>,
-        before: chrono::DateTime<chrono::Utc>,
+        before: Option<chrono::DateTime<chrono::Utc>>,
+        before_id: Option<i64>,
         limit: i32,
     ) -> Result<Vec<PostRow>, PostServiceError> {
         let mut tx = state.db_pool.begin().await?;
         let user_posts =
-            post_repo::get::user_posts(&mut tx, target_id, requester_id, before, limit).await?;
+            post_repo::get::user_posts(&mut tx, target_id, requester_id, before, before_id, limit)
+                .await?;
 
         let mut posts = Vec::new();
         for post_id in &user_posts {
@@ -201,16 +203,43 @@ impl PostService {
         &self,
         state: &AppState,
         user_id: i64,
+        before: Option<chrono::DateTime<chrono::Utc>>,
+        before_id: Option<i64>,
         limit: i32,
     ) -> Result<Vec<PostRow>, PostServiceError> {
         let mut tx = state.db_pool.begin().await?;
-        let feed = post_repo::get::feed(&mut tx, user_id, limit).await?;
+        let feed = post_repo::get::feed(&mut tx, user_id, before, before_id, limit).await?;
 
         let mut posts = Vec::new();
         for post_id in &feed {
             // Fetch each post by its ID
             if let Some(post) = self
                 .get_post(state, &mut tx, *post_id, Some(user_id))
+                .await?
+            {
+                posts.push(post);
+            }
+        }
+
+        Ok(posts)
+    }
+
+    pub async fn get_explore(
+        &self,
+        state: &AppState,
+        requester_id: Option<i64>,
+        before: Option<chrono::DateTime<chrono::Utc>>,
+        before_id: Option<i64>,
+        tag_id: Option<i64>,
+        limit: i32,
+    ) -> Result<Vec<PostRow>, PostServiceError> {
+        let mut tx = state.db_pool.begin().await?;
+        let explore = post_repo::get::query_explore_posts(&mut tx, before, before_id, tag_id, limit as i64).await?;
+
+        let mut posts = Vec::new();
+        for post_id in &explore {
+            if let Some(post) = self
+                .get_post(state, &mut tx, *post_id, requester_id)
                 .await?
             {
                 posts.push(post);

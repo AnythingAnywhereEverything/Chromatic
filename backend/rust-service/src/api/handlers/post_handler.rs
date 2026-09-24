@@ -28,7 +28,8 @@ pub enum PostStatus {
 #[derive(serde::Deserialize)]
 pub struct FeedQuery {
     pub limit: Option<i32>,
-    pub cursor_id: Option<i64>,
+    pub before: Option<chrono::DateTime<chrono::Utc>>,
+    pub before_id: Option<i64>,
 }
 #[derive(Debug, serde::Deserialize)]
 pub struct LikeRequest {
@@ -51,7 +52,16 @@ impl PostVisibility {
 #[derive(serde::Deserialize, Debug)]
 pub struct UserPostQuery {
     pub limit: Option<i32>,
-    pub before: chrono::DateTime<chrono::Utc>,
+    pub before: Option<chrono::DateTime<chrono::Utc>>,
+    pub before_id: Option<i64>,
+}
+
+#[derive(serde::Deserialize, Debug)]
+pub struct ExploreQuery {
+    pub limit: Option<i32>,
+    pub before: Option<chrono::DateTime<chrono::Utc>>,
+    pub before_id: Option<i64>,
+    pub tag_id: Option<i64>,
 }
 
 pub async fn get_user_posts_handler(
@@ -74,7 +84,36 @@ pub async fn get_user_posts_handler(
             target_id,
             user_id,
             query.before,
+            query.before_id,
             query.limit.unwrap_or(8) as i32,
+        )
+        .await?;
+
+    Ok(Json(posts))
+}
+
+pub async fn get_explore_post_handler(
+    State(state): State<SharedState>,
+    Path(version): Path<String>,
+    req_auth: RequestAuth,
+    query: Query<ExploreQuery>,
+) -> Result<Json<Vec<PostRow>>, APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+
+    let user_id = match req_auth.user {
+        Some(user) => Some(user.user_id),
+        None => None,
+    };
+
+    let posts = PostService
+        .get_explore(
+            &state,
+            user_id,
+            query.before,
+            query.before_id,
+            query.tag_id,
+            query.limit.unwrap_or(8).clamp(1, 30) as i32,
         )
         .await?;
 
@@ -99,6 +138,8 @@ pub async fn get_feed_post_handler(
         .get_feed(
             &state,
             user_id.unwrap(),
+            query.before,
+            query.before_id,
             query.limit.unwrap_or(8) as i32,
         )
         .await?;

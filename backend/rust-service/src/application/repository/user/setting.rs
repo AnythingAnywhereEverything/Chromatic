@@ -105,3 +105,26 @@ pub async fn get_setting_type(
 
     Ok(row)
 }
+
+pub async fn update_setting_type(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    user_id: i64,
+    setting_key: SettingsType,
+    setting_value: serde_json::Value,
+) -> Result<UserSettingRow, sqlx::Error> {
+    let row: UserSettingRow = sqlx::query_as(
+        r#"
+        UPDATE user_settings
+        SET setting_value = $3, updated_at = NOW()
+        WHERE user_id = $1 AND setting_key = $2
+        RETURNING setting_key, setting_value, created_at, updated_at
+        "#
+    )
+    .bind(user_id)
+    .bind(setting_key.to_string())
+    .bind(setting_value)
+    .fetch_one(tx.as_mut())
+    .await?;
+
+    Ok(row)
+}

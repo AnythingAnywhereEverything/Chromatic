@@ -77,6 +77,17 @@ pub struct UserSettingRow {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
+#[derive(Debug, sqlx::FromRow, serde::Serialize)]
+pub struct PendingFollowRow {
+    pub follower_id: String,
+    pub username: String,
+    pub display_name: Option<String>,
+    pub avatar: Option<String>,       // hash name
+    pub avatar_thumbhash: Option<String>, // thumbhash
+    pub status: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
 #[derive(serde::Serialize, serde::Deserialize, sqlx::Type, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum SettingsType {
@@ -85,6 +96,7 @@ pub enum SettingsType {
     Privacy,
     Notification,
     Display,
+    Message,
 }
 
 impl ToString for SettingsType {
@@ -95,6 +107,7 @@ impl ToString for SettingsType {
             SettingsType::Privacy => "privacy".to_string(),
             SettingsType::Notification => "notification".to_string(),
             SettingsType::Display => "display".to_string(),
+            SettingsType::Message => "message".to_string(),
         }
     }
 }

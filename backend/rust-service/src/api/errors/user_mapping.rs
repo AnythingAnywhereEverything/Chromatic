@@ -57,6 +57,18 @@ impl From<ProfileServiceError> for APIError {
                     .code(APIErrorCode::InvalidFollowOperation)
                     .kind(APIErrorKind::ValidationError),
             ),
+            ProfileServiceError::FollowRequestNotFound => (
+                StatusCode::BAD_REQUEST,
+                APIErrorEntry::new("Follow request not found.")
+                    .code(APIErrorCode::FollowRequestNotFound)
+                    .kind(APIErrorKind::ValidationError),
+            ),
+            ProfileServiceError::InvalidSettingUpdate => (
+                StatusCode::BAD_REQUEST,
+                APIErrorEntry::new("Invalid setting update.")
+                    .code(APIErrorCode::InvalidSettingUpdate)
+                    .kind(APIErrorKind::ValidationError),
+            ),
             _ => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 APIErrorEntry::new(&error.to_string())

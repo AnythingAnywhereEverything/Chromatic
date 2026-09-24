@@ -33,8 +33,11 @@ defmodule ElixirService.Messages do
 
   def edit_message(message_id, new_content) do
     message = Repo.get(Message, message_id)
+
     case message do
-      nil -> {:error, :not_found}
+      nil ->
+        {:error, :not_found}
+
       _ ->
         message
         |> change(%{content: new_content})

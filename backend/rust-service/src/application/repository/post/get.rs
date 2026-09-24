@@ -1,6 +1,9 @@
 use sqlx::{Postgres, Transaction};
 
-use crate::application::repository::{RepositoryResult, post::{row::{CommentBaseRow, CommentIdsRow, FeedRow, PostBaseRow, UserPostsRow}}};
+use crate::application::repository::{
+    RepositoryResult,
+    post::row::{CommentBaseRow, CommentIdsRow, FeedRow, PostBaseRow, UserPostsRow},
+};
 
 pub async fn base_post(
     tx: &mut Transaction<'_, Postgres>,
@@ -184,6 +187,8 @@ pub async fn base_post(
 pub async fn feed(
     tx: &mut Transaction<'_, Postgres>,
     user_id: i64,
+    before: Option<chrono::DateTime<chrono::Utc>>,
+    before_id: Option<i64>,
     limit: i32,
 ) -> RepositoryResult<Vec<i64>> {
     let posts = sqlx::query_as::<_, FeedRow>(
@@ -207,11 +212,18 @@ pub async fn feed(
                 )
                 OR p.user_id = $1
             )
-        ORDER BY p.created_at DESC
-        LIMIT $2
+        AND (
+                $2::timestamptz IS NULL
+                OR p.created_at < $2
+                OR (p.created_at = $2 AND p.id < $3)
+            )
+        ORDER BY p.created_at DESC, p.id DESC
+        LIMIT $4
         "#,
     )
     .bind(user_id)
+    .bind(before)
+    .bind(before_id)
     .bind(limit)
     .fetch_all(tx.as_mut())
     .await?;
@@ -223,7 +235,8 @@ pub async fn user_posts(
     tx: &mut Transaction<'_, Postgres>,
     target_id: i64,
     requester_id: Option<i64>,
-    before: chrono::DateTime<chrono::Utc>,
+    before: Option<chrono::DateTime<chrono::Utc>>,
+    before_id: Option<i64>,
     limit: i32,
 ) -> RepositoryResult<Vec<i64>> {
     let posts = sqlx::query_as::<_, UserPostsRow>(
@@ -232,7 +245,11 @@ pub async fn user_posts(
             FROM media_posts p
             WHERE p.deleted_at IS NULL
                 AND p.user_id = $1
-                AND p.created_at < $3
+                AND (
+                        $3::timestamptz IS NULL
+                        OR p.created_at < $3
+                        OR (p.created_at = $3 AND p.id < $4)
+                    )
                 AND p.deleted_at IS NULL
                 AND (
                         (
@@ -274,17 +291,21 @@ pub async fn user_posts(
                             )
                         )
                     )
-            ORDER BY p.created_at DESC
-            LIMIT $4;
+            ORDER BY p.created_at DESC, p.id DESC
+            LIMIT $5;
         "#,
     )
     .bind(target_id)
     .bind(requester_id)
     .bind(before)
+    .bind(before_id)
     .bind(limit)
     .fetch_all(tx.as_mut())
     .await?;
-    Ok(posts.into_iter().map(|user_posts_row| user_posts_row.post_id).collect())
+    Ok(posts
+        .into_iter()
+        .map(|user_posts_row| user_posts_row.post_id)
+        .collect())
 }
 
 pub async fn base_comment(
@@ -423,5 +444,52 @@ pub async fn post_comment_ids(
     .bind(limit)
     .fetch_all(tx.as_mut())
     .await?;
-    Ok(comments.into_iter().map(|comment_row| comment_row.comment_id).collect())
+    Ok(comments
+        .into_iter()
+        .map(|comment_row| comment_row.comment_id)
+        .collect())
+}
+
+pub async fn query_explore_posts(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    before: Option<chrono::DateTime<chrono::Utc>>,
+    before_id: Option<i64>,
+    tag_id: Option<i64>,
+    limit: i64,
+) -> RepositoryResult<Vec<i64>> {
+    let ids = sqlx::query_as::<_, UserPostsRow>(
+        r#"
+            SELECT p.id AS post_id
+            FROM media_posts p
+            WHERE p.deleted_at IS NULL
+                AND p.visibility = 'everyone'::post_visibility
+                AND (
+                        $1::timestamptz IS NULL
+                        OR p.created_at < $1
+                        OR (p.created_at = $1 AND p.id < $2)
+                    )
+                AND (
+                        $3::bigint IS NULL
+                        OR EXISTS (
+                            SELECT 1
+                            FROM tag_attachments ta
+                            WHERE ta.target_id = p.id
+                                AND ta.target_type = 'post'
+                                AND ta.tag_id = $3
+                        )
+                    )
+            ORDER BY p.created_at DESC, p.id DESC
+            LIMIT $4;
+        "#,
+    )
+    .bind(before)
+    .bind(before_id)
+    .bind(tag_id)
+    .bind(limit)
+    .fetch_all(tx.as_mut())
+    .await?;
+    Ok(ids
+        .into_iter()
+        .map(|post_row| post_row.post_id)
+        .collect())
 }

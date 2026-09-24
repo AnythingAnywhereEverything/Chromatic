@@ -41,7 +41,7 @@ export interface PostProps {
     reposted_post?: RepostedPost;
 
     is_liked: boolean;
-    tag: PostTag[];
+    tags: PostTag[];
 
     has_attachment: boolean;
     attachments: Media[];
@@ -59,8 +59,17 @@ interface PostTag {
 
 const LIMIT = 8;
 
-export const getUserFeed = async (): Promise<PostProps[]> => {
-    const res = await fetchWithAuth(`v2/posts/feed?${LIMIT}`);
+export const getUserFeed = async (
+    before?: Date,
+    beforeId?: string,
+    limit: number = LIMIT,
+): Promise<PostProps[]> => {
+    const query = new URLSearchParams();
+    if (before) query.append("before", before.toISOString());
+    if (beforeId) query.append("before_id", beforeId);
+    query.append("limit", limit.toString());
+
+    const res = await fetchWithAuth(`v2/posts/feed?${query.toString()}`);
     if (!res.ok) throw new Error("Failed to get post data");
     const data = await res.json();
     console.log(data);

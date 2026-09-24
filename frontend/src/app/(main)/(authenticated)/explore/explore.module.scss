@@ -1,0 +1,49 @@
+.explore-body {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing) * 3);
+    width: 100%;
+    max-width: 600px;
+    margin-inline: auto;
+    padding: calc(var(--spacing) * 4);
+}
+
+.explore-filter {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: calc(var(--spacing) * 2);
+}
+
+.explore-top {
+    width: 100%;
+}
+
+.explore-tags {
+    padding: var(--space-4);
+    border-radius: var(--border);
+}
+.explore-filter-input {
+    width: 100%;
+    padding: calc(var(--spacing) * 1);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-md);
+}
+.explore-top {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing) * 2);
+}
+.explore-posts {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing) * 2);
+}
+
+.explore-empty {
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+    text-align: center;
+    padding-block: calc(var(--spacing) * 6);
+}

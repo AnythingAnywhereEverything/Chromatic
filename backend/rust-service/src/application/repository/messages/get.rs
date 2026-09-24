@@ -50,33 +50,44 @@ pub async fn get_messages(
     .await
 }
 
-pub async fn get_messages_id(
+pub async fn get_messages_rows(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     user_id: i64,
     target_id: i64,
     before: chrono::DateTime<chrono::Utc>,
+    before_id: Option<i64>,
     limit: i32,
-) -> Result<Vec<i64>, sqlx::Error> {
-    // pagination based on the 'before' timestamp
-    let messages = sqlx::query_as::<_, (i64,)>(
+) -> Result<Vec<MessageRow>, sqlx::Error> {
+    sqlx::query_as::<_, MessageRow>(
         r#"
-        SELECT m.id AS message_id
+        SELECT
+            m.id::text AS id,
+            m.user_id::text AS user_id,
+            m.target_id::text AS target_id,
+            m.content,
+            m.has_attachment,
+            m.has_reactions,
+            m.created_at,
+            m.updated_at
         FROM messages m
         WHERE ((m.user_id = $1 AND m.target_id = $2)
         OR (m.user_id = $2 AND m.target_id = $1)) 
         AND m.deleted_at IS NULL
-        AND m.created_at < $3
-        ORDER BY m.created_at DESC
-        LIMIT $4
+        AND (
+            m.created_at < $3
+            OR (m.created_at = $3 AND ($4::bigint IS NULL OR m.id < $4))
+        )
+        ORDER BY m.created_at DESC, m.id DESC
+        LIMIT $5
         "#,
     )
     .bind(user_id)
     .bind(target_id)
     .bind(before)
+    .bind(before_id)
     .bind(limit)
     .fetch_all(tx.as_mut())
-    .await?;
-    Ok(messages.into_iter().map(|(id,)| id).collect())
+    .await
 }
 
 pub async fn base_message(

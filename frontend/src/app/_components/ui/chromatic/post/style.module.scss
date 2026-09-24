@@ -105,3 +105,10 @@
         z-index: 0;
     }
 }
+.subject-tag {
+    list-style-type: none;
+    padding-left: var(--space-30);
+    .subject-tag-item {
+        font-size: (--font-size-sm);
+    }
+}

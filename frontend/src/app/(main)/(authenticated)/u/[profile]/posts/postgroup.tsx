@@ -21,6 +21,7 @@ export default function PostGroup({
     const [user, setUser] = useState<UserResponse | null>(null);
 
     const [beforeDate, setBeforeDate] = useState(new Date());
+    const [beforeId, setBeforeId] = useState<string | undefined>(undefined);
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
 
@@ -40,8 +41,7 @@ export default function PostGroup({
         setLoading(true);
 
         try {
-            console.log("Loading more posts before date:", beforeDate);
-            const post = await GetUserPosts(profile.id, beforeDate, 10);
+            const post = await GetUserPosts(profile.id, beforeDate, beforeId, 10);
             console.log("Fetched posts:", post);
 
             if (!post || post.length === 0) {
@@ -64,6 +64,7 @@ export default function PostGroup({
             const oldestPost = post[post.length - 1];
 
             setBeforeDate(new Date(`${oldestPost.created_at}`));
+            setBeforeId(oldestPost.post_id);
 
             console.log("Oldest post date:", oldestPost.created_at);
 
@@ -105,7 +106,7 @@ export default function PostGroup({
                 observer.unobserve(target);
             }
         };
-    }, [loading, hasMore, beforeDate, profile.id]);
+    }, [loading, hasMore, beforeDate, beforeId, profile.id]);
 
     return (
         <div className={style["postgroup-layout"]}>

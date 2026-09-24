@@ -9,7 +9,7 @@ pub async fn get_all_tag_attachments_repo(
     sqlx::query_as::<_, TagRow>(
         r#"
             SELECT
-                id,
+                id::text as id,
                 tag_name
             FROM interest_tags
             ORDER BY id ASC
@@ -26,9 +26,9 @@ pub async fn get_tag_attachments(
     sqlx::query_as::<_, TagAttachmentFull>(
         r#"
             SELECT
-                ta.target_id,
+                ta.target_id::text as target_id,
                 ta.target_type,
-                ta.tag_id,
+                ta.tag_id::text as tag_id,
                 it.tag_name
             FROM tag_attachments ta
             JOIN interest_tags it

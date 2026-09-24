@@ -39,6 +39,11 @@
     flex: 0 0 auto;
 }
 
+.image-link {
+    display: block;
+    cursor: pointer;
+}
+
 .image-item {
     border-radius: var(--radius-small);
 }

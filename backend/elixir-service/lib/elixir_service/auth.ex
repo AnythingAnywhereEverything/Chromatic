@@ -31,16 +31,13 @@ defmodule ElixirService.Auth do
 
     case Redis.command(["EXISTS", key]) do
       {:ok, 1} ->
-
         Redis.command(["EXPIRE", key, Integer.to_string(@session_extend_ttl)])
 
         {:ok, %{id: user_id}}
 
       {:ok, 0} ->
-
         case find_session(user_id, created_at, token) do
           {:ok, session} ->
-
             Redis.command([
               "SETEX",
               key,
