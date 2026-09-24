@@ -1,0 +1,46 @@
+// Since it is replace if has class so TEMP
+.dropdown-content {
+    display: flex;
+    flex-direction: column;
+    width: calc(var(--spacing) * 40);
+    background-color: var(--popover);
+    color: var(--text-neutral);
+    overflow: hidden;
+    padding: calc(var(--spacing) * 2);
+    border-radius: var(--radius-small);
+    border: 1px solid var(--border);
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: scale(0.95) translateY(-6px);
+
+    gap: var(--spacing);
+
+    max-height: 320px;
+    overflow-y: scroll;
+
+    transition:
+        opacity 200ms ease,
+        transform 200ms ease,
+        visibility 200ms ease;
+}
+
+.dropdown-content[data-state="open"] {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: scale(1) translateY(0);
+}
+
+.dropdown-content[data-state="closed"] {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: scale(0.95) translateY(-6px);
+}
+
+.post-tag {
+    padding: var(--space-4);
+    cursor: pointer;
+}
