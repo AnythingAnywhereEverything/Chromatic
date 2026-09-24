@@ -15,7 +15,8 @@ use crate::{
 #[derive(serde::Deserialize, Debug)]
 pub struct MessageQuery {
     pub limit: Option<i32>,
-    pub before: chrono::DateTime<chrono::Utc>,
+    pub before: Option<chrono::DateTime<chrono::Utc>>,
+    pub before_id: Option<i64>,
 }
 
 pub async fn get_message_chat_handler(
@@ -32,14 +33,11 @@ pub async fn get_message_chat_handler(
         None => return Err(AuthServiceError::InvalidCredentials.into()),
     };
 
+    let before = query.before.unwrap_or_else(chrono::Utc::now);
+    let limit = query.limit.map(|limit| limit.clamp(1, 100)).unwrap_or(11);
+
     let message = MessageService
-        .get_messages_chat(
-            &state,
-            user_id,
-            target_id,
-            query.before,
-            query.limit.unwrap_or(11) as i32,
-        )
+        .get_messages_chat(&state, user_id, target_id, before, query.before_id, limit)
         .await?;
     Ok(Json(message))
 }

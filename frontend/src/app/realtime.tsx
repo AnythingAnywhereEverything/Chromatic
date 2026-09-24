@@ -20,24 +20,31 @@ type Message = {
     content: string;
 };
 
+type DeletedMessage = {
+    id: string;
+    sender_id: string;
+    recipient_id: string;
+};
+
 type RealtimeContextValue = {
     connected: boolean;
     message: Message | null;
+    deletedMessage: DeletedMessage | null;
     sendMessage: (recipientId: string, content: string) => void;
+    deleteMessage: (sender_id: string, messageId: string) => void;
 };
 
 const RealtimeContext = createContext<RealtimeContextValue | null>(null);
 
-export function RealtimeProvider({
-    children,
-}: {
-    children: ReactNode;
-}) {
+export function RealtimeProvider({ children }: { children: ReactNode }) {
     const userId = useUser().data?.id;
 
     const [token, setToken] = useState<string | null>(null);
     const [connected, setConnected] = useState(false);
-    const [message, setMessages] = useState<Message|null>(null);
+    const [message, setMessages] = useState<Message | null>(null);
+    const [deletedMessage, setDeletedMessage] = useState<DeletedMessage | null>(
+        null,
+    );
 
     const channelRef = useRef<Channel | null>(null);
 
@@ -50,11 +57,15 @@ export function RealtimeProvider({
             return null;
         }
 
-        return new Socket(process.env.NEXT_PUBLIC_PHOENIX_SOCKET_URL || "ws://localhost:4000/socket", {
-            params: {
-                token,
+        return new Socket(
+            process.env.NEXT_PUBLIC_PHOENIX_SOCKET_URL ||
+                "ws://localhost:4000/socket",
+            {
+                params: {
+                    token,
+                },
             },
-        });
+        );
     }, [token]);
 
     useEffect(() => {
@@ -82,6 +93,10 @@ export function RealtimeProvider({
             setMessages(message);
         });
 
+        channel.on("message_deleted", (deleted: DeletedMessage) => {
+            setDeletedMessage(deleted);
+        });
+
         return () => {
             channel.leave();
             channelRef.current = null;
@@ -91,13 +106,17 @@ export function RealtimeProvider({
         };
     }, [socket, userId]);
 
-    const sendMessage = (
-        recipientId: string,
-        content: string,
-    ) => {
+    const sendMessage = (recipientId: string, content: string) => {
         channelRef.current?.push("send_message", {
             recipient_id: recipientId,
             content,
+        });
+    };
+
+    const deleteMessage = (sender_id: string, messageId: string) => {
+        channelRef.current?.push("delete_message", {
+            sender_id: sender_id,
+            message_id: messageId,
         });
     };
 
@@ -106,7 +125,9 @@ export function RealtimeProvider({
             value={{
                 connected,
                 message,
+                deletedMessage,
                 sendMessage,
+                deleteMessage,
             }}
         >
             {children}
@@ -118,9 +139,7 @@ export function useRealtime() {
     const context = useContext(RealtimeContext);
 
     if (!context) {
-        throw new Error(
-            "useRealtime must be used inside RealtimeProvider",
-        );
+        throw new Error("useRealtime must be used inside RealtimeProvider");
     }
 
     return context;

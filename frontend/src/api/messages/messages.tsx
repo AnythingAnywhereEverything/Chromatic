@@ -12,6 +12,9 @@ export interface MessageResponse {
     updated_at: string;
 }
 
+// must stay in sync with the backend default in message_handler.rs
+export const MESSAGE_PAGE_LIMIT = 11;
+
 // It should be panigation, but now I'm Rushing
 export async function getFollowedUsers(): Promise<UserResponse[] | null> {
     const response = await fetchWithAuth(`v2/messages/followed`);
@@ -28,10 +31,14 @@ export async function getFollowedUsers(): Promise<UserResponse[] | null> {
 export async function getMessages(
     targetId: string,
     before: string,
-    limit: number
+    limit: number = MESSAGE_PAGE_LIMIT,
+    beforeId?: string,
 ): Promise<MessageResponse[] | null> {
     const query = new URLSearchParams();
     query.append("before", before);
+    if (beforeId) {
+        query.append("before_id", beforeId);
+    }
     query.append("limit", limit.toString());
     const response = await fetchWithAuth(`v2/messages/channel/${targetId}?${query.toString()}`);
 

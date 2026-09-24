@@ -44,31 +44,22 @@ impl MessageService {
         user_id: i64,
         target_id: i64,
         before: chrono::DateTime<chrono::Utc>,
+        before_id: Option<i64>,
         limit: i32,
     ) -> Result<Vec<MessageRow>, MessageServiceError> {
         let mut tx = state.db_pool.begin().await?;
 
-        let messages_id =
-            messages::get::get_messages_id(&mut tx, user_id, target_id, before, limit).await?;
-        if messages_id.is_empty() {
+        let messages =
+            messages::get::get_messages_rows(&mut tx, user_id, target_id, before, before_id, limit)
+                .await?;
+        if messages.is_empty() {
             let target_exists = user::find::is_user_exist(&mut tx, target_id).await?;
             if !target_exists {
                 return Err(MessageServiceError::UserNotFound);
             }
-
-            return Ok(Vec::new());
         }
 
         tx.commit().await?;
-
-        // allocate mem for the messages
-        let mut messages = Vec::with_capacity(messages_id.len());
-
-        for id in messages_id {
-            if let Some(message) = self.get_message(state, id, user_id).await? {
-                messages.push(message);
-            }
-        }
 
         Ok(messages)
     }
