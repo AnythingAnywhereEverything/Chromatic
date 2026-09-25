@@ -98,30 +98,28 @@ impl PersistentStore for LocalStorage {
 
     async fn put_dir(&self, source: &Path, key: &str) -> Result<(), StorageError> {
         let dest_path = self.persistent_root.join(key);
-        
-        // Ensure the destination directory exists
-        if let Some(parent) = dest_path.parent() {
-            tokio::fs::create_dir_all(parent).await?;
-        }
 
-        // try moving directory directly, if it fails, move each entries one by one
+        tokio::fs::create_dir_all(&dest_path).await?;
+
         if let Err(_) = tokio::fs::rename(source, &dest_path).await {
-            // tries to move each entries from source to destination directory
             let mut entries = tokio::fs::read_dir(source).await?;
             while let Some(entry) = entries.next_entry().await? {
                 let entry_type = entry.file_type().await?;
                 let file_name = entry.file_name();
                 let from_path = entry.path();
-                let to_path = dest_path.join(file_name.clone());
+                let to_path = dest_path.join(&file_name);
 
                 if entry_type.is_dir() {
-                    tokio::fs::create_dir_all(&to_path).await?;
-                    let key = format!("{}/{}", key, file_name.into_string().unwrap_or_default());
-                    Self::put_dir(&self, &from_path, &key).await?;
+                    let child_key = format!("{}/{}", key, file_name.to_string_lossy());
+
+                    Self::put_dir(self, &from_path, &child_key).await?;
                 } else {
-                    tokio::fs::rename(&from_path, &to_path).await?;
+                    tokio::fs::copy(&from_path, &to_path).await?;
+                    tokio::fs::remove_file(&from_path).await?;
                 }
             }
+            // Remove the now-empty source directory.
+            tokio::fs::remove_dir(source).await?;
         }
 
         Ok(())

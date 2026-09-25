@@ -53,6 +53,16 @@ impl From <PostServiceError> for APIError{
                 APIErrorEntry::new(&format!("Profile Service Error: {}", e.to_string()))
                 .kind(APIErrorKind::PostError)
             ),
+            PostServiceError::MediaServiceError(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                APIErrorEntry::new(&format!("Media Service Error: {}", e.to_string()))
+                .kind(APIErrorKind::PostError)
+            ),
+            PostServiceError::MediaExtractorError(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                APIErrorEntry::new(&format!("Media Extractor Error: {}", e.to_string()))
+                .kind(APIErrorKind::PostError)
+            ),
             _ => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 APIErrorEntry::new("An unexpected error occurred")

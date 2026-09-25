@@ -87,7 +87,7 @@ pub enum InspectionError {
     #[error("Failed to inspect media.")]
     InspectionFailed,
 
-    #[error("Failed to read file.")]
+    #[error(transparent)]
     IoError(#[from] std::io::Error),
 
     #[error(transparent)]
@@ -138,7 +138,7 @@ pub enum ExtractionError {
     #[error(transparent)]
     ContainerError(#[from] ContainerError),
 
-    #[error("Failed to read file.")]
+    #[error(transparent)]
     IoError(#[from] std::io::Error),
 
     #[error(transparent)]
@@ -237,7 +237,7 @@ pub enum MediaProcessorError {
     #[error("Failed to get video duration.")]
     GetDurationFailed,
 
-    #[error("Failed to read file.")]
+    #[error(transparent)]
     IoError(#[from] std::io::Error),
 
     #[error(transparent)]

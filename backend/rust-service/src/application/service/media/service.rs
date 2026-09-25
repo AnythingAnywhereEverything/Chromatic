@@ -587,6 +587,8 @@ impl MediaService {
                         }
                     }
                     MediaType::Video => {
+                        tracing::info!("Processing video file ID: {}", file.id().unwrap_or(-1));
+
                         let vpo = processing_options.get_video_processors().cloned();
                         let pvpo = processing_options.get_post_video_processors().cloned();
                         // we may generate a thumbnail, or just save it as is.
@@ -614,10 +616,14 @@ impl MediaService {
                             // due to hash unable on video type
                             // this for good to prevent large video file.
                             _ => {
+                                tracing::info!("Using default naming strategy for video file ID: {}", file.id().unwrap_or(-1));
                                 file.rename(&file.id().unwrap().to_string())?;
                                 file.set_current_extension(file.detected_extension().to_string())?;
                             }
                         }
+
+                        tracing::info!("Finished naming video file ID: {}", file.id().unwrap_or(-1));
+                        tracing::info!("Starting to probe video file object: {:#?}", file);
 
                         let thumbnail_byte = {
                             if fflages.video_thumbnail || config.is_generate_thumbhash() {
@@ -627,11 +633,24 @@ impl MediaService {
                             }
                         };
 
+                        tracing::info!("Generating thumbnail for video file ID: {}", file.id().unwrap_or(-1));
+
+
+                        tracing::info!("Probing video file path: {}", file.file_full_path().to_string_lossy());
+                        
                         let (width, height, duration) =
                             inspector::probe_video(&file.file_full_path()).await?;
                         file.set_width(width.unwrap_or(0) as u32);
                         file.set_height(height.unwrap_or(0) as u32);
                         file.set_duration(duration.unwrap_or(0.0) as f64);
+
+                        tracing::info!(
+                            "Video file ID: {} - width: {}, height: {}, duration: {}",
+                            file.id().unwrap_or(-1),
+                            file.width().unwrap_or(0),
+                            file.height().unwrap_or(0),
+                            file.duration().unwrap_or(0.0)
+                        );
 
                         let is_file_id_contained = config.is_file_id_contained();
                         if fflages.video_thumbnail
@@ -641,7 +660,7 @@ impl MediaService {
                         {
                             // check if video have to be in its own directory as
 
-                            tracing::debug!(
+                            tracing::info!(
                                 "Video file ID contained: {}, Post video processors: {:?}",
                                 is_file_id_contained,
                                 pvpo
@@ -664,7 +683,7 @@ impl MediaService {
                                     (put_image_path, put_image_relative)
                                 };
 
-                            tracing::debug!(
+                            tracing::info!(
                                 "Putting video thumbnail in directory: {:?}",
                                 put_image_path
                             );
