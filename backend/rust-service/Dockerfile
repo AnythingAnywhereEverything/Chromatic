@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     libssl3 \
     ca-certificates \
     libvips \
+    ffmpeg \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 

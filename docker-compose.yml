@@ -22,6 +22,8 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./media:/app/media
+      - ./temp:/app/temp
+    gpus: all
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "3000"]
       interval: 2s
