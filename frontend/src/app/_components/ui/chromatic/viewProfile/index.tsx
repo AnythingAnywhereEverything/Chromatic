@@ -178,6 +178,9 @@ const ViewProfile = ({
         if (payload.quote !== undefined) {
             formData.append("quote", payload.quote);
         }
+        if (payload.bio !== undefined) {
+            formData.append("bio", payload.bio);
+        }
 
         const data =
             await profileService.updateUserProfile.mutateAsync(formData);
