@@ -202,3 +202,18 @@ export const updateUserSettingType = async (
   }
   return data;
 };
+
+export const isAdmin = async (): Promise<boolean> => {
+  const res = await fetchWithAuth(`v2/users/admin`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const errorMessage = data?.errors?.[0]?.message || "Failed to check admin status";
+    throw new Error(errorMessage);
+  }
+  return data?.is_admin || false;
+};
