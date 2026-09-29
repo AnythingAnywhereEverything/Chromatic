@@ -6,5 +6,6 @@ pub mod message_service;
 
 pub mod auth;
 pub mod media;
+pub mod admin;
 
 pub mod errors;
