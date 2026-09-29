@@ -10,5 +10,5 @@ mod errors; // * Group error mappings for domain services, e.g. SessionServiceEr
 pub mod handlers;
 pub mod server;
 pub use error::{APIError, APIErrorCode, APIErrorEntry, APIErrorKind};
-pub use extractors::{AuthUser, RequestAuth};
+pub use extractors::{AdminUser, AuthUser, RequestAuth};
 pub use version::APIVersion;
