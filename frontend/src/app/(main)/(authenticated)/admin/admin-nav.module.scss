@@ -1,0 +1,20 @@
+.admin-nav {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+    min-width: var(--size-192);
+    padding: var(--space-8);
+    height: 100vh;
+}
+
+.admin-nav-item {
+    display: flex;
+    align-items: center;
+    padding: var(--space-8);
+    text-decoration: none;
+    width: 100%;
+    &:hover{
+        background-color: var(--muted);
+    }
+}

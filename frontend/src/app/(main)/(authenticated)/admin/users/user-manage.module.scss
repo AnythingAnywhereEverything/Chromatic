@@ -1,0 +1,122 @@
+.user-management {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+}
+.management-actions {
+    display: flex;
+    justify-content: space-between;
+}
+.role-dropdown-trigger {
+    background-color: var(--muted);
+    padding: var(--space-4);
+}
+.filters{
+    display: flex;
+    gap: var(--space-8);
+    input{
+        padding: var(--space-4);
+    }
+}
+/* // * AI generated  */
+.user-list-header,
+.user-grid {
+    display: grid;
+    grid-template-columns:
+        0.5fr
+        2fr
+        3fr
+        1.5fr
+        1.5fr /* status */
+        2fr
+        2fr;
+
+    align-items: center;
+    width: 100%;
+}
+
+.user-list-header {
+    padding: 12px 16px;
+    background-color: var(--muted);
+}
+
+.user {
+    list-style: none;
+}
+
+.user-grid {
+    padding: 14px 16px;
+}
+
+.user-select-all,
+.user-username,
+.user-email,
+.user-status,
+.user-role,
+.user-joined,
+.user-actions {
+    min-width: 0;
+}
+
+/* Header alignment */
+
+.user-list-header .user-select-all {
+    display: flex;
+    align-items: center;
+}
+
+.user-list-header .user-username,
+.user-list-header .user-email,
+.user-list-header .user-status,
+.user-list-header .user-role,
+.user-list-header .user-joined,
+.user-list-header .user-actions {
+    display: flex;
+    align-items: center;
+}
+
+/* Row alignment */
+
+.user-grid > input[type="checkbox"] {
+    justify-self: start;
+}
+
+.user-grid .user-username {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+    img{
+        flex-shrink: 0;
+        border-radius: 50%;
+    }
+}
+
+.user-grid .user-email {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-grid .user-status,
+.user-grid .user-role,
+.user-grid .user-joined {
+    white-space: nowrap;
+}
+
+.user-grid .user-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.user {
+    border-bottom: 1px solid var(--border);
+}
+
+.user-action-export,
+.user-action-delete {
+    padding: var(--space-4);
+    background-color: red;
+}
