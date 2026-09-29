@@ -27,6 +27,12 @@ pub struct Config {
     pub media_temp_root: String,
     // Server Worker ID.
     pub server_worker_id: u64,
+
+    // Username promoted to superuser on boot, and only when no superuser exists
+    // yet. `None` leaves the admin panel unreachable until the `UPDATE` is run by an existing superuser.
+    pub bootstrap_admin: Option<String>,
+    pub bootstrap_admin_password: Option<String>,
+    pub bootstrap_admin_email: String,
 }
 
 impl Config {
@@ -81,7 +87,20 @@ pub fn load() -> Config {
         is_production: env_parse("PRODUCTION"),
         media_root: env_parse("MEDIA_ROOT"),
         media_driver: env_parse("MEDIA_DRIVER"),
-        media_temp_root: env_parse("MEDIA_TEMP_ROOT")
+        media_temp_root: env_parse("MEDIA_TEMP_ROOT"),
+
+        // `env_get_or`, not `env_get`: these variables are genuinely optional
+        // and `env_get` panics when the key is absent. Empty means "unset", so
+        // an empty value in a compose file and an absent key behave the same.
+        bootstrap_admin: match env_get_or("BOOTSTRAP_ADMIN", "").trim() {
+            "" => None,
+            username => Some(username.to_owned()),
+        },
+        bootstrap_admin_password: match env_get_or("BOOTSTRAP_ADMIN_PASSWORD", "").trim() {
+            "" => None,
+            password => Some(password.to_owned()),
+        },
+        bootstrap_admin_email: env_get_or("BOOTSTRAP_ADMIN_EMAIL", "test_useradmin@example.com"),
     };
 
     tracing::trace!("configuration: {:#?}", config);
