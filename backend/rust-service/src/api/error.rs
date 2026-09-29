@@ -93,6 +93,11 @@ pub enum APIErrorCode {
     BioError,
     QuotesError,
 
+    // Admin
+    AdminSelfSuspensionForbidden,
+    AdminSelfDemotionForbidden,
+    AdminLastSuperuserProtected,
+
     // Transaction
     TransactionNotFound,
     TransferInsufficientFunds,

@@ -7,6 +7,7 @@ pub mod comment_service;
 pub mod guild_service;
 pub mod profile_service;
 pub mod message_service;
+pub mod admin_service;
 
 
 pub use session_service::SessionServiceError;
@@ -17,3 +18,4 @@ pub use post_service::PostServiceError;
 pub use comment_service::CommentServiceError;
 pub use profile_service::ProfileServiceError;
 pub use message_service::MessageServiceError;
+pub use admin_service::AdminServiceError;
