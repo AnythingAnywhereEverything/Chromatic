@@ -19,6 +19,7 @@ import {
 } from "@/app/_components/ui/chromatic/dropdown";
 import { BsThreeDots } from "react-icons/bs";
 import { followUser, unfollowUser } from "@/api/user/follow";
+import { ReportDialogue } from "@/app/_components/ui/chromatic/report";
 
 function ProfileBannerSkeleton() {
     return (
@@ -67,6 +68,7 @@ function ProfileBanner({
     }
 
     const [following, setFollowing] = useState(false);
+    const [reportOpen, setReportOpen] = useState(false);
     useEffect(() => {
         if (profile) {
             setFollowing(profile.is_following);
@@ -173,12 +175,26 @@ function ProfileBanner({
                                                     </DropdownItem>
                                                 )}
                                                 <DropdownItem>
-                                                    Report User
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setReportOpen(true)
+                                                        }
+                                                    >
+                                                        Report User
+                                                    </button>
                                                 </DropdownItem>
                                             </>
                                         )}
                                     </DropdownContent>
                                 </Dropdown>
+                                <ReportDialogue
+                                    targetId={profile.id}
+                                    targetType="user"
+                                    label={`@${profile.username}`}
+                                    open={reportOpen}
+                                    onOpenChange={setReportOpen}
+                                />
                             </div>
                         )}
                     </div>

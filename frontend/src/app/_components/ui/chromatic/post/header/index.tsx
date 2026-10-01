@@ -1,4 +1,5 @@
 interface PostHeaderProps {
+    post_id: string;
     author: {
         id: string;
         username: string;
@@ -36,8 +37,10 @@ import {
 } from "../../tooltip";
 import { FaGlobeAmericas, FaLock, FaUserFriends } from "react-icons/fa";
 import { followUser, unfollowUser } from "@/api/user/follow";
+import { ReportDialogue } from "../../report";
 
 const PostHeader: React.FC<PostHeaderProps> = ({
+    post_id,
     author,
     created_at,
     visibility,
@@ -46,6 +49,7 @@ const PostHeader: React.FC<PostHeaderProps> = ({
 }) => {
     const currentUserId = useUser().data?.id;
     const hasDisplayName = author.display_name || null;
+    const [isReportDialogueOpen, setIsReportDialogueOpen] = useState(false);
 
     // * all props should re-render on actions but this is not.
     const [isFollowing, setIsFollowing] = useState(is_followed);
@@ -180,13 +184,27 @@ const PostHeader: React.FC<PostHeaderProps> = ({
                                     </button>
                                 </DropdownItem>
                             )}
+                            <DropdownItem>Block {author.username}</DropdownItem>
                             <DropdownItem>
-                                Block {author.username}
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setIsReportDialogueOpen(true)
+                                    }
+                                >
+                                    Report
+                                </button>
                             </DropdownItem>
-                            <DropdownItem>Report</DropdownItem>
                         </DropdownContent>
                     )}
                 </Dropdown>
+                <ReportDialogue
+                    targetId={post_id}
+                    targetType="post"
+                    label="post"
+                    open={isReportDialogueOpen}
+                    onOpenChange={setIsReportDialogueOpen}
+                />
             </div>
         </header>
     );
