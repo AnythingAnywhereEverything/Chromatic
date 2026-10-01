@@ -7,3 +7,6 @@ pub mod user_mapping;
 pub mod message_mapping;
 pub mod admin_mapping;
 pub mod opengraph_mapping;
+pub mod guild_mapping;
+pub mod staff_role_mapping;
+pub mod report_mapping;

@@ -102,6 +102,7 @@ pub enum APIErrorCode {
     GuildInvalidName,
     GuildNotFound,
     AlreadyMember,
+    NotGuildOwner,
 
     // Staff role
     StaffRoleNotFound,

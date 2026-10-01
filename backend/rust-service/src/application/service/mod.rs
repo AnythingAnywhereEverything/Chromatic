@@ -8,5 +8,8 @@ pub mod opengraph_service;
 pub mod auth;
 pub mod media;
 pub mod admin;
+pub mod guild;
+pub mod staff_role;
+pub mod report;
 
 pub mod errors;

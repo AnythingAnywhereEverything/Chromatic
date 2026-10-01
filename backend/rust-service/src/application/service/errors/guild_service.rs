@@ -2,97 +2,42 @@ use thiserror::Error;
 
 use crate::application::service::errors::SnowflakeServiceError;
 
+/// Errors raised by the guild service.
+///
+/// Unit variants with fixed messages, so removing the carried sqlx/snowflake
+/// error keeps this type serializable-stable and lets the handler layer own
+/// what the user actually sees. `InvalidName` is the one validation failure a
+/// create request can produce (the schema has no other constraints beyond the
+/// foreign keys and the `id` primary key).
 #[derive(Debug, Error)]
 pub enum GuildServiceError {
-    #[error("Database error")]
-    Database,
+    #[error("Guild name must be 1-128 characters")]
+    InvalidName,
+
+    #[error("Guild not found")]
+    GuildNotFound,
+
+    #[error("User is already a member of this guild")]
+    AlreadyMember,
+
+    #[error("Only the guild owner can do that")]
+    NotOwner,
 
     #[error("ID generation failed.")]
     IdGenerationFailed,
 
-    // * Guild related errors
-    #[error("Failed to create guild")]
-    FailedToCreateGuild,
-
-    #[error("Failed to update guild")]
-    FailedToUpdateGuild,
-
-    #[error("Failed to delete guild")]
-    FailedToDeleteGuild,
-
-    #[error("Failed to remove member from guild")]
-    FailedToRemoveMember,
-
-    #[error("Failed to get guild")]
-    InvalidGuild,
-
-    // * member related errors
-    #[error("Failed to join guild")]
-    FailedToJoinGuild,
-
-    // AKA ban
-    #[error("Failed to remove member from guild")]
-    FailedToRemoveMemberFromGuild,
-
-    // * channels related errors
-    #[error("Failed to create channel")]
-    FailedToCreateChannel,
-
-    #[error("Failed to update channel")]
-    FailedToUpdateChannel,
-
-    #[error("Failed to delete channel")]
-    FailedToDeleteChannel,
-
-    #[error("Failed to get channel")]
-    InvalidChannel,
-
-    // * role related errors
-    #[error("Failed to create role")]
-    FailedToCreateRole,
-
-    #[error("Failed to update role")]
-    FailedToUpdateRole,
-
-    #[error("Failed to delete role")]
-    FailedToDeleteRole,
-
-    // * media related errors
-    #[error("Failed to create guild asset")]
-    FailedToCreateGuildAsset,
-
-    #[error("Failed to update guild asset")]
-    FailedToUpdateGuildAsset,
-
-    #[error("Failed to delete guild asset")]
-    FailedToDeleteGuildAsset,
-
-    #[error("Failed to get guild asset")]
-    InvalidGuildAsset,
-
-    // * asset related
-    #[error("Failed to create media")]
-    FailedToCreateMedia,
-
-    #[error("Failed to update media")]
-    FailedToUpdateMedia,
-
-    #[error("Failed to delete media")]
-    FailedToDeleteMedia,
-
-    #[error("Failed to get media")]
-    InvalidMedia,
-
+    #[error("Database error.")]
+    Database,
 }
 
 impl From<sqlx::Error> for GuildServiceError {
     fn from(_: sqlx::Error) -> Self {
-        GuildServiceError::Database
+        Self::Database
     }
 }
 
 impl From<SnowflakeServiceError> for GuildServiceError {
     fn from(_: SnowflakeServiceError) -> Self {
-        GuildServiceError::IdGenerationFailed
+        Self::IdGenerationFailed
     }
 }
