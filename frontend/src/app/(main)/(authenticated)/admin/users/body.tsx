@@ -7,6 +7,7 @@ import {
 } from "@/app/_components/ui/chromatic/dropdown";
 import { useQuery } from "@tanstack/react-query";
 import { useDeferredValue, useState } from "react";
+import { useRouter } from "next/navigation";
 import style from "./user-manage.module.scss";
 import { getAdminUsers } from "@/api/admin/users";
 import { AdminUser } from "@/api/admin/types";
@@ -20,8 +21,8 @@ export default function AdminUsersBody() {
     const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
     const [search, setSearch] = useState("");
     const deferredSearch = useDeferredValue(search);
+    const router = useRouter();
 
-    const [exampleUser, setExampleUser] = useState<AdminUser | null>(null);
 
     const { data: page } = useQuery({
         queryKey: ["admin-users", deferredSearch],
@@ -44,6 +45,10 @@ export default function AdminUsersBody() {
                 ? current.filter((userId) => userId !== id)
                 : [...current, id],
         );
+    };
+
+    const handleEditUser = (id: string) => {
+        router.push(`/admin/users/${id}`); 
     };
 
     return (
@@ -184,8 +189,9 @@ export default function AdminUsersBody() {
                             </span>
                             <div className={style["user-actions"]}>
                                 <button
-                                    className={style["user-action-export"]}
+                                    className={style["user-action-edit"]}
                                     type="button"
+                                    onClick={() => handleEditUser(user.id)}
                                 >
                                     <FiEdit />
                                 </button>

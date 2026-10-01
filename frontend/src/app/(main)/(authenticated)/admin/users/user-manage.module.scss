@@ -12,10 +12,10 @@
     background-color: var(--muted);
     padding: var(--space-4);
 }
-.filters{
+.filters {
     display: flex;
     gap: var(--space-8);
-    input{
+    input {
         padding: var(--space-4);
     }
 }
@@ -87,7 +87,7 @@
     align-items: center;
     gap: 8px;
     overflow: hidden;
-    img{
+    img {
         flex-shrink: 0;
         border-radius: 50%;
     }
@@ -115,8 +115,19 @@
     border-bottom: 1px solid var(--border);
 }
 
-.user-action-export,
+.user-action-edit,
 .user-action-delete {
     padding: var(--space-4);
-    background-color: red;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.user-action-edit{
+    background-color: var(--muted);
+    border-radius: var(--radius);
+}
+
+.user-action-delete{
+    background-color: var(--color-destructive-foreground);
+    border-radius: var(--radius);
 }
