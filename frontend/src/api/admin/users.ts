@@ -6,6 +6,7 @@ import {
     AdminUserPage,
 } from "./types";
 
+// todo: Sei.. about remove the before_id parameter from the API calls if it's no longer needed.
 /**
  * Admin user management (`v2/admin/users`).
  *
@@ -23,8 +24,6 @@ export const getAdminUsers = async (
         is_active: params.is_active,
         is_superuser: params.is_superuser,
         before: params.before,
-        // Passed through as the raw string. `Number()` on a 17-digit
-        // snowflake loses precision and would silently skip or repeat rows.
         before_id: params.before_id,
         limit: params.limit,
     });

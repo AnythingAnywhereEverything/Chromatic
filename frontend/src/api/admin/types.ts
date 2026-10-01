@@ -1,43 +1,18 @@
-/**
- * Types for the admin API (`v2/admin/*`).
- *
- * These mirror the Rust row structs in
- * `backend/rust-service/src/application/repository/admin/row.rs` exactly.
- * There is no DTO layer on the backend, so these are the response shape.
- *
- * Two things that are easy to get wrong, and why:
- *
- * 1. **Nullable fields are optional, not `| null`.** `AdminUserRow` carries
- *    `#[skip_serializing_none]`, which drops the key entirely when the value
- *    is `None` rather than emitting `"display_name": null`. So an absent key
- *    is normal, and `display_name: null` will never appear.
- *
- * 2. **Ids are strings and must stay strings.** Snowflake ids are 17 digits;
- *    `Number.MAX_SAFE_INTEGER` is 16, so `Number(id)` silently corrupts them
- *    (96638107465551872 -> 96638107465551870). This is why the backend also
- *    carries an unserialized `id_raw: i64` for ordering. Never parse an id.
- */
-
-/** A user as seen by the admin panel. */
 export interface AdminUser {
-    /** Snowflake id, as a string. Never convert with `Number()`. */
     id: string;
     username: string;
     email: string;
     display_name?: string;
-    /** Avatar file name; builds `avatars/{id}/{avatar}`. Absent = no picture. */
     avatar?: string;
     avatar_thumbhash?: string;
     is_active: boolean;
     is_superuser: boolean;
     email_verified_at?: string;
-    /** All three are counts, and all three are nullable in the database. */
     followers_count?: number;
     following_count?: number;
     posts_count?: number;
     created_at: string;
     updated_at: string;
-    /** Present only when the account is soft-deleted. */
     deleted_at?: string;
 }
 
@@ -65,12 +40,7 @@ export interface AdminStats {
     active_users: number;
     suspended_users: number;
     superusers: number;
-    /**
-     * Overlaps the other three rather than being a fourth state: a soft
-     * delete leaves `is_active` untouched, so a deleted account counts as
-     * active *and* deleted. The real invariant is
-     * `active_users + suspended_users = total_users`.
-     */
+
     deleted_users: number;
 }
 
@@ -79,7 +49,144 @@ export type AdminAction =
     | "suspend"
     | "activate"
     | "grant_role"
-    | "revoke_role";
+    | "revoke_role"
+    | "create_role"
+    | "update_role"
+    | "delete_role"
+    | "assign_staff_role"
+    | "revoke_staff_role";
+
+export const STAFF_PERMISSIONS = [
+    {
+        bit: 1,
+        key: "access_admin_panel",
+        label: "Access admin panel",
+        description: "Can reach the admin panel at all.",
+    },
+    {
+        bit: 2,
+        key: "manage_users",
+        label: "Manage users",
+        description: "Suspend, activate, and change superuser status.",
+    },
+    {
+        bit: 3,
+        key: "manage_posts",
+        label: "Manage posts",
+        description: "Edit or delete posts on other people's behalf.",
+    },
+    {
+        bit: 4,
+        key: "manage_staff_roles",
+        label: "Manage staff roles",
+        description: "Create, edit, and delete roles, and assign them.",
+    },
+    {
+        bit: 5,
+        key: "view_audit",
+        label: "View audit log",
+        description: "Read the moderation audit trail.",
+    },
+    {
+        bit: 6,
+        key: "view_stats",
+        label: "View statistics",
+        description: "Read platform-wide counts.",
+    },
+] as const;
+
+/** The codepoints of `STAFF_PERMISSIONS`, as a plain number array. */
+export const STAFF_PERMISSION_BITS: readonly number[] =
+    STAFF_PERMISSIONS.map((permission) => permission.bit);
+
+/** One staff role, as `staff_roles` stores it. */
+export interface AdminStaffRole {
+    id: string;
+    name: string;
+    description?: string;
+    position: number;
+    permission_bitmask: number[];
+    created_at: string;
+    updated_at: string;
+}
+
+/**
+ * One page of roles.
+ *
+ * Keyset paginated on `(position, id)`, so there is no total count — same as
+ * `AdminUserPage`. The role table is short enough that paging is rarely needed,
+ * but the shape is kept honest rather than pretending a total exists.
+ */
+export interface AdminStaffRolePage {
+    rows: AdminStaffRole[];
+    has_more: boolean;
+}
+
+/**
+ * One role plus how many people hold it.
+ *
+ * `member_count` is a separate scalar, not `members.length`, so the dialog can
+ * show "assigned to 1,240 people" without loading the members. It comes from the
+ * same round trip as the role via `#[sqlx(flatten)]`.
+ */
+export interface AdminStaffRoleDetail {
+    role: AdminStaffRole;
+    member_count: number;
+}
+
+/** One holder of a staff role. */
+export interface AdminStaffRoleMember {
+    user_id: string;
+    username: string;
+    display_name?: string;
+    avatar?: string;
+    assigned_at: string;
+    /** Snowflake id of the admin who granted it. Carries no FK. */
+    assigned_by: string;
+}
+
+/** One page of a role's members. */
+export interface AdminStaffRoleMembersPage {
+    rows: AdminStaffRoleMember[];
+    has_more: boolean;
+}
+
+/**
+ * One user's staff roles.
+ *
+ * `role_ids` is exactly what the `PUT` body carries, so a form seeds from this
+ * and submits it back with changes applied. The client never diffs against its
+ * own guess of the current state — the server's set is the only truth.
+ */
+export interface UserStaffRoles {
+    user_id: string;
+    roles: AdminStaffRole[];
+    role_ids: string[];
+}
+
+/**
+ * Query filters for the role list.
+ *
+ * As with users, an **absent** filter is not the same as a falsy one, so the
+ * request builder skips `undefined` instead of sending it.
+ */
+export interface AdminStaffRoleListParams {
+    q?: string;
+    before?: number;
+    before_id?: string;
+    limit?: number;
+}
+
+/**
+ * Query filters for a single role's member list.
+ *
+ * Keyset cursor is a *user* id here, not a role id: the member query orders by
+ * user id, and that string is why it must never be parsed as a number.
+ */
+export interface AdminStaffRoleMembersParams {
+    before_user_id?: string;
+    limit?: number;
+}
 
 /** The `action_data` payload written for a suspend/activate. */
 export interface FlagChange {
@@ -91,25 +198,40 @@ export interface FlagChange {
  * One `audit_logs` row.
  *
  * `action_data` is a JSONB blob the service wrote at mutation time, so its
- * shape depends on which action ran: a suspend/activate writes `is_active`,
- * a role change writes `is_superuser`. Both are optional here because the
- * field is whichever one applies, not both.
+ * shape depends entirely on which action ran. Only the keys for that action are
+ * populated; the others are absent, not null.
+ *
+ * `target_type` is `"user"` for the user moderation and assignment actions,
+ * `"staff_role"` for create/update/delete of a role.
  */
 export interface AdminAuditEntry {
     id: string;
     target_id: string;
-    /** Always `"user"` for every entry the admin API produces. */
     target_type: string;
     action: AdminAction;
-    /** The superuser who performed the action, as a string id. */
     performed_by: string;
-    /** Handle of the target user. Absent only if the user row is gone. */
     target_username?: string;
-    /** Handle of the admin who performed the action. */
     performed_by_username?: string;
     action_data: {
         is_active?: FlagChange;
         is_superuser?: FlagChange;
+        name?: string;
+        position?: number;
+        permission_bitmask?: number[];
+        previous?: {
+            name?: string;
+            description?: string;
+            position?: number;
+            permission_bitmask?: number[];
+        };
+        current?: {
+            name?: string;
+            description?: string;
+            position?: number;
+            permission_bitmask?: number[];
+        };
+        revoked_from_user_ids?: string[];
+        role_id?: string;
     };
     created_at: string;
 }
@@ -124,30 +246,14 @@ export interface AdminAuditEntry {
  * `before_id` stays a string for the reason above — it is a snowflake id.
  */
 export interface AdminUserListParams {
-    /** Matches username, email, or a numeric id. */
     q?: string;
     is_active?: boolean;
     is_superuser?: boolean;
-    /** Keyset cursor. RFC3339 timestamp. Only meaningful with `before_id`. */
     before?: string;
-    /** Keyset cursor, as a raw string. Only meaningful with `before`. */
     before_id?: string;
-    /** Server clamps to 1..=200 and defaults to 50. */
     limit?: number;
 }
 
-/**
- * Error thrown by every call in this folder.
- *
- * Carries `status` and `code` so callers can branch on the admin-specific
- * refusals instead of matching on message text:
- *
- * - 409 `admin_last_superuser_protected` — would remove the final admin
- * - 403 `admin_self_demotion_forbidden` / `admin_self_suspension_forbidden`
- * - 403 `authentication_forbidden` — authenticated, but not a superuser
- * - 401 — no session at all
- * - 404 `user_not_found`
- */
 export class AdminApiError extends Error {
     status: number;
     code?: string;
