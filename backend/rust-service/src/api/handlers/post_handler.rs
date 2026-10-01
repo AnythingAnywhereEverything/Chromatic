@@ -64,6 +64,13 @@ pub struct ExploreQuery {
     pub tag_id: Option<i64>,
 }
 
+#[derive(serde::Deserialize, Debug)]
+pub struct SearchExploreQuery {
+    pub limit: Option<i32>,
+    pub before: Option<chrono::DateTime<chrono::Utc>>,
+    pub query: Option<String>,
+}
+
 pub async fn get_user_posts_handler(
     State(state): State<SharedState>,
     Path((version, target_id)): Path<(String, i64)>,
@@ -92,6 +99,7 @@ pub async fn get_user_posts_handler(
     Ok(Json(posts))
 }
 
+/// ! Deprecated: This handler will be removed in future versions. Use `search_explore_post_handler` instead.
 pub async fn get_explore_post_handler(
     State(state): State<SharedState>,
     Path(version): Path<String>,
@@ -113,6 +121,34 @@ pub async fn get_explore_post_handler(
             query.before,
             query.before_id,
             query.tag_id,
+            query.limit.unwrap_or(8).clamp(1, 30) as i32,
+        )
+        .await?;
+
+    Ok(Json(posts))
+}
+
+#[axum::debug_handler]
+pub async fn search_explore_post_handler(
+    State(state): State<SharedState>,
+    Path(version): Path<String>,
+    req_auth: RequestAuth,
+    query: Query<SearchExploreQuery>,
+) -> Result<Json<Vec<PostRow>>, APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+
+    let user_id = match req_auth.user {
+        Some(user) => Some(user.user_id),
+        None => return Err(AuthServiceError::InvalidCredentials.into()),
+    };
+
+    let posts = PostService
+        .search_explore(
+            &state,
+            user_id,
+            query.before,
+            query.query.clone(),
             query.limit.unwrap_or(8).clamp(1, 30) as i32,
         )
         .await?;

@@ -1,19 +1,17 @@
-use axum::extract::multipart::Multipart;
-use multipart_derive::Multipart;
-use redis::AsyncTypedCommands;
-use sqlx::types::Json;
-
 use crate::application::{
     repository::{
         media::{
             self as media_repo,
             row::{MediaType, ProcessingState},
-        }, post::{
-            self as post_repo, row::{CommentRow, MediaTypeAttachment, PostRow, PostVisibility, TagTarget},
-        }, tags:: {
-            self as tags_repo
-        }, user::follow::is_following,
-    }, service::{
+        },
+        post::{
+            self as post_repo,
+            row::{CommentRow, MediaTypeAttachment, PostRow, PostVisibility, TagRow, TagTarget},
+        },
+        tags::{self as tags_repo},
+        user::follow::is_following,
+    },
+    service::{
         errors::PostServiceError,
         media::{
             extractor::{ExtractorFileOptions, ValidationOptions},
@@ -24,8 +22,14 @@ use crate::application::{
             },
         },
         profile_service::ProfileService,
-    }, state::AppState,
+    },
+    state::AppState,
 };
+use axum::extract::multipart::Multipart;
+use multipart_derive::Multipart;
+use redis::AsyncTypedCommands;
+use sqlx::types::Json;
+use std::collections::HashSet;
 
 #[derive(serde::Deserialize, Debug, Multipart)]
 pub struct CreatePostRequest {
@@ -34,7 +38,6 @@ pub struct CreatePostRequest {
     pub files: Option<FileContainer>,
     pub repost_from: Option<i64>,
     pub visibility: PostVisibility,
-    pub media_tags: Option<Vec<i64>>,
 }
 
 #[derive(serde::Deserialize, Debug, Multipart)]
@@ -47,6 +50,16 @@ pub struct UpdatePostRequest {
 
 pub struct PostService;
 
+fn extract_post_tags(content: &Option<String>) -> HashSet<String> {
+    if let Some(text) = content {
+        text.split_whitespace()
+            .filter_map(|word| word.strip_prefix('#').map(|tag| tag.to_lowercase()))
+            .collect()
+    } else {
+        HashSet::new()
+    }
+}
+
 impl PostService {
     pub async fn get_comments(
         &self,
@@ -57,12 +70,17 @@ impl PostService {
         limit: i64,
     ) -> Result<Vec<CommentRow>, PostServiceError> {
         let mut tx = state.db_pool.begin().await?;
-        let comment_ids: Vec<i64> = post_repo::get::post_comment_ids(&mut tx, post_id, requester_id, before, limit).await?;
+        let comment_ids: Vec<i64> =
+            post_repo::get::post_comment_ids(&mut tx, post_id, requester_id, before, limit).await?;
 
         let comments = {
             let mut comments = Vec::new();
             for comment_id in comment_ids {
-                if let Some(comment) = self.get_comment(state, &mut tx, comment_id, requester_id).await.ok() {
+                if let Some(comment) = self
+                    .get_comment(state, &mut tx, comment_id, requester_id)
+                    .await
+                    .ok()
+                {
                     comments.push(comment);
                 }
             }
@@ -79,10 +97,11 @@ impl PostService {
         comment_id: i64,
         requester_id: i64,
     ) -> Result<CommentRow, PostServiceError> {
-        let comment = post_repo::get::base_comment(tx, comment_id, requester_id).await?;        
+        let comment = post_repo::get::base_comment(tx, comment_id, requester_id).await?;
 
         // add author information to the comment
-        let author = ProfileService::get_profile_by_id(state, comment.author_id, Some(requester_id)).await?;
+        let author =
+            ProfileService::get_profile_by_id(state, comment.author_id, Some(requester_id)).await?;
         let comment = CommentRow {
             id: comment.id,
             post_id: comment.post_id,
@@ -157,6 +176,11 @@ impl PostService {
         author_id: i64,
     ) -> Result<(), PostServiceError> {
         let mut tx = state.db_pool.begin().await?;
+        // delete all tag attachments associated with this post
+        let tag_attachments = tags_repo::get::tag_attachments(&mut tx, post_id).await?;
+        for tag_attachment in tag_attachments {
+            let _ = tags_repo::delete::tag(&mut tx, tag_attachment.tag_id.parse::<i64>()?).await?;
+        }
         let rows_affected = post_repo::delete::post(&mut tx, post_id, author_id).await?;
         if rows_affected == 0 {
             return Err(PostServiceError::PostNotFound);
@@ -224,6 +248,38 @@ impl PostService {
         Ok(posts)
     }
 
+    pub async fn search_explore(
+        &self,
+        state: &AppState,
+        requester_id: Option<i64>,
+        before: Option<chrono::DateTime<chrono::Utc>>,
+        query: Option<String>,
+        limit: i32,
+    ) -> Result<Vec<PostRow>, PostServiceError> {
+        let mut tx = state.db_pool.begin().await?;
+        let explore = post_repo::get::search_explore(
+            &mut tx,
+            requester_id,
+            before,
+            query.clone(),
+            limit as i64,
+        )
+        .await?;
+
+        let mut posts = Vec::new();
+        for post_id in &explore {
+            if let Some(post) = self
+                .get_post(state, &mut tx, *post_id, requester_id)
+                .await?
+            {
+                posts.push(post);
+            }
+        }
+
+        Ok(posts)
+    }
+
+    /// ! Deprecated: This method will be removed in future versions. Use `search` instead.
     pub async fn get_explore(
         &self,
         state: &AppState,
@@ -234,7 +290,9 @@ impl PostService {
         limit: i32,
     ) -> Result<Vec<PostRow>, PostServiceError> {
         let mut tx = state.db_pool.begin().await?;
-        let explore = post_repo::get::query_explore_posts(&mut tx, before, before_id, tag_id, limit as i64).await?;
+        let explore =
+            post_repo::get::query_explore_posts(&mut tx, before, before_id, tag_id, limit as i64)
+                .await?;
 
         let mut posts = Vec::new();
         for post_id in &explore {
@@ -258,7 +316,7 @@ impl PostService {
     ) -> Result<Option<PostRow>, PostServiceError> {
         let redis = &mut state.redis.get().await?;
         let cache_key: String = format!("post:{}", post_id);
-        
+
         // check cache
         let post = {
             let cached_post: Option<String> = redis.get(&cache_key).await?;
@@ -377,7 +435,8 @@ impl PostService {
             }
         }
 
-        let post_tags = extracted.media_tags.unwrap_or_default();
+        // parse post tags from the extracted content string
+        let post_tags = extract_post_tags(&extracted.content);
 
         let _ = post_repo::post::create_post(
             &mut tx,
@@ -392,13 +451,19 @@ impl PostService {
         .await?;
 
         if !post_tags.is_empty() {
-            tracing::trace!("Entering add tags stage");
+            // check if tag exists in the database and add it if necessary
             for tag in post_tags {
-                tags_repo::add::add_tags_target(&mut tx, *new_post_id, TagTarget::Post, tag)
-                    .await?;
+                let tagrow = tags_repo::get::tag(&mut tx, tag.clone()).await?.unwrap_or({
+                    let id = state.snowflake_generator.generate_id()?;
+                    tags_repo::add::tag(&mut tx, id, tag.clone()).await?
+                });
+
+                let tag_id = tagrow.id.parse::<i64>()?;
+                tags_repo::add::tag_target(&mut tx, *new_post_id, TagTarget::Post, tag_id).await?;
             }
         }
-        let post = self
+
+        let post: Option<PostRow> = self
             .get_post(state, &mut tx, *new_post_id, Some(author_id))
             .await?;
         tx.commit().await?;

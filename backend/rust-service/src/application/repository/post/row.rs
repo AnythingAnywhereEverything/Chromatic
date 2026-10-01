@@ -210,6 +210,7 @@ pub struct TagAttachmentFull {
 pub struct TagRow{
     pub id: String,
     pub tag_name: String,
+    pub popularity: i32,
 }
 
 #[derive(serde::Deserialize, sqlx::Type, Debug)]

@@ -450,6 +450,81 @@ pub async fn post_comment_ids(
         .collect())
 }
 
+pub async fn search_explore(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    requester_id: Option<i64>,
+    before: Option<chrono::DateTime<chrono::Utc>>,
+    query: Option<String>,
+    limit: i64,
+) -> RepositoryResult<Vec<i64>> {
+    let ids = sqlx::query_as::<_, UserPostsRow>(
+        r#"
+            SELECT p.id AS post_id
+            FROM media_posts p
+            WHERE p.deleted_at IS NULL
+                AND (
+                        (
+                            $1 IS NULL
+                            AND p.visibility = 'everyone'::post_visibility
+                        )
+
+                        OR 
+
+                        (
+                            -- The post belongs to the current user
+                            $1 IS NOT NULL
+                            AND p.user_id = $1
+                        )
+
+                        OR
+
+                        (
+                            $1 IS NOT NULL
+                            AND (
+                                -- Everyone can see it
+                                p.visibility = 'everyone'::post_visibility
+
+                                OR
+
+                                -- Both users follow each other
+                                (
+                                    p.visibility = 'friend'::post_visibility
+                                    AND EXISTS (
+                                        SELECT 1
+                                        FROM user_follow uf1
+                                        JOIN user_follow uf2
+                                            ON uf1.follower_id = uf2.user_id
+                                        AND uf2.follower_id = uf1.user_id
+                                        WHERE uf1.user_id = p.user_id
+                                        AND uf2.user_id = $1
+                                    )
+                                )
+                            )
+                        )
+                    )
+
+                AND (
+                        $2::timestamptz IS NULL
+                        OR p.created_at <= $2
+                    )
+                AND (
+                        $3::text IS NULL
+                        OR p.content ILIKE '%' || $3 || '%'
+                    )
+            ORDER BY p.created_at DESC, p.id DESC
+            LIMIT $4;
+        "#,
+    )
+    .bind(requester_id)
+    .bind(before)
+    .bind(query)
+    .bind(limit)
+    .fetch_all(tx.as_mut())
+    .await?;
+    Ok(ids.into_iter().map(|post_row| post_row.post_id).collect())
+}
+
+/// ! Deprecated
 pub async fn query_explore_posts(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     before: Option<chrono::DateTime<chrono::Utc>>,
@@ -488,8 +563,5 @@ pub async fn query_explore_posts(
     .bind(limit)
     .fetch_all(tx.as_mut())
     .await?;
-    Ok(ids
-        .into_iter()
-        .map(|post_row| post_row.post_id)
-        .collect())
+    Ok(ids.into_iter().map(|post_row| post_row.post_id).collect())
 }

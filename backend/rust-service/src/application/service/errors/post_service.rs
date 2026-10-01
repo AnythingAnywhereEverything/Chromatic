@@ -1,4 +1,5 @@
 use deadpool_redis::PoolError;
+use std::num::ParseIntError;
 use thiserror::Error;
 
 use crate::application::service::errors::{
@@ -63,10 +64,19 @@ pub enum PostServiceError {
 
     #[error(transparent)]
     Database(#[from] sqlx::Error),
+
+    #[error("Failed to parse tag ID")]
+    TagIdParseFailed,
 }
 
 impl From<SnowflakeServiceError> for PostServiceError {
     fn from(_: SnowflakeServiceError) -> Self {
         PostServiceError::IdGenerationFailed
+    }
+}
+
+impl From<ParseIntError> for PostServiceError {
+    fn from(_: ParseIntError) -> Self {
+        PostServiceError::TagIdParseFailed
     }
 }

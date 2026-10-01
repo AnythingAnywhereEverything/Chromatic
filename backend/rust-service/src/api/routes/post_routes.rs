@@ -2,7 +2,7 @@ use axum::{Router, routing::{delete, get, post, put}};
 
 use crate::{
     api::handlers::{
-        comment_handler::*, post_handler::{create_new_post_handler, delete_post_handler, get_explore_post_handler, get_feed_post_handler, get_info_post_handler, get_user_posts_handler, post_liked_handler, update_post_handler},
+        comment_handler::*, post_handler::{create_new_post_handler, delete_post_handler, get_explore_post_handler, get_feed_post_handler, get_info_post_handler, get_user_posts_handler, post_liked_handler, search_explore_post_handler, update_post_handler},
     }, application::state::SharedState,
 };
 
@@ -12,6 +12,7 @@ pub fn routes() -> Router<SharedState> {
     .route("/feed", get(get_feed_post_handler))
 
     .route("/explore", get(get_explore_post_handler))
+    .route("/search", get(search_explore_post_handler))
 
     .route("/new", post(create_new_post_handler))
     
