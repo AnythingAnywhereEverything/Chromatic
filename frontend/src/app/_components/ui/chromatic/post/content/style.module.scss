@@ -1,0 +1,56 @@
+.opengraph-preview {
+    display: flex;
+    flex-direction: row;
+    gap: var(--space-4);
+    text-decoration: none;
+    cursor: pointer;
+    color: var(--text-neutral);
+    border: 1px solid var(--border);
+    padding: var(--space-8);
+    background-color: color-mix(in srgb, var(--popover) 97%, var(--foreground));
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    width: 100%;
+
+    &:hover {
+        background-color: color-mix(
+            in srgb,
+            var(--popover) 90%,
+            var(--foreground)
+        );
+    }
+
+    .opengraph-preview-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .opengraph-preview-title {
+        font-size: var(--font-size-xl);
+        font-weight: var(--font-bold);
+        margin: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .opengraph-preview-description {
+        font-size: var(--font-size-sm);
+        line-height: var(--text-line-height-sm);
+        height: calc(var(--text-line-height-sm) * 3);
+        overflow: hidden;
+        line-clamp: 3;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+    }
+
+    .opengraph-preview-image {
+        flex: 0 0 var(--size-256);
+        width: var(--size-256);
+        max-height: var(--size-256);
+        border-radius: var(--radius-sm);
+        object-fit: cover;
+    }
+    
+}
