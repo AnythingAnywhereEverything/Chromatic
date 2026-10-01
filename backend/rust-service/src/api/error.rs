@@ -106,6 +106,10 @@ pub enum APIErrorCode {
     TransferAccountsAreSame,
     ResourceNotFound,
 
+    // OpenGraph
+    OpenGraphError,
+    OpenGraphValidationFailed,
+
     ApiVersionError,
 
     DatabaseError,
@@ -141,6 +145,8 @@ pub enum APIErrorKind {
     DatabaseError,
 
     RedisError,
+
+    OpenGraphError,
     
     PostError,
 

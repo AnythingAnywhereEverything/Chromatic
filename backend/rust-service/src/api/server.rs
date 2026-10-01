@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
+use crate::api::handlers::opengraph_handler::{get_opengraph_image_handler, opengraph_handler};
 use axum::{
     Json, Router,
     body::Body,
@@ -22,10 +23,13 @@ use tower_http::cors::{Any, CorsLayer};
 
 use crate::{
     api::{
-        error::APIError, routes::{
-            admin_routes, auth_routes, dev_routes, message_routes, post_routes, protected_routes, tag_routes, user_routes,
+        error::APIError,
+        routes::{
+            admin_routes, auth_routes, dev_routes, message_routes, post_routes, protected_routes,
+            tag_routes, user_routes,
         },
-    }, application::state::SharedState,
+    },
+    application::state::SharedState,
 };
 
 pub async fn create_router(state: SharedState) -> Router {
@@ -38,6 +42,8 @@ pub async fn create_router(state: SharedState) -> Router {
     let router = Router::new()
         .route("/head", get(head_request_handler))
         .route("/any", any(any_request_handler))
+        .route("/{version}/opengraph", any(opengraph_handler))
+        .route("/{version}/external", get(get_opengraph_image_handler))
         .route("/{version}/health", get(health_handler))
         .route("/{version}/version", get(version_handler))
         // Nesting authentication routes.

@@ -9,6 +9,8 @@ import { useUser } from "@/hooks/useUser";
 import PostHeader from "./header";
 import BottomPostInteraction from "./interaction";
 import { deletePost } from "@/api/post/post";
+import { FormattedText, OpenGraphPreviewComponent } from "./content";
+import type { OpenGraphPreview } from "./content";
 
 // NOTE: Add support for community posts, custom popup to display and fetch comments.
 const Post: React.FC<PostProps> = ({
@@ -33,6 +35,10 @@ const Post: React.FC<PostProps> = ({
     const ref = useRef<HTMLSpanElement | null>(null);
     const [likeState, setLikeState] = useState(is_liked);
     const [isDeleted, setIsDeleted] = useState(false);
+    const [openGraphPreviews, setOpenGraphPreviews] = useState<
+        OpenGraphPreview[]
+    >([]);
+    const [showAllOpenGraphPreviews, setShowAllOpenGraphPreviews] = useState(false);
     const rootRef = useRef<HTMLDivElement>(null);
 
     let currentUserId = useUser().data?.id;
@@ -64,80 +70,112 @@ const Post: React.FC<PostProps> = ({
     return (
         <>
             {!isDeleted && (
-            <section
-                className={style["container"]}
+                <section className={style["container"]}>
+                    <PostHeader
+                        author={{
+                            id: author.id,
+                            username: author.username,
+                            display_name: author.display_name,
+                            avatar: author.avatar,
+                            avatar_thumbhash: author.avatar_thumbhash,
+                        }}
+                        is_followed={is_followed}
+                        created_at={created_at}
+                        visibility={visibility}
+                        onDelete={handleDeletePost}
+                    />
 
-            >
-                <PostHeader
-                    author={{
-                        id: author.id,
-                        username: author.username,
-                        display_name: author.display_name,
-                        avatar: author.avatar,
-                        avatar_thumbhash: author.avatar_thumbhash,
-                    }}
-                    is_followed={is_followed}
-                    created_at={created_at}
-                    visibility={visibility}
-                    onDelete={handleDeletePost}
-                />
+                    <div className={style["main-container"]}>
+                        {content && content.length > 0 && (
+                            <div className={style["text-container"]}>
+                                <FormattedText
+                                    className={`${style["content"]} ${!open ? style["is-collapsed"] : ""}`}
+                                    ref={ref}
+                                    content={content}
+                                    onLinkOpenGraphPreview={
+                                        setOpenGraphPreviews
+                                    }
+                                />
+                                <div>
+                                    {showReadMoreButton && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setOpen(!open)}
+                                            className={style["read-more-btn"]}
+                                        >
+                                            {open ? "Show less" : "Read more"}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                        {openGraphPreviews.length > 0 && (
+                            <div className={style["opengraph-previews"]}>
+                                {(showAllOpenGraphPreviews
+                                    ? openGraphPreviews
+                                    : openGraphPreviews.slice(0, 2)
+                                ).map((preview) => (
+                                    <OpenGraphPreviewComponent
+                                        key={preview.url}
+                                        preview={preview}
+                                    />
+                                ))}
 
-                <div className={style["main-container"]}>
-                    {content && content.length > 0 && (
-                        <div className={style["text-container"]}>
-                            <span
-                                className={`${style["content"]} ${!open ? style["is-collapsed"] : ""}`}
-                                ref={ref}
-                            >
-                                {content}
-                            </span>
-                            <div>
-                                {showReadMoreButton && (
+                                {openGraphPreviews.length > 2 && (
                                     <button
                                         type="button"
-                                        onClick={() => setOpen(!open)}
-                                        className={style["read-more-btn"]}
+                                        className={style["opengraph-see-more"]}
+                                        onClick={() =>
+                                            setShowAllOpenGraphPreviews(
+                                                !showAllOpenGraphPreviews,
+                                            )
+                                        }
                                     >
-                                        {open ? "Show less" : "Read more"}
+                                        {showAllOpenGraphPreviews
+                                            ? "Show less"
+                                            : `See ${openGraphPreviews.length - 2} more`}
                                     </button>
                                 )}
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {/* //*--------------------has attachment cp---------------- */}
-                    {has_attachment && (
-                        <MediaGroup
-                            media={attachments}
-                            postUrl={`/u/${author.username}/f/${post_id}`}
-                        />
-                    )}
-                    {/* //todo: */}
-                    <ul className={style["subject-tag"]}>
-                        {tags.map((item) => {
-                            return (
-                                <li
-                                    key={item.tag_id}
-                                >
-                                    <p className={style["subject-tag-item"]}>{item.tag_name}</p>
-                                </li>
-                            );
-                        })}
-                    </ul>
-                </div>
+                        {/* //*--------------------has attachment cp---------------- */}
+                        {has_attachment && (
+                            <MediaGroup
+                                media={attachments}
+                                postUrl={`/u/${author.username}/f/${post_id}`}
+                            />
+                        )}
+                        {/* //todo: */}
+                        <ul className={style["subject-tag"]}>
+                            {tags.map((item) => {
+                                return (
+                                    <li key={item.tag_id}>
+                                        <p
+                                            className={
+                                                style["subject-tag-item"]
+                                            }
+                                        >
+                                            {item.tag_name}
+                                        </p>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </div>
 
-                <div className={style["separator"]} />
+                    <div className={style["separator"]} />
 
-                <BottomPostInteraction
-                    {...{
-                        username: author.username,
-                        post_id,
-                        is_liked,
-                        total_likes,
-                        total_comments,
-                    }}
-                />
-            </section>
+                    <BottomPostInteraction
+                        {...{
+                            username: author.username,
+                            post_id,
+                            is_liked,
+                            total_likes,
+                            total_comments,
+                        }}
+                    />
+                </section>
             )}
         </>
     );

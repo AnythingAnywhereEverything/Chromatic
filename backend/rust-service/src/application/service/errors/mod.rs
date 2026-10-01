@@ -8,6 +8,7 @@ pub mod guild_service;
 pub mod profile_service;
 pub mod message_service;
 pub mod admin_service;
+pub mod opengraph_service;
 
 
 pub use session_service::SessionServiceError;
@@ -17,5 +18,6 @@ pub use auth_service::AuthServiceError;
 pub use post_service::PostServiceError;
 pub use comment_service::CommentServiceError;
 pub use profile_service::ProfileServiceError;
+pub use opengraph_service::OpenGraphServiceError;
 pub use message_service::MessageServiceError;
 pub use admin_service::AdminServiceError;

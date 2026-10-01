@@ -6,3 +6,4 @@ pub mod comment_mapping;
 pub mod user_mapping;
 pub mod message_mapping;
 pub mod admin_mapping;
+pub mod opengraph_mapping;
