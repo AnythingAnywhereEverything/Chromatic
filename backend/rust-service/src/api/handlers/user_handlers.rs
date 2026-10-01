@@ -1,5 +1,7 @@
 use axum::{
-    Json, extract::{Multipart, Path, State},
+    Json,
+    extract::{Multipart, Path, State},
+    http::StatusCode,
 };
 use multipart_derive::Multipart;
 use serde::Deserialize;
@@ -22,6 +24,7 @@ use crate::{
                 model::FileContainer,
             },
             profile_service::ProfileService,
+            report::service::ReportService,
         }, state::SharedState,
     },
 };
@@ -320,4 +323,72 @@ pub async fn follow_user_reject_handler(
     ProfileService::reject_follow_request(&state, user_id, follower_id).await?;
 
     Ok(())
+}
+
+/// File a report against a user, post, or comment.
+///
+/// The body names the target rather than the path, because all three target
+/// types share one route. A path parameter would force three endpoints that
+/// differ only in which column they validate against.
+///
+/// `reporter_id` comes from the token and is not a body field, so a client
+/// cannot file a report as someone else.
+///
+/// Returns 201 with no body: the created row is not echoed back. It carries no
+/// information the caller did not send, and `load_target` has just read the
+/// target — returning a snapshot of it would only invite a caller to treat a
+/// report receipt as moderation evidence.
+/// Body for `POST /{version}/users/report`.
+///
+/// `target_type` is a string rather than an enum so a client sending garbage
+/// gets a 400 with `report_invalid_target_type` naming the offending field,
+/// instead of axum's own rejection, which arrives before this handler runs and
+/// says nothing about which field was wrong. The service matches it against a
+/// fixed list either way.
+///
+/// `description` is optional. `report_data` is `JSONB NOT NULL`, so "no
+/// description" is `null` inside the stored object rather than a missing column.
+#[derive(Deserialize, Debug)]
+pub struct ReportPayload {
+    #[serde(deserialize_with = "deserialize_i64")]
+    pub target_id: i64,
+    pub target_type: String,
+    pub report_type: String,
+    pub description: Option<String>,
+}
+
+pub async fn report_user_handler(
+    State(state): State<SharedState>,
+    Path(version): Path<String>,
+    req_auth: RequestAuth,
+    Json(payload): Json<ReportPayload>,
+) -> Result<StatusCode, APIError> {
+    let api_version = version::parse_version(&version)?;
+    tracing::trace!("api version: {}", api_version);
+
+    let user_id = match req_auth.user {
+        Some(user) => user.user_id,
+        None => return Err(AuthServiceError::InvalidCredentials.into()),
+    };
+
+    ReportService::submit(
+        &state,
+        user_id,
+        payload.target_id,
+        &payload.target_type,
+        &payload.report_type,
+        payload.description.as_deref(),
+    )
+    .await?;
+
+    Ok(StatusCode::CREATED)
+}
+
+// just let it work first
+fn deserialize_i64<'de, D>(deserializer: D) -> Result<i64, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = String::deserialize(deserializer)?;
+    value.parse::<i64>().map_err(serde::de::Error::custom)
 }

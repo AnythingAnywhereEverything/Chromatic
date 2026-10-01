@@ -98,6 +98,24 @@ pub enum APIErrorCode {
     AdminSelfDemotionForbidden,
     AdminLastSuperuserProtected,
 
+    // Guild
+    GuildInvalidName,
+    GuildNotFound,
+    AlreadyMember,
+
+    // Staff role
+    StaffRoleNotFound,
+    StaffRoleNameTaken,
+    StaffRoleInvalidName,
+
+    // Report
+    ReportCannotReportYourself,
+    ReportInvalidTargetType,
+    ReportInvalidType,
+    ReportInvalidDescription,
+    ReportAlreadyOpen,
+    ReportTargetNotFound,
+
     // Transaction
     TransactionNotFound,
     TransferInsufficientFunds,
