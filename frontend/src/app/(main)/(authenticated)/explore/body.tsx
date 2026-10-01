@@ -1,6 +1,5 @@
 "use client";
 
-import { TagRow } from "@/api/tags/tags";
 import { PostProps } from "@/api/post/getFeed";
 import { Post } from "@/app/_components/ui/chromatic/post";
 import style from "./explore.module.scss";
@@ -16,9 +15,6 @@ function ExploreBody() {
     const urlQuery = searchParams.get("q") ?? "";
 
     const [query, setQuery] = useState(urlQuery);
-
-    const [tags, setTags] = useState<TagRow[]>([]);
-    const [selectedTag, setSelectedTag] = useState<TagRow | null>(null);
 
     const [posts, setPosts] = useState<PostProps[]>([]);
     const [loading, setLoading] = useState(false);

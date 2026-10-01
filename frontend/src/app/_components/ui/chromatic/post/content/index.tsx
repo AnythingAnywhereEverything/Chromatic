@@ -94,6 +94,30 @@ const FormattedText: React.FC<
         return [...new Set(content.match(urlRegex) ?? [])];
     }, [content]);
 
+    useEffect(() => {
+        if (!onLinkOpenGraphPreview || urls.length === 0) {
+            return;
+        }
+
+        let cancelled = false;
+
+        Promise.all(urls.map(fetchOpenGraph)).then((previews) => {
+            if (cancelled) {
+                return;
+            }
+
+            onLinkOpenGraphPreview(
+                previews.filter(
+                    (preview): preview is OpenGraphPreview => preview !== null,
+                ),
+            );
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [urls, onLinkOpenGraphPreview]);
+
     const formatText = (input: string) => {
         const parts: React.ReactNode[] = [];
         let lastIndex = 0;

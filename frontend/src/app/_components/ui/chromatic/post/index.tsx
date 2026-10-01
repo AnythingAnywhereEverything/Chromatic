@@ -27,7 +27,6 @@ const Post: React.FC<PostProps> = ({
     created_at,
     updated_at,
     attachments = [],
-    tags = [],
     is_liked = false,
 }) => {
     const [open, setOpen] = useState(false);
@@ -146,22 +145,6 @@ const Post: React.FC<PostProps> = ({
                                 postUrl={`/u/${author.username}/f/${post_id}`}
                             />
                         )}
-                        {/* //todo: */}
-                        <ul className={style["subject-tag"]}>
-                            {tags.map((item) => {
-                                return (
-                                    <li key={item.tag_id}>
-                                        <p
-                                            className={
-                                                style["subject-tag-item"]
-                                            }
-                                        >
-                                            {item.tag_name}
-                                        </p>
-                                    </li>
-                                );
-                            })}
-                        </ul>
                     </div>
 
                     <div className={style["separator"]} />
