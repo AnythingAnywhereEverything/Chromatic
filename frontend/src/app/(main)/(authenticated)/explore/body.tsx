@@ -150,7 +150,7 @@ function ExploreBody() {
         <section className={style["explore-body"]}>
             <Form
                 action="#"
-                className={style["explore-top"]}
+                className={style["explore-search"]}
                 onSubmit={handleSearch}
             >
                 <input
@@ -162,7 +162,7 @@ function ExploreBody() {
                     onChange={(e) => setQuery(e.target.value)}
                 />
 
-                <button type="submit">Search</button>
+                <button type="submit" disabled={!query} className={style["explore-search-button"]}>Search</button>
             </Form>
 
             <div className={style["explore-posts"]}>
