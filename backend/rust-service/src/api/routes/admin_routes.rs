@@ -8,6 +8,7 @@ use crate::{
         activate_user_handler, get_stats_handler, get_user_detail_handler, list_audit_handler,
         list_users_handler, suspend_user_handler, update_user_role_handler,
     },
+    api::routes::staff_role_routes,
     application::state::SharedState,
 };
 
@@ -22,4 +23,5 @@ pub fn routes() -> Router<SharedState> {
         .route("/users/{user_id}/role", patch(update_user_role_handler))
         .route("/stats", get(get_stats_handler))
         .route("/audit", get(list_audit_handler))
+        .merge(staff_role_routes::routes())
 }
