@@ -52,5 +52,14 @@
         border-radius: var(--radius-sm);
         object-fit: cover;
     }
-    
+}
+
+.opengraph-preview-link {
+    text-decoration: none;
+    color: var(--color-blue);
+    text-decoration: none;
+
+    &:hover {
+        text-decoration: underline;
+    }
 }

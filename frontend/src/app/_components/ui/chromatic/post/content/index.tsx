@@ -120,6 +120,7 @@ const FormattedText: React.FC<
             if (part.match(urlRegex)) {
                 return (
                     <a
+                        className={styles["opengraph-preview-link"]}
                         key={index}
                         href={part}
                         target="_blank"
