@@ -7,7 +7,7 @@ import style from "./admin-nav.module.scss";
 const ADMIN_NAV_ITEMS = [
     { label: "Overview", href: "/admin/overview" },
     { label: "Users", href: "/admin/users" },
-    { label: "Posts", href: "/admin/posts" }
+    { label: "Roles", href: "/admin/roles" },
 ];
 
 export default function AdminNavigator() {

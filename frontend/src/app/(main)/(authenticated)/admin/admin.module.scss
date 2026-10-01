@@ -58,3 +58,13 @@
         color: var(--muted-foreground);
     }
 }
+.audit-log-list > li {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    align-items: center;
+    width: 100%;
+}
+
+.audit-log-header {
+    font-weight: 500;
+}

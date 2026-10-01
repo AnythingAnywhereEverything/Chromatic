@@ -21,7 +21,7 @@ export default function AdminOverviewBody() {
     useEffect(() => {
         const fetchAuditLog = async () => {
             try {
-                setAuditLog(await getAdminAudit());
+                setAuditLog(await getAdminAudit(15));
             } catch (error) {
                 console.error("Failed to fetch audit log:", error);
             }
@@ -55,6 +55,9 @@ export default function AdminOverviewBody() {
         { label: "Deleted", value: stats?.deleted_users },
     ];
 
+    // print audit
+    console.log(auditLog);
+    
     return (
         <section className={style["overview"]}>
             <h1>Overview</h1>
@@ -85,6 +88,9 @@ export default function AdminOverviewBody() {
                     {auditLog.map((audit) => (
                         <li key={audit.id}>
                             <span>{audit.action}</span>
+                            <span>{audit.target_username}</span>
+                            <span>{audit.performed_by_username}</span>
+                            <span>{audit.created_at}</span>
                         </li>
                     ))}
                 </ul>
