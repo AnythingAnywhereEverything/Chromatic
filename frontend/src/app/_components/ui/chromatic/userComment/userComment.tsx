@@ -26,6 +26,7 @@ import {
 } from "../dropdown";
 import { BsThreeDots } from "react-icons/bs";
 import { useUser } from "@/hooks/useUser";
+import { ReportDialogue } from "../report";
 
 function UserComment(props: commentProps) {
     const {
@@ -46,6 +47,7 @@ function UserComment(props: commentProps) {
     const [isLiked, setIsLiked] = useState(is_liked);
     const [likeCount, setLikeCount] = useState(total_likes);
     const [showReadMoreButton, setShowReadMoreButton] = useState(false);
+    const [reportOpen, setReportOpen] = useState(false);
 
     const currentUserId = useUser().data?.id;
 
@@ -176,10 +178,24 @@ function UserComment(props: commentProps) {
                                     <DropdownItem>
                                         Block @{author.username}
                                     </DropdownItem>
-                                    <DropdownItem>Report</DropdownItem>
+                                    <DropdownItem>
+                                        <button
+                                            type="button"
+                                            onClick={() => setReportOpen(true)}
+                                        >
+                                            Report
+                                        </button>
+                                    </DropdownItem>
                                 </DropdownContent>
                             )}
                         </Dropdown>
+                        <ReportDialogue
+                            targetId={id}
+                            targetType="comment"
+                            label="comment"
+                            open={reportOpen}
+                            onOpenChange={setReportOpen}
+                        />
                     </div>
                 </header>
                 <section className={style["interaction"]}>

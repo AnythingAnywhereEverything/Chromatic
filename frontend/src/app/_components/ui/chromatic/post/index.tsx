@@ -69,20 +69,24 @@ const Post: React.FC<PostProps> = ({
     return (
         <>
             {!isDeleted && (
-                <section className={style["container"]}>
-                    <PostHeader
-                        author={{
-                            id: author.id,
-                            username: author.username,
-                            display_name: author.display_name,
-                            avatar: author.avatar,
-                            avatar_thumbhash: author.avatar_thumbhash,
-                        }}
-                        is_followed={is_followed}
-                        created_at={created_at}
-                        visibility={visibility}
-                        onDelete={handleDeletePost}
-                    />
+            <section
+                className={style["container"]}
+
+            >
+                <PostHeader
+                    post_id={post_id}
+                    author={{
+                        id: author.id,
+                        username: author.username,
+                        display_name: author.display_name,
+                        avatar: author.avatar,
+                        avatar_thumbhash: author.avatar_thumbhash,
+                    }}
+                    is_followed={is_followed}
+                    created_at={created_at}
+                    visibility={visibility}
+                    onDelete={handleDeletePost}
+                />
 
                     <div className={style["main-container"]}>
                         {content && content.length > 0 && (

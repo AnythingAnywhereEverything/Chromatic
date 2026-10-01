@@ -5,7 +5,6 @@ import { IoInformationCircleOutline
     ,IoTrashOutline
     ,IoCheckmarkOutline
 } from "react-icons/io5";
-import { useState } from "react";
 interface BaseAlertProps {
     title: string;
     message: string;
@@ -85,7 +84,7 @@ const AlertDialogue:React.FC<AlertDialogProps> = ({
 
                     <div className={style["actions"]}>
                         <DialogClose>{cancelText ?? "Cancel"}</DialogClose>
-                        <DialogClose className={getButtonClass(type)} onClick={() => 0}>{confirmText ?? "Confirm"}</DialogClose>
+                        <DialogClose className={getButtonClass(type)} onClick={() => onConfirm?.()}>{confirmText ?? "Confirm"}</DialogClose>
                     </div>
                 </>
             )}
