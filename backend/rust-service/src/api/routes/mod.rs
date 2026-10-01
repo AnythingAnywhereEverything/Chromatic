@@ -5,3 +5,5 @@ pub mod dev_routes;
 pub mod protected_routes;
 pub mod message_routes;
 pub mod admin_routes;
+pub mod guild_routes;
+pub mod staff_role_routes;
