@@ -91,6 +91,12 @@ const SidebarNavigator: React.FC = () => {
                     href="/messages"
                 />
                 <SidebarPageItem
+                    icon={<HiOutlineUserGroup />}
+                    active={firstPathSegment === "community"}
+                    label="Community"
+                    href="/community"
+                />
+                <SidebarPageItem
                     icon={<FaBell />}
                     active={firstPathSegment === "notifications"}
                     label="Notifications"
