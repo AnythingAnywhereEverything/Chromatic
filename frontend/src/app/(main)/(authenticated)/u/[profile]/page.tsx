@@ -21,19 +21,20 @@ export const generateMetadata = async ({
         };
     }
 
-    const images = [];
+    let banner = response.banner;
 
-    if (response.avatar) {
-        images.push({
-            url: `${process.env.NEXT_PUBLIC_CDN_URL}avatars/${response.id}/${response.avatar}`,
-            width: 400,
-            height: 400,
-        });
+    // if banner prefix with a_ then it's an animated banner
+    // must replace webp with .png to make it a static image
+
+    if (banner && banner.startsWith("a_")) {
+        banner = banner.replace(".webp", ".png");
     }
+
+    const images = [];
 
     if (response.banner) {
         images.push({
-            url: `${process.env.NEXT_PUBLIC_CDN_URL}banners/${response.id}/${response.banner}`,
+            url: `${process.env.NEXT_PUBLIC_CDN_URL}banners/${response.id}/${banner}`,
             width: 1200,
             height: 400,
         });
@@ -41,10 +42,10 @@ export const generateMetadata = async ({
 
     return {
         title: `${profileOf}'s Profile`,
-        description: `${response.display_name} (@${response.username}) - ${response.bio || "No bio"}`,
+        description: `${response.display_name ? response.display_name : response.username} (@${response.username}) - ${response.bio || "No bio"}`,
         openGraph: {
             title: `${profileOf}'s Profile`,
-            description: `${response.display_name} (@${response.username}) - ${response.bio || "No bio"}`,
+            description: `${response.display_name ? response.display_name : response.username} (@${response.username}) - ${response.bio || "No bio"}`,
             url: `${process.env.NEXT_PUBLIC_URL}${profileOf}`,
             siteName: "Chromatic",
             images,

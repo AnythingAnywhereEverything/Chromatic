@@ -238,7 +238,6 @@ function MessageContent({ target, currentUser }: MessageContentProps) {
         setMessageInput("");
     };
 
-
     useEffect(() => {
         const container = messageContentRef.current;
 
@@ -295,25 +294,35 @@ function MessageContent({ target, currentUser }: MessageContentProps) {
                         />
                     ))}
             </section>
-            <div className={style["message-input"]}>
+            <form
+                className={style["message-input"]}
+                onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSubmitMessage();
+                }}
+            >
                 <EPicker onEmojiClick={handleEmojiClick}>
                     <MdEmojiEmotions />
                 </EPicker>
+
                 <textarea
                     className={style["message-textarea"]}
                     placeholder="Type a message..."
                     value={messageInput}
                     onChange={(e) => setMessageInput(e.target.value)}
                     maxLength={MAX_LENGTH_MESSAGE}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            e.currentTarget.form?.requestSubmit();
+                        }
+                    }}
                 />
-                <button
-                    type="button"
-                    className={style["message-send-button"]}
-                    onClick={handleSubmitMessage}
-                >
+
+                <button type="submit" className={style["message-send-button"]}>
                     <FaPaperPlane />
                 </button>
-            </div>
+            </form>
         </section>
     );
 }
@@ -325,7 +334,12 @@ interface MessageProps {
     deleteMessage: (sender_id: string, messageId: string) => void;
 }
 
-const Message: React.FC<MessageProps> = ({ target, currentUser, message, deleteMessage }) => {
+const Message: React.FC<MessageProps> = ({
+    target,
+    currentUser,
+    message,
+    deleteMessage,
+}) => {
     const router = useRouter();
 
     const messageUser =
@@ -391,7 +405,10 @@ const Message: React.FC<MessageProps> = ({ target, currentUser, message, deleteM
                                 <button
                                     type="button"
                                     onClick={() =>
-                                        deleteMessage(currentUser.id, message.id)
+                                        deleteMessage(
+                                            currentUser.id,
+                                            message.id,
+                                        )
                                     }
                                 >
                                     Delete
