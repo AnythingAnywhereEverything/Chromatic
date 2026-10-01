@@ -14,5 +14,6 @@ temp/*
 .next/
 
 .certificates/
+certs/
 
 test/results
