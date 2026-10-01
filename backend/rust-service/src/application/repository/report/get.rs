@@ -5,26 +5,6 @@ use crate::application::repository::{
     report::row::{ListReportsOpts, ReportPage, ReportRow},
 };
 
-/// One page of reports, newest first.
-///
-/// Keyset paginated on `(created_at, id)`, and `has_more` is derived by
-/// fetching one row past the limit rather than counting — the same trade
-/// `AdminUserPage` makes.
-///
-/// The `ORDER BY` name is table-qualified, and that is load-bearing. Because the
-/// select list aliases `r.id::TEXT AS id`, a bare `ORDER BY id` binds to the
-/// *output alias* and sorts lexically — verified against ids 9, 10 and 100,
-/// where the bare form returns `9, 100, 10`. Only `r.id` is the real `bigint`.
-///
-/// Ties on `created_at` break on `id`, which is monotonic snowflake, so this is a
-/// total order and the page boundary is stable.
-///
-/// The three target `LEFT JOIN`s are each guarded by `reported_target_type`
-/// rather than switched on in Rust, because a user id and a post id are both
-/// `BIGINT`: unguarded, every report would join against all three tables and
-/// match whichever row happened to share its id. The guard is in the `ON`
-/// clause rather than the `WHERE`, so a report whose target is gone still comes
-/// back, with its target columns null.
 pub async fn list_reports(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     opts: &ListReportsOpts,
