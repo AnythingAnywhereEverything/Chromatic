@@ -6,7 +6,7 @@ use crate::application::{
         },
         post::{
             self as post_repo,
-            row::{CommentRow, MediaTypeAttachment, PostRow, PostVisibility, TagRow, TagTarget},
+            row::{CommentRow, MediaTypeAttachment, PostRow, PostVisibility, TagTarget},
         },
         tags::{self as tags_repo},
         user::follow::is_following,
@@ -265,34 +265,6 @@ impl PostService {
             limit as i64,
         )
         .await?;
-
-        let mut posts = Vec::new();
-        for post_id in &explore {
-            if let Some(post) = self
-                .get_post(state, &mut tx, *post_id, requester_id)
-                .await?
-            {
-                posts.push(post);
-            }
-        }
-
-        Ok(posts)
-    }
-
-    /// ! Deprecated: This method will be removed in future versions. Use `search` instead.
-    pub async fn get_explore(
-        &self,
-        state: &AppState,
-        requester_id: Option<i64>,
-        before: Option<chrono::DateTime<chrono::Utc>>,
-        before_id: Option<i64>,
-        tag_id: Option<i64>,
-        limit: i32,
-    ) -> Result<Vec<PostRow>, PostServiceError> {
-        let mut tx = state.db_pool.begin().await?;
-        let explore =
-            post_repo::get::query_explore_posts(&mut tx, before, before_id, tag_id, limit as i64)
-                .await?;
 
         let mut posts = Vec::new();
         for post_id in &explore {

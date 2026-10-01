@@ -99,35 +99,6 @@ pub async fn get_user_posts_handler(
     Ok(Json(posts))
 }
 
-/// ! Deprecated: This handler will be removed in future versions. Use `search_explore_post_handler` instead.
-pub async fn get_explore_post_handler(
-    State(state): State<SharedState>,
-    Path(version): Path<String>,
-    req_auth: RequestAuth,
-    query: Query<ExploreQuery>,
-) -> Result<Json<Vec<PostRow>>, APIError> {
-    let api_version = version::parse_version(&version)?;
-    tracing::trace!("api version: {}", api_version);
-
-    let user_id = match req_auth.user {
-        Some(user) => Some(user.user_id),
-        None => None,
-    };
-
-    let posts = PostService
-        .get_explore(
-            &state,
-            user_id,
-            query.before,
-            query.before_id,
-            query.tag_id,
-            query.limit.unwrap_or(8).clamp(1, 30) as i32,
-        )
-        .await?;
-
-    Ok(Json(posts))
-}
-
 #[axum::debug_handler]
 pub async fn search_explore_post_handler(
     State(state): State<SharedState>,
