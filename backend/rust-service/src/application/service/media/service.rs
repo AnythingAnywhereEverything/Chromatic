@@ -361,22 +361,27 @@ impl MediaService {
         config: Option<ContainerConfig>,
         temp_store: Arc<dyn TempStore>,
     ) -> Result<JoinHandle<Result<ProcessResponse, MediaServiceError>>, MediaServiceError> {
+        // if no ID was set, generate a new ID for the file using the snowflake generator
         if !file.id().is_some() {
             let file_id = self.snowflake.generate_id()?;
             file.set_id(file_id);
         }
 
+        // Load configuration for processing, falling back to default if none is provided
         let config = config.unwrap_or(ContainerConfig::new());
-        // extract processor options from config
         let processing_options = config.get_processing_options().cloned().unwrap_or_default();
 
-        // multi-thread
+        // Spawn a new asynchronous task to process the file, returning a JoinHandle for the task
+        // TDLR: Multithread.
         let result: JoinHandle<Result<ProcessResponse, MediaServiceError>> = tokio::spawn(
             async move {
+                // Init a vector to hold newly created files such as thumbnails or static images for animated files
                 let mut extra_files: Vec<File> = Vec::new();
 
+                // Filter processing based on the media type of the file, handling images and videos differently
                 match file.category() {
                     MediaType::Image => {
+                        // Extract process options for image processing, if any are specified in the configuration
                         let ipo = processing_options.get_image_processors().cloned();
 
                         // * No processing Early Exit
@@ -574,8 +579,6 @@ impl MediaService {
                         }
                     }
                     MediaType::Video => {
-                        tracing::info!("Processing video file ID: {}", file.id().unwrap_or(-1));
-
                         let vpo = processing_options.get_video_processors().cloned();
                         let pvpo = processing_options.get_post_video_processors().cloned();
                         // we may generate a thumbnail, or just save it as is.
@@ -603,14 +606,10 @@ impl MediaService {
                             // due to hash unable on video type
                             // this for good to prevent large video file.
                             _ => {
-                                tracing::info!("Using default naming strategy for video file ID: {}", file.id().unwrap_or(-1));
                                 file.rename(&file.id().unwrap().to_string())?;
                                 file.set_current_extension(file.detected_extension().to_string())?;
                             }
                         }
-
-                        tracing::info!("Finished naming video file ID: {}", file.id().unwrap_or(-1));
-                        tracing::info!("Starting to probe video file object: {:#?}", file);
 
                         let thumbnail_byte = {
                             if fflages.video_thumbnail || config.is_generate_thumbhash() {
@@ -619,11 +618,6 @@ impl MediaService {
                                 None
                             }
                         };
-
-                        tracing::info!("Generating thumbnail for video file ID: {}", file.id().unwrap_or(-1));
-
-
-                        tracing::info!("Probing video file path: {}", file.file_full_path().to_string_lossy());
                         
                         let (width, height, duration) =
                             inspector::probe_video(&file.file_full_path()).await?;
@@ -631,27 +625,12 @@ impl MediaService {
                         file.set_height(height.unwrap_or(0) as u32);
                         file.set_duration(duration.unwrap_or(0.0) as f64);
 
-                        tracing::info!(
-                            "Video file ID: {} - width: {}, height: {}, duration: {}",
-                            file.id().unwrap_or(-1),
-                            file.width().unwrap_or(0),
-                            file.height().unwrap_or(0),
-                            file.duration().unwrap_or(0.0)
-                        );
-
                         let is_file_id_contained = config.is_file_id_contained();
                         if fflages.video_thumbnail
                             && !config
                                 .get_naming_strategy()
                                 .eq(&NamingStrategy::OriginalName)
                         {
-                            // check if video have to be in its own directory as
-
-                            tracing::info!(
-                                "Video file ID contained: {}, Post video processors: {:?}",
-                                is_file_id_contained,
-                                pvpo
-                            );
 
                             let (put_image_path, put_image_relative) =
                                 if is_file_id_contained || !pvpo.is_some() {
@@ -669,11 +648,6 @@ impl MediaService {
                                     );
                                     (put_image_path, put_image_relative)
                                 };
-
-                            tracing::info!(
-                                "Putting video thumbnail in directory: {:?}",
-                                put_image_path
-                            );
 
                             let file_name = format!("t_{}", file.id().unwrap_or(-1));
 
@@ -750,25 +724,13 @@ impl MediaService {
                             post_container.add_file(new_file)?;
                             post_container.file_id_contained()?;
 
-                            tracing::debug!(
-                                "Post processing container created: {:#?}",
-                                post_container
-                            );
-
                             // set and check HLS EARLY
-                            tracing::debug!("Checking for HLS in video post processors");
                             if pvpo
                                 .iter()
                                 .any(|p| matches!(p, VideoPostProcessorType::HLS { .. }))
                             {
                                 file.set_category(MediaType::Hls);
                             }
-
-                            tracing::debug!(
-                                "Returning ProcessResponse with processed file: {:#?} and post container: {:#?}",
-                                file,
-                                post_container
-                            );
 
                             let res = ProcessResponse {
                                 processed_file: file,
