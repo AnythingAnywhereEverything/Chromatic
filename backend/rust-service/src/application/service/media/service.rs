@@ -88,42 +88,43 @@ impl MediaService {
         state: &AppState,
         container: &mut FileContainer,
     ) -> Result<(), MediaServiceError> {
+        // Check if the container is empty
         if container.is_empty() {
             return Err(MediaServiceError::NoFilesInContainer);
         }
 
+        // Extract uploader ID and target path from the container
         let uploader = container
             .uploader_id()
             .ok_or(MediaServiceError::UploaderIdNotSet)?;
+        // Load all config from the container
         let config = container.config();
         let target_path = container.target_path()?.clone();
-
         if let Some(config) = &config {
             if config.is_file_id_contained() {
                 container.file_id_contained()?;
             }
         }
 
+        // Take all files out of the container for processing
         let files = container.take_files();
-
-        // loop through each file in the container and process them
-
         let mut tasks = Vec::with_capacity(files.len());
 
+        // Process each file in parallel using asynchronous tasks
         for file in files {
             let config = config.clone();
             let ts = self.temporary_store.clone();
-
             tasks.push(self.process_file(file, config, ts).await?);
         }
 
+        // Create vectors to hold new files and post-processing containers
         let mut new_files = Vec::new();
         let mut ppc = Vec::new();
 
+        // Await all processing tasks and collect results
         for task in tasks {
+            // wait for each task to finish
             let res = task.await??;
-            tracing::info!("Processing result: {:#?}", res);
-
             let file = res.processed_file;
             let file_to_insert = res.file_to_insert;
             let post_container = res.post_container;
@@ -137,31 +138,18 @@ impl MediaService {
                 ppc.push(post_container);
             }
         }
-
+        // Replace the files in the container with the newly processed files
+        // ensure that the container now holds the newly processed files
         container.replace_files(new_files);
 
+        // At this point, the container has been updated with the newly processed files
+        // Now resolve the files from the container to prepare for database insertion
         let resolved = container.resolve_files();
-        // guarding for debug
-        tracing::info!("Resolved files: {:#?}", resolved);
-
-        // abort post-processing containers
-        // for mut post_container in ppc {
-        //     post_container
-        //         .abort(self.temporary_store.clone())
-        //         .await
-        //         .map_err(|e| {
-        //             tracing::error!("Failed to abort post-processing container: {:?}", e);
-        //             MediaServiceError::ProcessingFailed
-        //         })?;
-        // }
-
         let mut tx = state.db_pool.begin().await?;
 
-        // loop save file to database
-        // let container_dir = container.relative_path().to_string();
+        // Loop through each resolved file and save it to the database
         for mut resolved_files in resolved {
             // check if media file id is within the post-processing container
-
             let is_post_processing = ppc.iter().any(|c| {
                 c.files(0)
                     .map_or(false, |f| f.id() == Some(resolved_files.id))
@@ -169,6 +157,7 @@ impl MediaService {
 
             // check if name exists and not duplicate
             for file in &resolved_files.files {
+                // * This use in a very specific case where naming can dedupe itself such as hash-based file names
                 if let Some(check_conflict_type) = &resolved_files.check_conflict_type {
                     if let Some(conflict_id) = media::check::conflict_recent_media(&mut tx, &uploader, &file.file_name_with_extension(), check_conflict_type.clone()).await? {
                         // update related id in container
@@ -188,6 +177,8 @@ impl MediaService {
                 }
             }
 
+            // Append the resolved file information to the media table
+            // Media Row
             let media_row = MediaRow {
                 id: resolved_files.id,
                 uploader_id: uploader,
@@ -203,11 +194,9 @@ impl MediaService {
                 original_content_type: resolved_files.original_content_type,
                 ..Default::default()
             };
-
-            tracing::info!("Creating media row: {:#?}", media_row);
-
             media::create::media_create(&mut tx, &media_row).await?;
 
+            // Media Object Metadata Row
             let meta = resolved_files.meta.as_ref().unwrap();
             let media_metadata_row = MediaObjectMetadataRow {
                 width: meta.width.map(|w| w as i32),
@@ -216,21 +205,15 @@ impl MediaService {
                 created_at: chrono::Utc::now().naive_utc(),
                 updated_at: chrono::Utc::now().naive_utc(),
             };
-
-            tracing::info!(
-                "Creating media object metadata row: {:#?}",
-                media_metadata_row
-            );
             media::create::media_object_metadata_create(&mut tx, media_row.id, &media_metadata_row).await?;
 
-            // loop resolved files
+            // Loop through each resolved file and create media object rows
             for file in resolved_files.files {
+                // Skip deleted files
                 if file.is_deleted() {
                     continue;
                 }
-
-                // make storage key
-
+                // Generate the storage key for the file based on its directory and the target path
                 let storage_key = file
                     .file_directory()
                     .replace(&container.relative_path(), &target_path);
@@ -246,20 +229,20 @@ impl MediaService {
                     updated_at: chrono::Utc::now().naive_utc(),
                     deleted_at: None,
                 };
-                tracing::info!("Creating media object row: {:#?}", media_objects_row);
                 media::create::media_object_create(&mut tx, media_row.id, &media_objects_row).await?;
             }
         }
 
+        // Commit early to ensure no conflict with post-processing tasks
         tx.commit().await?;
 
+        // Finalize the container after all media objects have been created
+        // And upload to the destination.
         container
             .finalize(self.persistent_store.clone(), self.temporary_store.clone())
             .await?;
 
-        // print post container info
-        tracing::info!("Post container info: {:#?}", ppc);
-
+        // Spawn post-processing tasks for each post-processing container
         let mut tx = state.db_pool.begin().await?;
         for mut post_container in ppc {
             post_container.set_target_path(target_path.clone());
@@ -267,12 +250,16 @@ impl MediaService {
             let ts = self.temporary_store.clone();
             let ps = self.persistent_store.clone();
             let db = state.db_pool.clone();
+
+            // ! Fire and forget the post-processing task for the container
+            // ! This requires further implementation on queuing for it to be completely safe
+            // ! But for now, we will stick with it.
             tokio::spawn(async move {
                 let _ = MediaService::post_process_containment(db, post_container, ts, ps).await;
             });
         }
 
-        // set the remaining files in the container as ready
+        // Set the remaining files in the container as ready for further processing or usage
         for file in container.files_mut() {
             media::update::processing_state(&mut tx, &file.id().unwrap(), &ProcessingState::Ready)
                 .await?;
