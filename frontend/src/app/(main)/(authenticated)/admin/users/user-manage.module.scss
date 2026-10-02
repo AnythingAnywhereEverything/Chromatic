@@ -4,49 +4,162 @@
     flex-direction: column;
     gap: var(--space-8);
 }
+
+.user-management h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+/* Actions */
+
 .management-actions {
     display: flex;
+    align-items: center;
     justify-content: space-between;
+    gap: var(--space-4);
 }
+
+.filters,
+.create-export {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.filters input {
+    width: 240px;
+    height: 40px;
+    padding: 0 var(--space-4);
+
+    box-sizing: border-box;
+
+    color: var(--foreground);
+    background-color: var(--background);
+
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    outline: none;
+
+    transition:
+        border-color 120ms ease,
+        box-shadow 120ms ease;
+}
+
+.filters input:focus {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 20%, transparent);
+}
+
 .role-dropdown-trigger {
     background-color: var(--muted);
-    padding: var(--space-4);
 }
-.filters {
-    display: flex;
-    gap: var(--space-8);
-    input {
-        padding: var(--space-4);
-    }
+
+/* Buttons */
+
+.export-users,
+.create-user {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    height: 40px;
+    padding: 0 var(--space-4);
+
+    border-radius: var(--radius);
+    cursor: pointer;
+
+    transition:
+        background-color 120ms ease,
+        border-color 120ms ease;
 }
-/* // * AI generated  */
+
+.export-users {
+    color: var(--foreground);
+    background-color: var(--muted);
+    border: 1px solid var(--border);
+}
+
+.export-users:hover {
+    background-color: var(--accent);
+}
+
+.create-user {
+    color: var(--primary-foreground);
+    background-color: var(--primary);
+    border: 1px solid var(--primary);
+}
+
+.create-user:hover {
+    opacity: 0.9;
+}
+
+/* User table */
+
 .user-list-header,
 .user-grid {
     display: grid;
+
     grid-template-columns:
         0.5fr
         2fr
         3fr
         1.5fr
-        1.5fr /* status */
+        1.5fr
         2fr
         2fr;
 
     align-items: center;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .user-list-header {
-    padding: 12px 16px;
+    min-height: 44px;
+    padding: 0 16px;
+
+    color: var(--muted-foreground);
     background-color: var(--muted);
+
+    border: 1px solid var(--border);
+    border-radius: var(--radius) var(--radius) 0 0;
+
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.user-list {
+    margin: 0;
+    padding: 0;
+
+    border: 1px solid var(--border);
+    border-top: 0;
+    border-radius: 0 0 var(--radius) var(--radius);
+
+    overflow: hidden;
 }
 
 .user {
     list-style: none;
+    border-bottom: 1px solid var(--border);
+
+    transition: background-color 120ms ease;
+}
+
+.user:last-child {
+    border-bottom: 0;
+}
+
+.user:hover {
+    background-color: var(--muted);
 }
 
 .user-grid {
-    padding: 14px 16px;
+    min-height: 60px;
+    padding: 10px 16px;
 }
 
 .user-select-all,
@@ -59,13 +172,9 @@
     min-width: 0;
 }
 
-/* Header alignment */
+/* Header */
 
-.user-list-header .user-select-all {
-    display: flex;
-    align-items: center;
-}
-
+.user-list-header .user-select-all,
 .user-list-header .user-username,
 .user-list-header .user-email,
 .user-list-header .user-status,
@@ -76,28 +185,56 @@
     align-items: center;
 }
 
-/* Row alignment */
+/* Checkbox */
+
+.user-select-all input,
+.user-grid > input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+
+    accent-color: var(--primary);
+    cursor: pointer;
+}
 
 .user-grid > input[type="checkbox"] {
     justify-self: start;
 }
 
+/* Username */
+
 .user-grid .user-username {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+
+    min-width: 0;
+
     overflow: hidden;
-    img {
-        flex-shrink: 0;
-        border-radius: 50%;
-    }
+    white-space: nowrap;
+    text-overflow: ellipsis;
+
+    font-weight: 500;
 }
 
+.user-grid .user-username img {
+    flex-shrink: 0;
+    border-radius: 50%;
+}
+
+/* Email */
+
 .user-grid .user-email {
+    min-width: 0;
+
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+
+    color: var(--muted-foreground);
 }
+
+/* Status */
 
 .user-grid .user-status,
 .user-grid .user-role,
@@ -105,29 +242,96 @@
     white-space: nowrap;
 }
 
+.user-grid .user-status {
+    color: var(--foreground);
+}
+
+/* Actions */
+
 .user-grid .user-actions {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.user {
-    border-bottom: 1px solid var(--border);
-}
-
 .user-action-edit,
 .user-action-delete {
-    padding: var(--space-4);
-    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 34px;
+    height: 34px;
+    padding: 0;
+
     box-sizing: border-box;
+
+    border: 0;
+    border-radius: var(--radius);
+
+    cursor: pointer;
+
+    transition:
+        background-color 120ms ease,
+        color 120ms ease;
 }
 
-.user-action-edit{
+.user-action-edit {
+    color: var(--foreground);
     background-color: var(--muted);
+}
+
+.user-action-edit:hover {
+    background-color: var(--accent);
+}
+
+.user-action-delete {
+    color: var(--destructive-foreground);
+    background-color: var(--destructive);
+}
+
+.user-action-delete:hover {
+    opacity: 0.85;
+}
+
+/* Empty state */
+
+.user-management > p {
+    margin: 0;
+    padding: var(--space-8);
+
+    color: var(--muted-foreground);
+    text-align: center;
+
+    border: 1px solid var(--border);
     border-radius: var(--radius);
 }
 
-.user-action-delete{
-    background-color: var(--color-destructive-foreground);
-    border-radius: var(--radius);
+/* Mobile */
+
+@media (max-width: 900px) {
+    .management-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .filters,
+    .create-export {
+        width: 100%;
+    }
+
+    .filters input {
+        flex: 1;
+        width: auto;
+    }
+
+    .user-list-header,
+    .user-grid {
+        min-width: 900px;
+    }
+
+    .user-list,
+    .user-list-header {
+        overflow-x: auto;
+    }
 }

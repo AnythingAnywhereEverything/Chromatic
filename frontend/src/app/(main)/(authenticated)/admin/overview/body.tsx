@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import style from "../admin.module.scss";
 import { AdminAuditEntry } from "@/api/admin/types";
 import { getAdminAudit } from "@/api/admin/audit";
+import { formatdatemonthyear } from "@/app/_components/ui/chromatic/post/helpers/dateFormater";
 
 export default function AdminOverviewBody() {
     const [rustHealth, setRustHealth] = useState<boolean>(false);
@@ -90,7 +91,7 @@ export default function AdminOverviewBody() {
                             <span>{audit.action}</span>
                             <span>{audit.target_username}</span>
                             <span>{audit.performed_by_username}</span>
-                            <span>{audit.created_at}</span>
+                            <span>{formatdatemonthyear(audit.created_at)}</span>
                         </li>
                     ))}
                 </ul>

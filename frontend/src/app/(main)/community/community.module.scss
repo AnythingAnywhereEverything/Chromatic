@@ -6,72 +6,125 @@
 }
 
 .community-header {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr minmax(220px, 320px) auto;
     align-items: center;
     gap: var(--space-8);
 }
 
-.community-header p {
-    color: var(--muted-foreground);
+.community-header h1 {
     margin: 0;
+    font-size: 24px;
+    font-weight: 600;
 }
 
-/* The search box filters the loaded list client-side. The browse endpoint has no
-   `q` param — that exists only on the admin list — so a search narrows what is
-   already in hand rather than asking the server for matches. */
+.community-header p {
+    margin: 4px 0 0;
+    color: var(--muted-foreground);
+}
+
+.community-search {
+    min-width: 0;
+}
 
 .community-search input {
-    padding: var(--space-4);
+    width: 100%;
+    height: 40px;
+    padding: 0 var(--space-4);
+
+    box-sizing: border-box;
+
     background-color: var(--muted);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
+
     color: inherit;
+    font: inherit;
+    outline: none;
+
+    transition:
+        border-color 120ms ease,
+        box-shadow 120ms ease;
 }
 
+.community-search input:focus {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 20%, transparent);
+}
+
+/* Guild grid */
+
 .guild-grid {
-    list-style: none;
-    padding: 0;
-    margin: 0;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--space-8);
+    gap: var(--space-6);
+
+    margin: 0;
+    padding: 0;
+
+    list-style: none;
 }
 
 .guild-card {
     display: flex;
     flex-direction: column;
-    gap: var(--space-8);
-    padding: var(--space-16);
+    gap: var(--space-6);
+
+    min-width: 0;
+    min-height: 190px;
+    padding: var(--space-8);
+
+    box-sizing: border-box;
+
     background-color: var(--background);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
+
+    transition:
+        border-color 120ms ease,
+        background-color 120ms ease,
+        transform 120ms ease;
+}
+
+.guild-card:hover {
+    background-color: var(--muted);
+    border-color: var(--ring);
+    transform: translateY(-1px);
 }
 
 .guild-card-head {
     display: flex;
     align-items: center;
-    gap: var(--space-8);
+    gap: var(--space-6);
+
+    min-width: 0;
 }
 
-/* The title is the card's whole affordance, so it is a button rather than a
-   heading: a heading cannot receive focus or a click, and this needs both. */
 .guild-card-title {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
+
     min-width: 0;
     padding: 0;
+
     background: none;
-    border: none;
+    border: 0;
+
     color: inherit;
     font: inherit;
     text-align: left;
+
     cursor: pointer;
 }
 
 .guild-card-title strong {
     overflow: hidden;
+
+    color: var(--foreground);
+    font-size: 15px;
+    font-weight: 600;
+
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -81,74 +134,107 @@
 }
 
 .guild-card-owner {
-    font-size: var(--font-size-sm);
+    overflow: hidden;
+
     color: var(--muted-foreground);
+    font-size: var(--font-size-sm);
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .guild-card-description {
-    color: var(--muted-foreground);
-    margin: 0;
-    overflow: hidden;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+
+    margin: 0;
+
+    overflow: hidden;
+
+    color: var(--muted-foreground);
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+
     -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
 }
 
 .guild-card-stats {
     display: flex;
-    gap: var(--space-12);
-    font-size: var(--font-size-sm);
+    align-items: center;
+    gap: var(--space-6);
+
+    margin-top: auto;
+
     color: var(--muted-foreground);
+    font-size: var(--font-size-sm);
 }
 
 .guild-card-footer {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    gap: var(--space-8);
-    margin-top: auto;
+    justify-content: space-between;
+
+    gap: var(--space-4);
+    padding-top: var(--space-4);
+
+    border-top: 1px solid var(--border);
 }
 
 .guild-card-created {
-    font-size: var(--font-size-sm);
     color: var(--muted-foreground);
+    font-size: var(--font-size-sm);
 }
 
-/* Joined state. Green rather than the muted button so it reads as a settled
-   state rather than another action waiting to be taken. */
+/* Buttons */
+
+.button-primary,
+.button-ghost,
 .button-joined {
-    display: flex;
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: var(--space-4);
-    padding: var(--space-4) var(--space-8);
+
+    min-height: 40px;
+    padding: 0 var(--space-6);
+
+    box-sizing: border-box;
+
     border-radius: var(--radius-md);
-    border: 1px solid var(--border);
-    background-color: transparent;
-    color: var(--muted-foreground);
+
     font: inherit;
-    cursor: default;
+    white-space: nowrap;
 }
 
 .button-primary,
 .button-ghost {
-    display: flex;
-    align-items: center;
-    gap: var(--space-4);
-    padding: var(--space-4) var(--space-8);
-    border-radius: var(--radius-md);
     border: 1px solid var(--border);
-    font: inherit;
     cursor: pointer;
+
+    transition:
+        background-color 120ms ease,
+        border-color 120ms ease,
+        color 120ms ease;
 }
 
 .button-primary {
+    color: var(--foreground);
     background-color: var(--muted);
-    color: inherit;
+}
+
+.button-primary:hover:not(:disabled) {
+    background-color: var(--accent);
+    border-color: var(--ring);
 }
 
 .button-ghost {
-    background-color: transparent;
     color: var(--muted-foreground);
+    background-color: transparent;
+}
+
+.button-ghost:hover:not(:disabled) {
+    color: var(--foreground);
+    background-color: var(--muted);
 }
 
 .button-primary:disabled,
@@ -157,18 +243,57 @@
     cursor: not-allowed;
 }
 
-.muted {
+.button-joined {
     color: var(--muted-foreground);
+    background-color: transparent;
+    border: 1px solid var(--border);
+    cursor: default;
 }
 
 .load-more {
     align-self: center;
+    margin-top: var(--space-2);
+}
+
+/* States */
+
+.muted {
+    margin: 0;
+    color: var(--muted-foreground);
 }
 
 .card-error {
-    color: red;
-    font-size: var(--font-size-sm);
     margin: 0;
+    padding: var(--space-4);
+
+    color: var(--destructive);
+    background-color: color-mix(
+        in srgb,
+        var(--destructive) 8%,
+        transparent
+    );
+
+    border: 1px solid color-mix(
+        in srgb,
+        var(--destructive) 25%,
+        transparent
+    );
+
+    border-radius: var(--radius-md);
+
+    font-size: var(--font-size-sm);
+}
+
+.no-guild {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+
+    padding: var(--space-32);
+
+    color: var(--muted-foreground);
+    text-align: center;
 }
 
 /* Dialog */
@@ -180,20 +305,21 @@
 }
 
 .dialog-description {
+    margin: 0;
     color: var(--muted-foreground);
 }
 
 .dialog-body {
     display: flex;
     flex-direction: column;
-    gap: var(--space-12);
+    gap: var(--space-6);
 }
 
 .dialog-actions {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    gap: var(--space-8);
+    justify-content: flex-end;
+    gap: var(--space-4);
 }
 
 /* Fields */
@@ -201,66 +327,90 @@
 .field {
     display: flex;
     flex-direction: column;
-    gap: var(--space-4);
+    gap: var(--space-2);
 }
 
 .field > span {
+    color: var(--foreground);
     font-size: var(--font-size-sm);
-    color: var(--muted-foreground);
+    font-weight: 500;
 }
 
 .field input,
 .field textarea {
+    width: 100%;
     padding: var(--space-4);
+
+    box-sizing: border-box;
+
     background-color: var(--muted);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
+
     color: inherit;
     font: inherit;
+    outline: none;
+
+    resize: vertical;
+
+    transition:
+        border-color 120ms ease,
+        box-shadow 120ms ease;
+}
+
+.field input:focus,
+.field textarea:focus {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 20%, transparent);
 }
 
 .field-hint,
 .field-error,
 .form-error {
+    margin: 0;
     font-size: var(--font-size-sm);
 }
 
-/* Inline rather than a toast: the fix is to edit this exact field. */
-.field-error,
-.form-error {
-    color: red;
+.field-hint {
+    color: var(--muted-foreground);
 }
 
+.field-error,
 .form-error {
-    display: block;
+    color: var(--destructive);
 }
 
 /* Guild view */
 
 .guild-view {
     display: grid;
-    /* The rail is a fixed width and the message pane takes the rest, so a long
-       channel name cannot squeeze the conversation into a column. */
-    grid-template-columns: 240px 1fr;
+    grid-template-columns: 240px minmax(0, 1fr);
     gap: var(--space-8);
-    align-items: start;
+
+    min-height: 60vh;
 }
 
 .channel-rail {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-8);
-    padding: var(--space-12);
-    background-color: var(--muted);
-    border-radius: var(--radius-lg);
     position: sticky;
     top: var(--space-8);
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+
+    height: fit-content;
+    padding: var(--space-6);
+
+    background-color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
 }
 
 .channel-rail-header {
     display: flex;
     align-items: center;
-    gap: var(--space-8);
+    gap: var(--space-4);
+
     min-width: 0;
 }
 
@@ -272,66 +422,90 @@
 
 .channel-rail-header strong {
     overflow: hidden;
+
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .channel-rail-header span {
-    font-size: var(--font-size-sm);
     color: var(--muted-foreground);
+    font-size: var(--font-size-sm);
 }
 
 .channel-back {
-    background: none;
-    border: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+
+    padding: 0;
+
     color: var(--muted-foreground);
+    background: none;
+    border: 0;
+
     font: inherit;
     cursor: pointer;
-    padding: 0;
+}
+
+.channel-back:hover {
+    color: var(--foreground);
 }
 
 .channel-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
     display: flex;
     flex-direction: column;
     gap: 2px;
+
+    margin: 0;
+    padding: 0;
+
+    list-style: none;
 }
 
 .channel-list-heading {
-    font-size: var(--font-size-sm);
+    margin: 0;
+
     color: var(--muted-foreground);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    margin: 0;
 }
 
 .channel-row {
     display: flex;
     align-items: center;
     gap: var(--space-4);
+
     width: 100%;
-    padding: 6px var(--space-8);
-    background: none;
-    border: none;
+    min-width: 0;
+    padding: 7px var(--space-4);
+
+    box-sizing: border-box;
+
+    color: var(--muted-foreground);
+    background: transparent;
+    border: 0;
     border-radius: var(--radius-md);
-    color: inherit;
+
     font: inherit;
     text-align: left;
+
     cursor: pointer;
 }
 
-.channel-row:hover {
-    background-color: var(--background);
-}
-
+.channel-row:hover,
 .channel-active {
+    color: var(--foreground);
     background-color: var(--background);
 }
 
 .channel-row span {
+    min-width: 0;
+
     overflow: hidden;
+
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -339,35 +513,51 @@
 .channel-pane {
     display: flex;
     flex-direction: column;
-    gap: var(--space-8);
+
+    min-width: 0;
     min-height: 60vh;
+    gap: var(--space-6);
 }
 
 .channel-pane-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--space-8);
-    padding-bottom: var(--space-8);
+    gap: var(--space-4);
+
+    padding-bottom: var(--space-6);
+
     border-bottom: 1px solid var(--border);
+}
+
+.channel-pane-header h2 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+
+    margin: 0;
+
+    font-size: 18px;
+    font-weight: 600;
 }
 
 .channel-messages {
     display: flex;
     flex-direction: column;
-    gap: var(--space-12);
+    gap: var(--space-6);
+
     flex: 1;
 }
 
 .mock-message {
     display: flex;
-    gap: var(--space-8);
+    gap: var(--space-4);
 }
 
 .mock-message-body {
     display: flex;
     flex-direction: column;
     gap: 2px;
+
     min-width: 0;
 }
 
@@ -376,70 +566,81 @@
 }
 
 .mock-message-time {
-    font-size: var(--font-size-sm);
+    margin-left: var(--space-2);
+
     color: var(--muted-foreground);
+    font-size: var(--font-size-sm);
+    font-weight: 400;
 }
 
 .mock-message-content {
-    color: var(--muted-foreground);
     margin: 0;
-}
 
-.mock-compose {
-    display: flex;
-    gap: var(--space-8);
-    align-items: flex-end;
-    padding: var(--space-8);
+    color: var(--muted-foreground);
+    line-height: 1.5;
 }
-
-.mock-compose textarea {
-    flex: 1;
-    padding: var(--space-8);
-    background-color: var(--background);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    color: inherit;
-    font: inherit;
-    resize: vertical;
-    min-height: 44px;
-}
-
-/* The compose box is inert: there is no message endpoint for a channel yet, so
-   it is marked read-only and disabled rather than accepting text it would
-   silently discard. */
 
 .mock-notice {
     display: flex;
     align-items: center;
-    gap: var(--space-8);
-    padding: var(--space-8);
-    font-size: var(--font-size-sm);
+
+    margin: 0;
+    padding: var(--space-4);
+
     color: var(--muted-foreground);
     background-color: var(--muted);
+
+    border: 1px solid var(--border);
     border-radius: var(--radius-md);
+
+    font-size: var(--font-size-sm);
 }
 
-.no-guild {
+.mock-compose {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-8);
-    padding: var(--space-32);
-    color: var(--muted-foreground);
+    align-items: flex-end;
+    gap: var(--space-4);
+
+    padding-top: var(--space-4);
+
+    border-top: 1px solid var(--border);
 }
 
-@media (max-width: 768px) {
-    /* Three siblings in a row (title, search, button) leave the search input and
-       the "New community" button sharing whatever the title does not claim, which
-       on a phone means a squashed input and a wrapped label. Stacked, each gets
-       the full width. */
+.mock-compose textarea {
+    flex: 1;
+
+    min-height: 40px;
+    padding: var(--space-4);
+
+    background-color: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+
+    color: inherit;
+    font: inherit;
+
+    resize: vertical;
+}
+
+.mock-compose .button-primary {
+    min-width: 40px;
+    padding: 0;
+}
+
+/* Responsive */
+
+@media (max-width: 900px) {
     .community-header {
-        flex-direction: column;
+        grid-template-columns: 1fr;
         align-items: stretch;
     }
 
     .community-search input {
         width: 100%;
+    }
+
+    .community-header .button-primary {
+        width: fit-content;
     }
 
     .guild-view {
@@ -448,5 +649,24 @@
 
     .channel-rail {
         position: static;
+    }
+}
+
+@media (max-width: 600px) {
+    .guild-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .guild-card {
+        min-height: 0;
+    }
+
+    .dialog-actions {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .dialog-actions button {
+        width: 100%;
     }
 }

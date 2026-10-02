@@ -29,22 +29,12 @@ export default function CommunityBody() {
         staleTime: 60 * 1000,
         retry: false,
     });
-
-    // Pages after the first, accumulated. The cursor is derived from the last
-    // row in `loaded` rather than stored, so it cannot drift out of sync with
-    // the rows it was supposed to point past.
     const [loaded, setLoaded] = useState<Guild[]>([]);
     const [loadingMore, setLoadingMore] = useState(false);
     const [moreError, setMoreError] = useState<string | null>(null);
-    // Whether a page beyond what the most recent fetch returned exists. Set
-    // from page 1 before any "load more", then replaced by each later page.
     const [lastHasMore, setLastHasMore] = useState<boolean | null>(null);
 
     const guilds = [...(page?.rows ?? []), ...loaded];
-    // Until a second page has been fetched, page 1 is the authority on whether
-    // more exist. After that the later page is, since only it knows what
-    // follows it — deriving from a row count instead would keep offering the
-    // button after the last page.
     const hasMore = lastHasMore ?? Boolean(page?.has_more);
 
     const loadMore = async () => {
@@ -70,9 +60,6 @@ export default function CommunityBody() {
         }
     };
 
-    // The browse endpoint has no `q` param (that exists only on the admin
-    // list), so search narrows what is loaded rather than asking the server.
-    // It is therefore scoped to the pages fetched so far, not the whole table.
     const term = deferredSearch.trim().toLowerCase();
     const visible = term
         ? guilds.filter(
@@ -83,12 +70,8 @@ export default function CommunityBody() {
         : guilds;
 
     const refresh = () => {
-        // Joined state is derived from this session's join responses only — the
-        // list carries no membership flag — so clearing on refresh returns it
-        // to unknown rather than leaving a stale "joined" on screen.
         setLoaded([]);
         setMoreError(null);
-        // Back to page 1 being the authority on whether more exist.
         setLastHasMore(null);
     };
 

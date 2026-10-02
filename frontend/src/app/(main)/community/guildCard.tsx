@@ -45,22 +45,29 @@ export default function GuildCard({ guild }: { guild: Guild }) {
     return (
         <li className={style["guild-card"]}>
             <div className={style["guild-card-head"]}>
-                <UserIdAvatar userId={guild.id} name={guild.name} size={44} />
+                    <UserIdAvatar
+                        userId={guild.id}
+                        name={guild.name}
+                        size={44}
+                    />
+                    <Link
+                        href={`/community/${guild.id}`}
+                        className={style["guild-card-title"]}
+                    >
+                        <strong>{guild.name}</strong>
+                        <span className={style["guild-card-owner"]}>
+                            {formatLargeNumber(members)}{" "}
+                            {members === 1 ? "member" : "members"}
+                        </span>
+                    </Link>
 
-                <Link
-                    href={`/community/${guild.id}`}
-                    className={style["guild-card-title"]}
+                <button
+                    style={{ marginLeft: "auto" }}
+                    type="button"
+                    className={style["button-delete"]}
+                    onClick={handleDeleteGuild}
                 >
-                    <strong>{guild.name}</strong>
-                    <span className={style["guild-card-owner"]}>
-                        {formatLargeNumber(members)}{" "}
-                        {members === 1 ? "member" : "members"}
-                    </span>
-                </Link>
-
-                {/* delete */}
-                <button type="button" className={style["button-delete"]} onClick={handleDeleteGuild}>
-                    Delete
+                    X
                 </button>
             </div>
 

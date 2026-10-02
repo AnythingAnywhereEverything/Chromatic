@@ -4,7 +4,7 @@ import { Portal } from "@/app/_components/portal";
 
 import { AlertDialogue } from "@/app/_components/ui/chromatic/confirmation";
 
-import { CreateCommunityBtn } from "@/app/_components/ui/chromatic/createCom";
+
 
 
 import {
@@ -424,10 +424,6 @@ const TestPage = () => {
                         </button>
                     ))}
                 </div>
-            </section>
-
-            <section>
-                <CreateCommunityBtn />
             </section>
         </section>
     );

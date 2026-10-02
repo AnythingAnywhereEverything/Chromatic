@@ -26,7 +26,7 @@ export default function AdminNavigator() {
                         key={href}
                         href={href}
                         className={`${style["admin-nav-item"]} ${
-                            active ? style["active"] : ""
+                            active ? style["is-active"] : ""
                         }`}
                         >
                         {label}

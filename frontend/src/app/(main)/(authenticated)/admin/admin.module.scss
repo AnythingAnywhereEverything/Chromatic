@@ -68,3 +68,68 @@
 .audit-log-header {
     font-weight: 500;
 }
+
+// overview by AI
+.audit-log-list {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    overflow: hidden;
+
+    border: 1px solid #2a2a2f;
+    border-radius: 10px;
+    background: #18181b;
+}
+
+.audit-log-list > li {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    align-items: center;
+    min-height: 48px;
+    padding: 0 16px;
+
+    border-bottom: 1px solid #27272a;
+}
+
+.audit-log-list > li:last-child {
+    border-bottom: 0;
+}
+
+.audit-log-header {
+    min-height: 42px !important;
+
+    background: #202023;
+    color: #a1a1aa;
+
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.audit-log-list > li:not(.audit-log-header) {
+    color: #e4e4e7;
+    font-size: 14px;
+
+    transition:
+        background 120ms ease,
+        color 120ms ease;
+}
+
+.audit-log-list > li:not(.audit-log-header):hover {
+    background: #202023;
+}
+
+.audit-log-list > li > span {
+    min-width: 0;
+    overflow: hidden;
+
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.audit-log-list > li > span:first-child {
+    font-weight: 500;
+    color: #f4f4f5;
+}
